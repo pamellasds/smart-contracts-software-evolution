@@ -1,0 +1,36 @@
+
+
+pragma solidity 0.4.25;
+
+import ;
+
+
+contract state is owned {
+    
+    
+    address public associatedcontract;
+
+    constructor(address _owner, address _associatedcontract) public owned(_owner) {
+        associatedcontract = _associatedcontract;
+        emit associatedcontractupdated(_associatedcontract);
+    }
+
+    
+
+    
+    function setassociatedcontract(address _associatedcontract) external onlyowner {
+        associatedcontract = _associatedcontract;
+        emit associatedcontractupdated(_associatedcontract);
+    }
+
+    
+
+    modifier onlyassociatedcontract {
+        require(msg.sender == associatedcontract, );
+        _;
+    }
+
+    
+
+    event associatedcontractupdated(address associatedcontract);
+}

@@ -1,0 +1,11 @@
+similarity,combination
+24,['FaucetRLC.sol', 'TokenSpender.sol', 'SafeMath.sol']
+9,['FaucetRLC.sol', 'TokenSpender.sol', 'Ownable.sol']
+28,['FaucetRLC.sol', 'TokenSpender.sol', 'ERC20.sol']
+25,['FaucetRLC.sol', 'SafeMath.sol', 'Ownable.sol']
+37,['FaucetRLC.sol', 'SafeMath.sol', 'ERC20.sol']
+10,['FaucetRLC.sol', 'Ownable.sol', 'ERC20.sol']
+17,['TokenSpender.sol', 'SafeMath.sol', 'Ownable.sol']
+27,['TokenSpender.sol', 'SafeMath.sol', 'ERC20.sol']
+8,['TokenSpender.sol', 'Ownable.sol', 'ERC20.sol']
+6,['SafeMath.sol', 'Ownable.sol', 'ERC20.sol']

@@ -1,0 +1,4 @@
+similarity,combination
+2,['staking.sol', 'erc20interface.sol']
+3,['staking.sol', 'safemath.sol']
+2,['erc20interface.sol', 'safemath.sol']

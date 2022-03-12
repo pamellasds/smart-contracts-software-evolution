@@ -1,0 +1,7 @@
+similarity,combination
+0,['ERC20Interface.sol', 'Migrations.sol']
+2,['ERC20Interface.sol', 'KyberNetworkProxyInterface.sol']
+4,['ERC20Interface.sol', 'Swap.sol']
+2,['Migrations.sol', 'KyberNetworkProxyInterface.sol']
+3,['Migrations.sol', 'Swap.sol']
+3,['KyberNetworkProxyInterface.sol', 'Swap.sol']

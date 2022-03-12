@@ -1,0 +1,9 @@
+similarity,combination
+19,['NexoToken.sol']
+5,['StandardToken.sol']
+3,['Owned.sol']
+5,['Token.sol']
+1,['Migrations.sol']
+1,['SafeMath.sol']
+4,['TokenMock.sol']
+1,['AbstractToken.sol']

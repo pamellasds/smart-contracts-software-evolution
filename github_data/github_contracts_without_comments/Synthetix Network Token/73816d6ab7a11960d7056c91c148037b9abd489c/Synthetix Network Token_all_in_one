@@ -1,0 +1,3364 @@
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+import ;
+import ;
+import ;
+
+
+
+contract havven is externstatetoken {
+
+    
+
+    
+    struct issuancedata {
+        
+        uint currentbalancesum;
+        
+        uint lastaveragebalance;
+        
+        uint lastmodified;
+    }
+
+    
+    mapping(address => issuancedata) public issuancedata;
+    
+    issuancedata public totalissuancedata;
+
+    
+    uint public feeperiodstarttime;
+    
+    uint public lastfeeperiodstarttime;
+
+    
+    uint public feeperiodduration = 4 weeks;
+    
+    uint constant min_fee_period_duration = 1 days;
+    uint constant max_fee_period_duration = 26 weeks;
+
+    
+    
+    uint public lastfeescollected;
+
+    
+    mapping(address => bool) public haswithdrawnfees;
+
+    nomin public nomin;
+    havvenescrow public escrow;
+
+    
+    address public oracle;
+    
+    uint public price;
+    
+    uint public lastpriceupdatetime;
+    
+    uint public pricestaleperiod = 3 hours;
+
+    
+    uint public issuanceratio = unit / 5;
+    
+    uint constant max_issuance_ratio = unit;
+
+    
+    mapping(address => bool) public isissuer;
+    
+    mapping(address => uint) public nominsissued;
+
+    uint constant havven_supply = 1e8 * unit;
+    uint constant oracle_future_limit = 10 minutes;
+    string constant token_name = ;
+    string constant token_symbol = ;
+    
+    
+
+    
+    constructor(address _proxy, tokenstate _tokenstate, address _owner, address _oracle,
+                uint _price, address[] _issuers, havven _oldhavven)
+        externstatetoken(_proxy, _tokenstate, token_name, token_symbol, havven_supply, _owner)
+        public
+    {
+        oracle = _oracle;
+        price = _price;
+        lastpriceupdatetime = now;
+
+        uint i;
+        if (_oldhavven == address(0)) {
+            feeperiodstarttime = now;
+            lastfeeperiodstarttime = now  feeperiodduration;
+            for (i = 0; i < _issuers.length; i++) {
+                isissuer[_issuers[i]] = true;
+            }
+        } else {
+            feeperiodstarttime = _oldhavven.feeperiodstarttime();
+            lastfeeperiodstarttime = _oldhavven.lastfeeperiodstarttime();
+
+            uint cbs;
+            uint lab;
+            uint lm;
+            (cbs, lab, lm) = _oldhavven.totalissuancedata();
+            totalissuancedata.currentbalancesum = cbs;
+            totalissuancedata.lastaveragebalance = lab;
+            totalissuancedata.lastmodified = lm;
+
+            for (i = 0; i < _issuers.length; i++) {
+                address issuer = _issuers[i];
+                isissuer[issuer] = true;
+                uint nomins = _oldhavven.nominsissued(issuer);
+                if (nomins == 0) {
+                    
+                    
+                    continue;
+                }
+                (cbs, lab, lm) = _oldhavven.issuancedata(issuer);
+                nominsissued[issuer] = nomins;
+                issuancedata[issuer].currentbalancesum = cbs;
+                issuancedata[issuer].lastaveragebalance = lab;
+                issuancedata[issuer].lastmodified = lm;
+            }
+        }
+
+    }
+
+    
+
+    
+    function setnomin(nomin _nomin)
+        external
+        optionalproxy_onlyowner
+    {
+        nomin = _nomin;
+        emitnominupdated(_nomin);
+    }
+
+    
+    function setescrow(havvenescrow _escrow)
+        external
+        optionalproxy_onlyowner
+    {
+        escrow = _escrow;
+        emitescrowupdated(_escrow);
+    }
+
+    
+    function setfeeperiodduration(uint duration)
+        external
+        optionalproxy_onlyowner
+    {
+        require(min_fee_period_duration <= duration &&
+                               duration <= max_fee_period_duration);
+        feeperiodduration = duration;
+        emitfeeperioddurationupdated(duration);
+        rolloverfeeperiodifelapsed();
+    }
+
+    
+    function setoracle(address _oracle)
+        external
+        optionalproxy_onlyowner
+    {
+        oracle = _oracle;
+        emitoracleupdated(_oracle);
+    }
+
+    
+    function setpricestaleperiod(uint time)
+        external
+        optionalproxy_onlyowner
+    {
+        pricestaleperiod = time;
+    }
+
+    
+    function setissuanceratio(uint _issuanceratio)
+        external
+        optionalproxy_onlyowner
+    {
+        require(_issuanceratio <= max_issuance_ratio);
+        issuanceratio = _issuanceratio;
+        emitissuanceratioupdated(_issuanceratio);
+    }
+
+    
+    function setissuer(address account, bool value)
+        external
+        optionalproxy_onlyowner
+    {
+        isissuer[account] = value;
+        emitissuersupdated(account, value);
+    }
+
+    
+
+    function issuancecurrentbalancesum(address account)
+        external
+        view
+        returns (uint)
+    {
+        return issuancedata[account].currentbalancesum;
+    }
+
+    function issuancelastaveragebalance(address account)
+        external
+        view
+        returns (uint)
+    {
+        return issuancedata[account].lastaveragebalance;
+    }
+
+    function issuancelastmodified(address account)
+        external
+        view
+        returns (uint)
+    {
+        return issuancedata[account].lastmodified;
+    }
+
+    function totalissuancecurrentbalancesum()
+        external
+        view
+        returns (uint)
+    {
+        return totalissuancedata.currentbalancesum;
+    }
+
+    function totalissuancelastaveragebalance()
+        external
+        view
+        returns (uint)
+    {
+        return totalissuancedata.lastaveragebalance;
+    }
+
+    function totalissuancelastmodified()
+        external
+        view
+        returns (uint)
+    {
+        return totalissuancedata.lastmodified;
+    }
+
+    
+
+    
+    function transfer(address to, uint value)
+        public
+        optionalproxy
+        returns (bool)
+    {
+        address sender = messagesender;
+        require(nominsissued[sender] == 0 || value <= transferablehavvens(sender));
+        
+        _transfer_byproxy(sender, to, value);
+
+        return true;
+    }
+
+    
+    function transferfrom(address from, address to, uint value)
+        public
+        optionalproxy
+        returns (bool)
+    {
+        address sender = messagesender;
+        require(nominsissued[from] == 0 || value <= transferablehavvens(from));
+        
+        _transferfrom_byproxy(sender, from, to, value);
+
+        return true;
+    }
+
+    
+    function withdrawfees()
+        external
+        optionalproxy
+    {
+        address sender = messagesender;
+        rolloverfeeperiodifelapsed();
+        
+        require(!nomin.frozen(sender));
+
+        
+        updateissuancedata(sender, nominsissued[sender], nomin.totalsupply());
+
+        
+        require(!haswithdrawnfees[sender]);
+
+        uint feesowed;
+        uint lasttotalissued = totalissuancedata.lastaveragebalance;
+
+        if (lasttotalissued > 0) {
+            
+            feesowed = safediv_dec(
+                safemul_dec(issuancedata[sender].lastaveragebalance, lastfeescollected),
+                lasttotalissued
+            );
+        }
+
+        haswithdrawnfees[sender] = true;
+
+        if (feesowed != 0) {
+            nomin.withdrawfees(sender, feesowed);
+        }
+        emitfeeswithdrawn(messagesender, feesowed);
+    }
+
+    
+    function updateissuancedata(address account, uint prebalance, uint lasttotalsupply)
+        internal
+    {
+        
+        totalissuancedata = computeissuancedata(lasttotalsupply, totalissuancedata);
+
+        if (issuancedata[account].lastmodified < feeperiodstarttime) {
+            haswithdrawnfees[account] = false;
+        }
+
+        issuancedata[account] = computeissuancedata(prebalance, issuancedata[account]);
+    }
+
+
+    
+    function computeissuancedata(uint prebalance, issuancedata preissuance)
+        internal
+        view
+        returns (issuancedata)
+    {
+
+        uint currentbalancesum = preissuance.currentbalancesum;
+        uint lastaveragebalance = preissuance.lastaveragebalance;
+        uint lastmodified = preissuance.lastmodified;
+
+        if (lastmodified < feeperiodstarttime) {
+            if (lastmodified < lastfeeperiodstarttime) {
+                
+                lastaveragebalance = prebalance;
+            } else {
+                
+                
+                uint timeuptorollover = feeperiodstarttime  lastmodified;
+                uint lastfeeperiodduration = feeperiodstarttime  lastfeeperiodstarttime;
+                uint lastbalancesum = safeadd(currentbalancesum, safemul(prebalance, timeuptorollover));
+                lastaveragebalance = lastbalancesum / lastfeeperiodduration;
+            }
+            
+            currentbalancesum = safemul(prebalance, now  feeperiodstarttime);
+        } else {
+            
+            currentbalancesum = safeadd(
+                currentbalancesum,
+                safemul(prebalance, now  lastmodified)
+            );
+        }
+
+        return issuancedata(currentbalancesum, lastaveragebalance, now);
+    }
+
+    
+    function recomputelastaveragebalance(address account)
+        external
+        returns (uint)
+    {
+        updateissuancedata(account, nominsissued[account], nomin.totalsupply());
+        return issuancedata[account].lastaveragebalance;
+    }
+
+    
+    function issuenomins(uint amount)
+        public
+        optionalproxy
+        requireissuer(messagesender)
+        
+    {
+        address sender = messagesender;
+        require(amount <= remainingissuablenomins(sender));
+        uint lasttot = nomin.totalsupply();
+        uint preissued = nominsissued[sender];
+        nomin.issue(sender, amount);
+        nominsissued[sender] = safeadd(preissued, amount);
+        updateissuancedata(sender, preissued, lasttot);
+    }
+
+    function issuemaxnomins()
+        external
+        optionalproxy
+    {
+        issuenomins(remainingissuablenomins(messagesender));
+    }
+
+    
+    function burnnomins(uint amount)
+        
+        external
+        optionalproxy
+    {
+        address sender = messagesender;
+
+        uint lasttot = nomin.totalsupply();
+        uint preissued = nominsissued[sender];
+        
+        nomin.burn(sender, amount);
+        
+        nominsissued[sender] = safesub(preissued, amount);
+        updateissuancedata(sender, preissued, lasttot);
+    }
+
+    
+    function rolloverfeeperiodifelapsed()
+        public
+    {
+        
+        if (now >= feeperiodstarttime + feeperiodduration) {
+            lastfeescollected = nomin.feepool();
+            lastfeeperiodstarttime = feeperiodstarttime;
+            feeperiodstarttime = now;
+            emitfeeperiodrollover(now);
+        }
+    }
+
+    
+
+    
+    function maxissuablenomins(address issuer)
+        view
+        public
+        pricenotstale
+        returns (uint)
+    {
+        if (!isissuer[issuer]) {
+            return 0;
+        }
+        if (escrow != havvenescrow(0)) {
+            uint totalownedhavvens = safeadd(tokenstate.balanceof(issuer), escrow.balanceof(issuer));
+            return safemul_dec(havtousd(totalownedhavvens), issuanceratio);
+        } else {
+            return safemul_dec(havtousd(tokenstate.balanceof(issuer)), issuanceratio);
+        }
+    }
+
+    
+    function remainingissuablenomins(address issuer)
+        view
+        public
+        returns (uint)
+    {
+        uint issued = nominsissued[issuer];
+        uint max = maxissuablenomins(issuer);
+        if (issued > max) {
+            return 0;
+        } else {
+            return safesub(max, issued);
+        }
+    }
+
+    
+    function collateral(address account)
+        public
+        view
+        returns (uint)
+    {
+        uint bal = tokenstate.balanceof(account);
+        if (escrow != address(0)) {
+            bal = safeadd(bal, escrow.balanceof(account));
+        }
+        return bal;
+    }
+
+    
+    function issuancedraft(address account)
+        public
+        view
+        returns (uint)
+    {
+        uint issued = nominsissued[account];
+        if (issued == 0) {
+            return 0;
+        }
+        return usdtohav(safediv_dec(issued, issuanceratio));
+    }
+
+    
+    function lockedcollateral(address account)
+        public
+        view
+        returns (uint)
+    {
+        uint debt = issuancedraft(account);
+        uint collat = collateral(account);
+        if (debt > collat) {
+            return collat;
+        }
+        return debt;
+    }
+
+    
+    function unlockedcollateral(address account)
+        public
+        view
+        returns (uint)
+    {
+        uint locked = lockedcollateral(account);
+        uint collat = collateral(account);
+        return safesub(collat, locked);
+    }
+
+    
+    function transferablehavvens(address account)
+        public
+        view
+        returns (uint)
+    {
+        uint draft = issuancedraft(account);
+        uint collat = collateral(account);
+        
+        if (draft > collat) {
+            return 0;
+        }
+
+        uint bal = balanceof(account);
+        
+        
+        if (draft > safesub(collat, bal)) {
+            return safesub(collat, draft);
+        }
+        
+        return bal;
+    }
+
+    
+    function havtousd(uint hav_dec)
+        public
+        view
+        pricenotstale
+        returns (uint)
+    {
+        return safemul_dec(hav_dec, price);
+    }
+
+    
+    function usdtohav(uint usd_dec)
+        public
+        view
+        pricenotstale
+        returns (uint)
+    {
+        return safediv_dec(usd_dec, price);
+    }
+
+    
+    function updateprice(uint newprice, uint timesent)
+        external
+        onlyoracle  
+    {
+        
+        require(lastpriceupdatetime < timesent && timesent < now + oracle_future_limit);
+
+        price = newprice;
+        lastpriceupdatetime = timesent;
+        emitpriceupdated(newprice, timesent);
+
+        
+        rolloverfeeperiodifelapsed();
+    }
+
+    
+    function priceisstale()
+        public
+        view
+        returns (bool)
+    {
+        return safeadd(lastpriceupdatetime, pricestaleperiod) < now;
+    }
+
+    
+
+    modifier requireissuer(address account)
+    {
+        require(isissuer[account]);
+        _;
+    }
+
+    modifier onlyoracle
+    {
+        require(msg.sender == oracle);
+        _;
+    }
+
+    modifier pricenotstale
+    {
+        require(!priceisstale());
+        _;
+    }
+
+    
+
+    event priceupdated(uint newprice, uint timestamp);
+    bytes32 constant priceupdated_sig = keccak256();
+    function emitpriceupdated(uint newprice, uint timestamp) internal {
+        proxy._emit(abi.encode(newprice, timestamp), 1, priceupdated_sig, 0, 0, 0);
+    }
+
+    event issuanceratioupdated(uint newratio);
+    bytes32 constant issuanceratioupdated_sig = keccak256();
+    function emitissuanceratioupdated(uint newratio) internal {
+        proxy._emit(abi.encode(newratio), 1, issuanceratioupdated_sig, 0, 0, 0);
+    }
+
+    event feeperiodrollover(uint timestamp);
+    bytes32 constant feeperiodrollover_sig = keccak256();
+    function emitfeeperiodrollover(uint timestamp) internal {
+        proxy._emit(abi.encode(timestamp), 1, feeperiodrollover_sig, 0, 0, 0);
+    } 
+
+    event feeperioddurationupdated(uint duration);
+    bytes32 constant feeperioddurationupdated_sig = keccak256();
+    function emitfeeperioddurationupdated(uint duration) internal {
+        proxy._emit(abi.encode(duration), 1, feeperioddurationupdated_sig, 0, 0, 0);
+    } 
+
+    event feeswithdrawn(address indexed account, uint value);
+    bytes32 constant feeswithdrawn_sig = keccak256();
+    function emitfeeswithdrawn(address account, uint value) internal {
+        proxy._emit(abi.encode(value), 2, feeswithdrawn_sig, bytes32(account), 0, 0);
+    }
+
+    event oracleupdated(address neworacle);
+    bytes32 constant oracleupdated_sig = keccak256();
+    function emitoracleupdated(address neworacle) internal {
+        proxy._emit(abi.encode(neworacle), 1, oracleupdated_sig, 0, 0, 0);
+    }
+
+    event nominupdated(address newnomin);
+    bytes32 constant nominupdated_sig = keccak256();
+    function emitnominupdated(address newnomin) internal {
+        proxy._emit(abi.encode(newnomin), 1, nominupdated_sig, 0, 0, 0);
+    }
+
+    event escrowupdated(address newescrow);
+    bytes32 constant escrowupdated_sig = keccak256();
+    function emitescrowupdated(address newescrow) internal {
+        proxy._emit(abi.encode(newescrow), 1, escrowupdated_sig, 0, 0, 0);
+    }
+
+    event issuersupdated(address indexed account, bool indexed value);
+    bytes32 constant issuersupdated_sig = keccak256();
+    function emitissuersupdated(address account, bool value) internal {
+        proxy._emit(abi.encode(), 3, issuersupdated_sig, bytes32(account), bytes32(value ? 1 : 0), 0);
+    }
+
+}
+
+
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+
+
+contract state is owned {
+    
+    
+    address public associatedcontract;
+
+
+    constructor(address _owner, address _associatedcontract)
+        owned(_owner)
+        public
+    {
+        associatedcontract = _associatedcontract;
+        emit associatedcontractupdated(_associatedcontract);
+    }
+
+    
+
+    
+    function setassociatedcontract(address _associatedcontract)
+        external
+        onlyowner
+    {
+        associatedcontract = _associatedcontract;
+        emit associatedcontractupdated(_associatedcontract);
+    }
+
+    
+
+    modifier onlyassociatedcontract
+    {
+        require(msg.sender == associatedcontract);
+        _;
+    }
+
+    
+
+    event associatedcontractupdated(address associatedcontract);
+}
+
+
+
+pragma solidity 0.4.24;
+
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+contract issuancecontroller is safedecimalmath, selfdestructible, pausable {
+
+    
+    havven public havven;
+    nomin public nomin;
+
+    
+    address public fundswallet;
+
+    
+    address public oracle;
+    
+    uint constant oracle_future_limit = 10 minutes;
+
+    
+    uint public pricestaleperiod = 3 hours;
+
+    
+    uint public lastpriceupdatetime;
+    
+    uint public usdtohavprice;
+    
+    uint public usdtoethprice;
+    
+    
+
+    
+    constructor(
+        
+        address _owner,
+
+        
+        address _fundswallet,
+
+        
+        havven _havven,
+        nomin _nomin,
+
+        
+        address _oracle,
+        uint _usdtoethprice,
+        uint _usdtohavprice
+    )
+        
+        selfdestructible(_owner)
+        pausable(_owner)
+        public
+    {
+        fundswallet = _fundswallet;
+        havven = _havven;
+        nomin = _nomin;
+        oracle = _oracle;
+        usdtoethprice = _usdtoethprice;
+        usdtohavprice = _usdtohavprice;
+        lastpriceupdatetime = now;
+    }
+
+    
+
+    
+    function setfundswallet(address _fundswallet)
+        external
+        onlyowner
+    {
+        fundswallet = _fundswallet;
+        emit fundswalletupdated(fundswallet);
+    }
+    
+    
+    function setoracle(address _oracle)
+        external
+        onlyowner
+    {
+        oracle = _oracle;
+        emit oracleupdated(oracle);
+    }
+
+    
+    function setnomin(nomin _nomin)
+        external
+        onlyowner
+    {
+        nomin = _nomin;
+        emit nominupdated(_nomin);
+    }
+
+    
+    function sethavven(havven _havven)
+        external
+        onlyowner
+    {
+        havven = _havven;
+        emit havvenupdated(_havven);
+    }
+
+    
+    function setpricestaleperiod(uint _time)
+        external
+        onlyowner 
+    {
+        pricestaleperiod = _time;
+        emit pricestaleperiodupdated(pricestaleperiod);
+    }
+
+    
+    
+    function updateprices(uint newethprice, uint newhavvenprice, uint timesent)
+        external
+        onlyoracle
+    {
+        
+        require(lastpriceupdatetime < timesent && timesent < now + oracle_future_limit);
+
+        usdtoethprice = newethprice;
+        usdtohavprice = newhavvenprice;
+        lastpriceupdatetime = timesent;
+
+        emit pricesupdated(usdtoethprice, usdtohavprice, lastpriceupdatetime);
+    }
+
+    
+    function ()
+        external
+        payable
+    {
+        exchangeetherfornomins();
+    } 
+
+    
+    
+    function exchangeetherfornomins()
+        public 
+        payable
+        pricesnotstale
+        notpaused
+        returns (uint) 
+    {
+        
+        
+        uint requestedtopurchase = safemul_dec(msg.value, usdtoethprice);
+
+        
+        fundswallet.transfer(msg.value);
+
+        
+        
+        
+        
+        nomin.transfer(msg.sender, requestedtopurchase);
+
+        
+        
+        
+        
+
+        return requestedtopurchase;
+    }
+
+    
+    function exchangenominsforhavvens(uint amount)
+        external
+        pricesnotstale
+        notpaused
+        returns (uint) 
+    {
+        
+        uint havvenstosend = havvensreceivedfornomins(amount);
+        
+        
+        nomin.transferfrom(msg.sender, this, amount);
+
+        
+        havven.transfer(msg.sender, havvenstosend);
+
+        
+        
+        
+        
+
+        return havvenstosend; 
+    }
+
+    
+    function withdrawhavvens(uint amount)
+        external
+        onlyowner
+    {
+        havven.transfer(owner, amount);
+        
+        
+        
+        
+        
+    }
+
+    
+    function withdrawnomins(uint amount)
+        external
+        onlyowner
+    {
+        nomin.transfer(owner, amount);
+        
+        
+        
+        
+        
+    }
+
+    
+    
+    function pricesarestale()
+        public
+        view
+        returns (bool)
+    {
+        return safeadd(lastpriceupdatetime, pricestaleperiod) < now;
+    }
+
+    
+    function havvensreceivedfornomins(uint amount)
+        public 
+        view
+        returns (uint)
+    {
+        uint nominsreceived = nomin.amountreceived(amount);
+        return safediv_dec(nominsreceived, usdtohavprice);
+    }
+
+    
+    function nominsreceivedforether(uint amount)
+        public 
+        view
+        returns (uint)
+    {
+        uint nominstransferred = safemul_dec(amount, usdtoethprice);
+        return nomin.amountreceived(nominstransferred);
+    }
+    
+    
+
+    modifier onlyoracle
+    {
+        require(msg.sender == oracle);
+        _;
+    }
+
+    modifier pricesnotstale
+    {
+        require(!pricesarestale());
+        _;
+    }
+
+    
+
+    event fundswalletupdated(address newfundswallet);
+    event oracleupdated(address neworacle);
+    event nominupdated(nomin newnomincontract);
+    event havvenupdated(havven newhavvencontract);
+    event pricestaleperiodupdated(uint pricestaleperiod);
+    event pricesupdated(uint newethprice, uint newhavvenprice, uint timesent);
+}
+
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+import ;
+import ;
+import ;
+
+
+
+contract court is safedecimalmath, owned {
+
+    
+
+    
+    havven public havven;
+    nomin public nomin;
+
+    
+    uint public minstandingbalance = 100 * unit;
+
+    
+    uint public votingperiod = 1 weeks;
+    uint constant min_voting_period = 3 days;
+    uint constant max_voting_period = 4 weeks;
+
+    
+    uint public confirmationperiod = 1 weeks;
+    uint constant min_confirmation_period = 1 days;
+    uint constant max_confirmation_period = 2 weeks;
+
+    
+    uint public requiredparticipation = 3 * unit / 10;
+    uint constant min_required_participation = unit / 10;
+
+    
+    uint public requiredmajority = (2 * unit) / 3;
+    uint constant min_required_majority = unit / 2;
+
+    
+    uint nextmotionid = 1;
+
+    
+    mapping(uint => address) public motiontarget;
+
+    
+    mapping(address => uint) public targetmotionid;
+
+    
+    mapping(uint => uint) public motionstarttime;
+
+    
+    mapping(uint => uint) public votesfor;
+    mapping(uint => uint) public votesagainst;
+
+    
+    
+    
+    mapping(address => mapping(uint => uint)) voteweight;
+
+    
+    enum vote {abstention, yea, nay}
+
+    
+    mapping(address => mapping(uint => vote)) public vote;
+
+
+    
+
+    
+    constructor(havven _havven, nomin _nomin, address _owner)
+        owned(_owner)
+        public
+    {
+        havven = _havven;
+        nomin = _nomin;
+    }
+
+
+    
+
+    
+    function setminstandingbalance(uint balance)
+        external
+        onlyowner
+    {
+        
+        minstandingbalance = balance;
+    }
+
+    
+    function setvotingperiod(uint duration)
+        external
+        onlyowner
+    {
+        require(min_voting_period <= duration &&
+                duration <= max_voting_period);
+        
+        require(duration <= havven.feeperiodduration());
+        votingperiod = duration;
+    }
+
+    
+    function setconfirmationperiod(uint duration)
+        external
+        onlyowner
+    {
+        require(min_confirmation_period <= duration &&
+                duration <= max_confirmation_period);
+        confirmationperiod = duration;
+    }
+
+    
+    function setrequiredparticipation(uint fraction)
+        external
+        onlyowner
+    {
+        require(min_required_participation <= fraction);
+        requiredparticipation = fraction;
+    }
+
+    
+    function setrequiredmajority(uint fraction)
+        external
+        onlyowner
+    {
+        require(min_required_majority <= fraction);
+        requiredmajority = fraction;
+    }
+
+
+    
+
+    
+    function motionvoting(uint motionid)
+        public
+        view
+        returns (bool)
+    {
+        return motionstarttime[motionid] < now && now < motionstarttime[motionid] + votingperiod;
+    }
+
+    
+    function motionconfirming(uint motionid)
+        public
+        view
+        returns (bool)
+    {
+        
+        uint starttime = motionstarttime[motionid];
+        return starttime + votingperiod <= now &&
+               now < starttime + votingperiod + confirmationperiod;
+    }
+
+    
+    function motionwaiting(uint motionid)
+        public
+        view
+        returns (bool)
+    {
+        
+        return motionstarttime[motionid] + votingperiod + confirmationperiod <= now;
+    }
+
+    
+    function motionpasses(uint motionid)
+        public
+        view
+        returns (bool)
+    {
+        uint yeas = votesfor[motionid];
+        uint nays = votesagainst[motionid];
+        uint totalvotes = safeadd(yeas, nays);
+
+        if (totalvotes == 0) {
+            return false;
+        }
+
+        uint participation = safediv_dec(totalvotes, havven.totalissuancelastaveragebalance());
+        uint fractioninfavour = safediv_dec(yeas, totalvotes);
+
+        
+        return participation > requiredparticipation &&
+               fractioninfavour > requiredmajority;
+    }
+
+    
+    function hasvoted(address account, uint motionid)
+        public
+        view
+        returns (bool)
+    {
+        return vote[account][motionid] != vote.abstention;
+    }
+
+
+    
+
+    
+    function beginmotion(address target)
+        external
+        returns (uint)
+    {
+        
+        require((havven.issuancelastaveragebalance(msg.sender) >= minstandingbalance) ||
+                msg.sender == owner);
+
+        
+        require(votingperiod <= havven.feeperiodduration());
+
+        
+        require(targetmotionid[target] == 0);
+
+        
+        require(!nomin.frozen(target));
+
+        
+        havven.rolloverfeeperiodifelapsed();
+
+        uint motionid = nextmotionid++;
+        motiontarget[motionid] = target;
+        targetmotionid[target] = motionid;
+
+        
+        uint starttime = havven.feeperiodstarttime() + havven.feeperiodduration();
+        motionstarttime[motionid] = starttime;
+        emit motionbegun(msg.sender, target, motionid, starttime);
+
+        return motionid;
+    }
+
+    
+    function setupvote(uint motionid)
+        internal
+        returns (uint)
+    {
+        
+        require(motionvoting(motionid));
+
+        
+        require(!hasvoted(msg.sender, motionid));
+
+        
+        require(msg.sender != motiontarget[motionid]);
+
+        uint weight = havven.recomputelastaveragebalance(msg.sender);
+
+        
+        require(weight > 0);
+
+        voteweight[msg.sender][motionid] = weight;
+
+        return weight;
+    }
+
+    
+    function votefor(uint motionid)
+        external
+    {
+        uint weight = setupvote(motionid);
+        vote[msg.sender][motionid] = vote.yea;
+        votesfor[motionid] = safeadd(votesfor[motionid], weight);
+        emit votedfor(msg.sender, motionid, weight);
+    }
+
+    
+    function voteagainst(uint motionid)
+        external
+    {
+        uint weight = setupvote(motionid);
+        vote[msg.sender][motionid] = vote.nay;
+        votesagainst[motionid] = safeadd(votesagainst[motionid], weight);
+        emit votedagainst(msg.sender, motionid, weight);
+    }
+
+    
+    function cancelvote(uint motionid)
+        external
+    {
+        
+        require(!motionconfirming(motionid));
+
+        vote sendervote = vote[msg.sender][motionid];
+
+        
+        require(sendervote != vote.abstention);
+
+        
+        if (motionvoting(motionid)) {
+            if (sendervote == vote.yea) {
+                votesfor[motionid] = safesub(votesfor[motionid], voteweight[msg.sender][motionid]);
+            } else {
+                
+                votesagainst[motionid] = safesub(votesagainst[motionid], voteweight[msg.sender][motionid]);
+            }
+            
+            emit votecancelled(msg.sender, motionid);
+        }
+
+        delete voteweight[msg.sender][motionid];
+        delete vote[msg.sender][motionid];
+    }
+
+    
+    function _closemotion(uint motionid)
+        internal
+    {
+        delete targetmotionid[motiontarget[motionid]];
+        delete motiontarget[motionid];
+        delete motionstarttime[motionid];
+        delete votesfor[motionid];
+        delete votesagainst[motionid];
+        emit motionclosed(motionid);
+    }
+
+    
+    function closemotion(uint motionid)
+        external
+    {
+        require((motionconfirming(motionid) && !motionpasses(motionid)) || motionwaiting(motionid));
+        _closemotion(motionid);
+    }
+
+    
+    function approvemotion(uint motionid)
+        external
+        onlyowner
+    {
+        require(motionconfirming(motionid) && motionpasses(motionid));
+        address target = motiontarget[motionid];
+        nomin.freezeandconfiscate(target);
+        _closemotion(motionid);
+        emit motionapproved(motionid);
+    }
+
+    
+    function vetomotion(uint motionid)
+        external
+        onlyowner
+    {
+        require(!motionwaiting(motionid));
+        _closemotion(motionid);
+        emit motionvetoed(motionid);
+    }
+
+
+    
+
+    event motionbegun(address indexed initiator, address indexed target, uint indexed motionid, uint starttime);
+
+    event votedfor(address indexed voter, uint indexed motionid, uint weight);
+
+    event votedagainst(address indexed voter, uint indexed motionid, uint weight);
+
+    event votecancelled(address indexed voter, uint indexed motionid);
+
+    event motionclosed(uint indexed motionid);
+
+    event motionvetoed(uint indexed motionid);
+
+    event motionapproved(uint indexed motionid);
+}
+
+
+
+pragma solidity 0.4.24;
+
+import ;
+import ;
+
+contract nominairdropper is owned {
+    
+
+    
+    constructor (address _owner) 
+        owned(_owner)
+    {}
+
+    
+    function multisend(address tokenaddress, address[] destinations, uint256[] values)
+        external
+        onlyowner
+    {
+        
+        require(destinations.length == values.length);
+
+        
+        uint256 i = 0;
+        
+        while (i < destinations.length) {
+            nomin(tokenaddress).transfersenderpaysfee(destinations[i], values[i]);
+            i += 1;
+        }
+    }
+}
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+import ;
+import ;
+import ;
+
+
+
+contract externstatetoken is safedecimalmath, selfdestructible, proxyable {
+
+    
+
+    
+    tokenstate public tokenstate;
+
+    
+    string public name;
+    string public symbol;
+    uint public totalsupply;
+
+    
+    constructor(address _proxy, tokenstate _tokenstate,
+                string _name, string _symbol, uint _totalsupply,
+                address _owner)
+        selfdestructible(_owner)
+        proxyable(_proxy, _owner)
+        public
+    {
+        name = _name;
+        symbol = _symbol;
+        totalsupply = _totalsupply;
+        tokenstate = _tokenstate;
+   }
+
+    
+
+    
+    function allowance(address owner, address spender)
+        public
+        view
+        returns (uint)
+    {
+        return tokenstate.allowance(owner, spender);
+    }
+
+    
+    function balanceof(address account)
+        public
+        view
+        returns (uint)
+    {
+        return tokenstate.balanceof(account);
+    }
+
+    
+
+     
+    function settokenstate(tokenstate _tokenstate)
+        external
+        optionalproxy_onlyowner
+    {
+        tokenstate = _tokenstate;
+        emittokenstateupdated(_tokenstate);
+    }
+
+    function _internaltransfer(address from, address to, uint value) 
+        internal
+        returns (bool)
+    { 
+        
+        require(to != address(0));
+        require(to != address(this));
+        require(to != address(proxy));
+
+        
+        tokenstate.setbalanceof(from, safesub(tokenstate.balanceof(from), value));
+        tokenstate.setbalanceof(to, safeadd(tokenstate.balanceof(to), value));
+
+        emittransfer(from, to, value);
+
+        return true;
+    }
+
+    
+    function _transfer_byproxy(address from, address to, uint value)
+        internal
+        returns (bool)
+    {
+        return _internaltransfer(from, to, value);
+    }
+
+    
+    function _transferfrom_byproxy(address sender, address from, address to, uint value)
+        internal
+        returns (bool)
+    {
+        
+        tokenstate.setallowance(from, sender, safesub(tokenstate.allowance(from, sender), value));
+        return _internaltransfer(from, to, value);
+    }
+
+    
+    function approve(address spender, uint value)
+        public
+        optionalproxy
+        returns (bool)
+    {
+        address sender = messagesender;
+
+        tokenstate.setallowance(sender, spender, value);
+        emitapproval(sender, spender, value);
+        return true;
+    }
+
+    
+
+    event transfer(address indexed from, address indexed to, uint value);
+    bytes32 constant transfer_sig = keccak256();
+    function emittransfer(address from, address to, uint value) internal {
+        proxy._emit(abi.encode(value), 3, transfer_sig, bytes32(from), bytes32(to), 0);
+    }
+
+    event approval(address indexed owner, address indexed spender, uint value);
+    bytes32 constant approval_sig = keccak256();
+    function emitapproval(address owner, address spender, uint value) internal {
+        proxy._emit(abi.encode(value), 3, approval_sig, bytes32(owner), bytes32(spender), 0);
+    }
+
+    event tokenstateupdated(address newtokenstate);
+    bytes32 constant tokenstateupdated_sig = keccak256();
+    function emittokenstateupdated(address newtokenstate) internal {
+        proxy._emit(abi.encode(newtokenstate), 1, tokenstateupdated_sig, 0, 0, 0);
+    }
+}
+
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+contract havvenescrow is safedecimalmath, owned, limitedsetup(8 weeks) {
+    
+    havven public havven;
+
+    
+    mapping(address => uint[2][]) public vestingschedules;
+
+    
+    mapping(address => uint) public totalvestedaccountbalance;
+
+    
+    uint public totalvestedbalance;
+
+    uint constant time_index = 0;
+    uint constant quantity_index = 1;
+
+    
+    uint constant max_vesting_entries = 20;
+
+
+    
+
+    constructor(address _owner, havven _havven)
+        owned(_owner)
+        public
+    {
+        havven = _havven;
+    }
+
+
+    
+
+    function sethavven(havven _havven)
+        external
+        onlyowner
+    {
+        havven = _havven;
+        emit havvenupdated(_havven);
+    }
+
+
+    
+
+    
+    function balanceof(address account)
+        public
+        view
+        returns (uint)
+    {
+        return totalvestedaccountbalance[account];
+    }
+
+    
+    function numvestingentries(address account)
+        public
+        view
+        returns (uint)
+    {
+        return vestingschedules[account].length;
+    }
+
+    
+    function getvestingscheduleentry(address account, uint index)
+        public
+        view
+        returns (uint[2])
+    {
+        return vestingschedules[account][index];
+    }
+
+    
+    function getvestingtime(address account, uint index)
+        public
+        view
+        returns (uint)
+    {
+        return getvestingscheduleentry(account,index)[time_index];
+    }
+
+    
+    function getvestingquantity(address account, uint index)
+        public
+        view
+        returns (uint)
+    {
+        return getvestingscheduleentry(account,index)[quantity_index];
+    }
+
+    
+    function getnextvestingindex(address account)
+        public
+        view
+        returns (uint)
+    {
+        uint len = numvestingentries(account);
+        for (uint i = 0; i < len; i++) {
+            if (getvestingtime(account, i) != 0) {
+                return i;
+            }
+        }
+        return len;
+    }
+
+    
+    function getnextvestingentry(address account)
+        public
+        view
+        returns (uint[2])
+    {
+        uint index = getnextvestingindex(account);
+        if (index == numvestingentries(account)) {
+            return [uint(0), 0];
+        }
+        return getvestingscheduleentry(account, index);
+    }
+
+    
+    function getnextvestingtime(address account)
+        external
+        view
+        returns (uint)
+    {
+        return getnextvestingentry(account)[time_index];
+    }
+
+    
+    function getnextvestingquantity(address account)
+        external
+        view
+        returns (uint)
+    {
+        return getnextvestingentry(account)[quantity_index];
+    }
+
+
+    
+
+    
+    function withdrawhavvens(uint quantity)
+        external
+        onlyowner
+        onlyduringsetup
+    {
+        havven.transfer(havven, quantity);
+    }
+
+    
+    function purgeaccount(address account)
+        external
+        onlyowner
+        onlyduringsetup
+    {
+        delete vestingschedules[account];
+        totalvestedbalance = safesub(totalvestedbalance, totalvestedaccountbalance[account]);
+        delete totalvestedaccountbalance[account];
+    }
+
+    
+    function appendvestingentry(address account, uint time, uint quantity)
+        public
+        onlyowner
+        onlyduringsetup
+    {
+        
+        require(now < time);
+        require(quantity != 0);
+
+        
+        totalvestedbalance = safeadd(totalvestedbalance, quantity);
+        require(totalvestedbalance <= havven.balanceof(this));
+
+        
+        uint schedulelength = vestingschedules[account].length;
+        require(schedulelength <= max_vesting_entries);
+
+        if (schedulelength == 0) {
+            totalvestedaccountbalance[account] = quantity;
+        } else {
+            
+            require(getvestingtime(account, numvestingentries(account)  1) < time);
+            totalvestedaccountbalance[account] = safeadd(totalvestedaccountbalance[account], quantity);
+        }
+
+        vestingschedules[account].push([time, quantity]);
+    }
+
+    
+    function addvestingschedule(address account, uint[] times, uint[] quantities)
+        external
+        onlyowner
+        onlyduringsetup
+    {
+        for (uint i = 0; i < times.length; i++) {
+            appendvestingentry(account, times[i], quantities[i]);
+        }
+
+    }
+
+    
+    function vest()
+        external
+    {
+        uint numentries = numvestingentries(msg.sender);
+        uint total;
+        for (uint i = 0; i < numentries; i++) {
+            uint time = getvestingtime(msg.sender, i);
+            
+            if (time > now) {
+                break;
+            }
+            uint qty = getvestingquantity(msg.sender, i);
+            if (qty == 0) {
+                continue;
+            }
+
+            vestingschedules[msg.sender][i] = [0, 0];
+            total = safeadd(total, qty);
+        }
+
+        if (total != 0) {
+            totalvestedbalance = safesub(totalvestedbalance, total);
+            totalvestedaccountbalance[msg.sender] = safesub(totalvestedaccountbalance[msg.sender], total);
+            havven.transfer(msg.sender, total);
+            emit vested(msg.sender, now, total);
+        }
+    }
+
+
+    
+
+    event havvenupdated(address newhavven);
+
+    event vested(address indexed beneficiary, uint time, uint value);
+}
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+
+
+
+contract selfdestructible is owned {
+	
+	uint public initiationtime;
+	bool public selfdestructinitiated;
+	address public selfdestructbeneficiary;
+	uint public constant selfdestruct_delay = 4 weeks;
+
+	
+	constructor(address _owner)
+	    owned(_owner)
+	    public
+	{
+		require(_owner != address(0));
+		selfdestructbeneficiary = _owner;
+		emit selfdestructbeneficiaryupdated(_owner);
+	}
+
+	
+	function setselfdestructbeneficiary(address _beneficiary)
+		external
+		onlyowner
+	{
+		require(_beneficiary != address(0));
+		selfdestructbeneficiary = _beneficiary;
+		emit selfdestructbeneficiaryupdated(_beneficiary);
+	}
+
+	
+	function initiateselfdestruct()
+		external
+		onlyowner
+	{
+		initiationtime = now;
+		selfdestructinitiated = true;
+		emit selfdestructinitiated(selfdestruct_delay);
+	}
+
+	
+	function terminateselfdestruct()
+		external
+		onlyowner
+	{
+		initiationtime = 0;
+		selfdestructinitiated = false;
+		emit selfdestructterminated();
+	}
+
+	
+	function selfdestruct()
+		external
+		onlyowner
+	{
+		require(selfdestructinitiated && initiationtime + selfdestruct_delay < now);
+		address beneficiary = selfdestructbeneficiary;
+		emit selfdestructed(beneficiary);
+		selfdestruct(beneficiary);
+	}
+
+	event selfdestructterminated();
+	event selfdestructed(address beneficiary);
+	event selfdestructinitiated(uint selfdestructdelay);
+	event selfdestructbeneficiaryupdated(address newbeneficiary);
+}
+
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+import ;
+import ;
+import ;
+
+contract nomin is feetoken {
+
+    
+
+    
+    court public court;
+    havven public havven;
+
+    
+    mapping(address => bool) public frozen;
+
+    
+    uint constant transfer_fee_rate = 15 * unit / 10000;
+    string constant token_name = ;
+    string constant token_symbol = ;
+
+    
+
+    constructor(address _proxy, tokenstate _tokenstate, havven _havven,
+                uint _totalsupply,
+                address _owner)
+        feetoken(_proxy, _tokenstate,
+                 token_name, token_symbol, _totalsupply,
+                 transfer_fee_rate,
+                 _havven, 
+                 _owner)
+        public
+    {
+        require(_proxy != 0 && address(_havven) != 0 && _owner != 0);
+        
+        frozen[fee_address] = true;
+        havven = _havven;
+    }
+
+    
+
+    function setcourt(court _court)
+        external
+        optionalproxy_onlyowner
+    {
+        court = _court;
+        emitcourtupdated(_court);
+    }
+
+    function sethavven(havven _havven)
+        external
+        optionalproxy_onlyowner
+    {
+        
+        
+        havven = _havven;
+        setfeeauthority(_havven);
+        emithavvenupdated(_havven);
+    }
+
+
+    
+
+    
+    function transfer(address to, uint value)
+        public
+        optionalproxy
+        returns (bool)
+    {
+        require(!frozen[to]);
+        return _transfer_byproxy(messagesender, to, value);
+    }
+
+    
+    function transferfrom(address from, address to, uint value)
+        public
+        optionalproxy
+        returns (bool)
+    {
+        require(!frozen[to]);
+        return _transferfrom_byproxy(messagesender, from, to, value);
+    }
+
+    function transfersenderpaysfee(address to, uint value)
+        public
+        optionalproxy
+        returns (bool)
+    {
+        require(!frozen[to]);
+        return _transfersenderpaysfee_byproxy(messagesender, to, value);
+    }
+
+    function transferfromsenderpaysfee(address from, address to, uint value)
+        public
+        optionalproxy
+        returns (bool)
+    {
+        require(!frozen[to]);
+        return _transferfromsenderpaysfee_byproxy(messagesender, from, to, value);
+    }
+
+    
+    function freezeandconfiscate(address target)
+        external
+        onlycourt
+    {
+        
+        
+        uint motionid = court.targetmotionid(target);
+        require(motionid != 0);
+
+        
+        
+        require(court.motionconfirming(motionid));
+        require(court.motionpasses(motionid));
+        require(!frozen[target]);
+
+        
+        uint balance = tokenstate.balanceof(target);
+        tokenstate.setbalanceof(fee_address, safeadd(tokenstate.balanceof(fee_address), balance));
+        tokenstate.setbalanceof(target, 0);
+        frozen[target] = true;
+        emitaccountfrozen(target, balance);
+        emittransfer(target, fee_address, balance);
+    }
+
+    
+    function unfreezeaccount(address target)
+        external
+        optionalproxy_onlyowner
+    {
+        require(frozen[target] && target != fee_address);
+        frozen[target] = false;
+        emitaccountunfrozen(target);
+    }
+
+    
+    function issue(address account, uint amount)
+        external
+        onlyhavven
+    {
+        tokenstate.setbalanceof(account, safeadd(tokenstate.balanceof(account), amount));
+        totalsupply = safeadd(totalsupply, amount);
+        emittransfer(address(0), account, amount);
+        emitissued(account, amount);
+    }
+
+    
+    function burn(address account, uint amount)
+        external
+        onlyhavven
+    {
+        tokenstate.setbalanceof(account, safesub(tokenstate.balanceof(account), amount));
+        totalsupply = safesub(totalsupply, amount);
+        emittransfer(account, address(0), amount);
+        emitburned(account, amount);
+    }
+
+    
+
+    modifier onlyhavven() {
+        require(havven(msg.sender) == havven);
+        _;
+    }
+
+    modifier onlycourt() {
+        require(court(msg.sender) == court);
+        _;
+    }
+
+    
+
+    event courtupdated(address newcourt);
+    bytes32 constant courtupdated_sig = keccak256();
+    function emitcourtupdated(address newcourt) internal {
+        proxy._emit(abi.encode(newcourt), 1, courtupdated_sig, 0, 0, 0);
+    }
+
+    event havvenupdated(address newhavven);
+    bytes32 constant havvenupdated_sig = keccak256();
+    function emithavvenupdated(address newhavven) internal {
+        proxy._emit(abi.encode(newhavven), 1, havvenupdated_sig, 0, 0, 0);
+    }
+
+    event accountfrozen(address indexed target, uint balance);
+    bytes32 constant accountfrozen_sig = keccak256();
+    function emitaccountfrozen(address target, uint balance) internal {
+        proxy._emit(abi.encode(balance), 2, accountfrozen_sig, bytes32(target), 0, 0);
+    }
+
+    event accountunfrozen(address indexed target);
+    bytes32 constant accountunfrozen_sig = keccak256();
+    function emitaccountunfrozen(address target) internal {
+        proxy._emit(abi.encode(), 2, accountunfrozen_sig, bytes32(target), 0, 0);
+    }
+
+    event issued(address indexed account, uint amount);
+    bytes32 constant issued_sig = keccak256();
+    function emitissued(address account, uint amount) internal {
+        proxy._emit(abi.encode(amount), 2, issued_sig, bytes32(account), 0, 0);
+    }
+
+    event burned(address indexed account, uint amount);
+    bytes32 constant burned_sig = keccak256();
+    function emitburned(address account, uint amount) internal {
+        proxy._emit(abi.encode(amount), 2, burned_sig, bytes32(account), 0, 0);
+    }
+}
+
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+
+
+
+contract feetoken is externstatetoken {
+
+    
+
+    
+
+    
+    uint public transferfeerate;
+    
+    uint constant max_transfer_fee_rate = unit / 10;
+    
+    address public feeauthority;
+    
+    address public constant fee_address = 0xfeefeefeefeefeefeefeefeefeefeefeefeefeef;
+
+
+    
+
+    
+    constructor(address _proxy, tokenstate _tokenstate, string _name, string _symbol, uint _totalsupply,
+                uint _transferfeerate, address _feeauthority, address _owner)
+        externstatetoken(_proxy, _tokenstate,
+                         _name, _symbol, _totalsupply,
+                         _owner)
+        public
+    {
+        feeauthority = _feeauthority;
+
+        
+        require(_transferfeerate <= max_transfer_fee_rate);
+        transferfeerate = _transferfeerate;
+    }
+
+    
+
+    
+    function settransferfeerate(uint _transferfeerate)
+        external
+        optionalproxy_onlyowner
+    {
+        require(_transferfeerate <= max_transfer_fee_rate);
+        transferfeerate = _transferfeerate;
+        emittransferfeerateupdated(_transferfeerate);
+    }
+
+    
+    function setfeeauthority(address _feeauthority)
+        public
+        optionalproxy_onlyowner
+    {
+        feeauthority = _feeauthority;
+        emitfeeauthorityupdated(_feeauthority);
+    }
+
+    
+
+    
+    function transferfeeincurred(uint value)
+        public
+        view
+        returns (uint)
+    {
+        return safemul_dec(value, transferfeerate);
+        
+    }
+
+    
+    function transferplusfee(uint value)
+        external
+        view
+        returns (uint)
+    {
+        return safeadd(value, transferfeeincurred(value));
+    }
+
+    
+    function amountreceived(uint value)
+        public
+        view
+        returns (uint)
+    {
+        return safediv_dec(value, safeadd(unit, transferfeerate));
+    }
+
+    
+    function feepool()
+        external
+        view
+        returns (uint)
+    {
+        return tokenstate.balanceof(fee_address);
+    }
+
+    
+
+    
+    function _internaltransfer(address from, address to, uint amount, uint fee)
+        internal
+        returns (bool)
+    {
+        
+        require(to != address(0));
+        require(to != address(this));
+        require(to != address(proxy));
+
+        
+        tokenstate.setbalanceof(from, safesub(tokenstate.balanceof(from), safeadd(amount, fee)));
+        tokenstate.setbalanceof(to, safeadd(tokenstate.balanceof(to), amount));
+        tokenstate.setbalanceof(fee_address, safeadd(tokenstate.balanceof(fee_address), fee));
+
+        
+        emittransfer(from, to, amount);
+        emittransfer(from, fee_address, fee);
+
+        return true;
+    }
+
+    
+    function _transfer_byproxy(address sender, address to, uint value)
+        internal
+        returns (bool)
+    {
+        uint received = amountreceived(value);
+        uint fee = safesub(value, received);
+
+        return _internaltransfer(sender, to, received, fee);
+    }
+
+    
+    function _transferfrom_byproxy(address sender, address from, address to, uint value)
+        internal
+        returns (bool)
+    {
+        
+        uint received = amountreceived(value);
+        uint fee = safesub(value, received);
+
+        
+        tokenstate.setallowance(from, sender, safesub(tokenstate.allowance(from, sender), value));
+
+        return _internaltransfer(from, to, received, fee);
+    }
+
+    
+    function _transfersenderpaysfee_byproxy(address sender, address to, uint value)
+        internal
+        returns (bool)
+    {
+        
+        uint fee = transferfeeincurred(value);
+        return _internaltransfer(sender, to, value, fee);
+    }
+
+    
+    function _transferfromsenderpaysfee_byproxy(address sender, address from, address to, uint value)
+        internal
+        returns (bool)
+    {
+        
+        uint fee = transferfeeincurred(value);
+        uint total = safeadd(value, fee);
+
+        
+        tokenstate.setallowance(from, sender, safesub(tokenstate.allowance(from, sender), total));
+
+        return _internaltransfer(from, to, value, fee);
+    }
+
+    
+    function withdrawfees(address account, uint value)
+        external
+        onlyfeeauthority
+        returns (bool)
+    {
+        require(account != address(0));
+
+        
+        if (value == 0) {
+            return false;
+        }
+
+        
+        tokenstate.setbalanceof(fee_address, safesub(tokenstate.balanceof(fee_address), value));
+        tokenstate.setbalanceof(account, safeadd(tokenstate.balanceof(account), value));
+
+        emitfeeswithdrawn(account, value);
+        emittransfer(fee_address, account, value);
+
+        return true;
+    }
+
+    
+    function donatetofeepool(uint n)
+        external
+        optionalproxy
+        returns (bool)
+    {
+        address sender = messagesender;
+        
+        uint balance = tokenstate.balanceof(sender);
+        require(balance != 0);
+
+        
+        tokenstate.setbalanceof(sender, safesub(balance, n));
+        tokenstate.setbalanceof(fee_address, safeadd(tokenstate.balanceof(fee_address), n));
+
+        emitfeesdonated(sender, n);
+        emittransfer(sender, fee_address, n);
+
+        return true;
+    }
+
+
+    
+
+    modifier onlyfeeauthority
+    {
+        require(msg.sender == feeauthority);
+        _;
+    }
+
+
+    
+
+    event transferfeerateupdated(uint newfeerate);
+    bytes32 constant transferfeerateupdated_sig = keccak256();
+    function emittransferfeerateupdated(uint newfeerate) internal {
+        proxy._emit(abi.encode(newfeerate), 1, transferfeerateupdated_sig, 0, 0, 0);
+    }
+
+    event feeauthorityupdated(address newfeeauthority);
+    bytes32 constant feeauthorityupdated_sig = keccak256();
+    function emitfeeauthorityupdated(address newfeeauthority) internal {
+        proxy._emit(abi.encode(newfeeauthority), 1, feeauthorityupdated_sig, 0, 0, 0);
+    } 
+
+    event feeswithdrawn(address indexed account, uint value);
+    bytes32 constant feeswithdrawn_sig = keccak256();
+    function emitfeeswithdrawn(address account, uint value) internal {
+        proxy._emit(abi.encode(value), 2, feeswithdrawn_sig, bytes32(account), 0, 0);
+    }
+
+    event feesdonated(address indexed donor, uint value);
+    bytes32 constant feesdonated_sig = keccak256();
+    function emitfeesdonated(address donor, uint value) internal {
+        proxy._emit(abi.encode(value), 2, feesdonated_sig, bytes32(donor), 0, 0);
+    }
+}
+
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+
+
+
+contract pausable is owned {
+    
+    uint public lastpausetime;
+    bool public paused;
+
+    
+    constructor(address _owner)
+        owned(_owner)
+        public
+    {
+        
+    }
+
+    
+    function setpaused(bool _paused)
+        external
+        onlyowner
+    {
+        
+        if (_paused == paused) {
+            return;
+        }
+
+        
+        paused = _paused;
+        
+        
+        if (paused) {
+            lastpausetime = now;
+        }
+
+        
+        emit pausechanged(paused);
+    }
+
+    event pausechanged(bool ispaused);
+
+    modifier notpaused {
+        require(!paused);
+        _;
+    }
+}
+
+
+
+pragma solidity 0.4.24;
+
+
+
+contract safedecimalmath {
+
+    
+    uint8 public constant decimals = 18;
+
+    
+    uint public constant unit = 10 ** uint(decimals);
+
+    
+    function addissafe(uint x, uint y)
+        pure
+        internal
+        returns (bool)
+    {
+        return x + y >= y;
+    }
+
+    
+    function safeadd(uint x, uint y)
+        pure
+        internal
+        returns (uint)
+    {
+        require(x + y >= y);
+        return x + y;
+    }
+
+    
+    function subissafe(uint x, uint y)
+        pure
+        internal
+        returns (bool)
+    {
+        return y <= x;
+    }
+
+    
+    function safesub(uint x, uint y)
+        pure
+        internal
+        returns (uint)
+    {
+        require(y <= x);
+        return x  y;
+    }
+
+    
+    function mulissafe(uint x, uint y)
+        pure
+        internal
+        returns (bool)
+    {
+        if (x == 0) {
+            return true;
+        }
+        return (x * y) / x == y;
+    }
+
+    
+    function safemul(uint x, uint y)
+        pure
+        internal
+        returns (uint)
+    {
+        if (x == 0) {
+            return 0;
+        }
+        uint p = x * y;
+        require(p / x == y);
+        return p;
+    }
+
+    
+    function safemul_dec(uint x, uint y)
+        pure
+        internal
+        returns (uint)
+    {
+        
+        return safemul(x, y) / unit;
+
+    }
+
+    
+    function divissafe(uint x, uint y)
+        pure
+        internal
+        returns (bool)
+    {
+        return y != 0;
+    }
+
+    
+    function safediv(uint x, uint y)
+        pure
+        internal
+        returns (uint)
+    {
+        
+        require(y != 0);
+        return x / y;
+    }
+
+    
+    function safediv_dec(uint x, uint y)
+        pure
+        internal
+        returns (uint)
+    {
+        
+        return safediv(safemul(x, unit), y);
+    }
+
+    
+    function inttodec(uint i)
+        pure
+        internal
+        returns (uint)
+    {
+        return safemul(i, unit);
+    }
+}
+
+
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+import ;
+
+
+contract proxy is owned {
+
+    proxyable public target;
+    bool public usedelegatecall;
+
+    constructor(address _owner)
+        owned(_owner)
+        public
+    {}
+
+    function settarget(proxyable _target)
+        external
+        onlyowner
+    {
+        target = _target;
+        emit targetupdated(_target);
+    }
+
+    function setusedelegatecall(bool value) 
+        external
+        onlyowner
+    {
+        usedelegatecall = value;
+    }
+
+    function _emit(bytes calldata, uint numtopics,
+                   bytes32 topic1, bytes32 topic2,
+                   bytes32 topic3, bytes32 topic4)
+        external
+        onlytarget
+    {
+        uint size = calldata.length;
+        bytes memory _calldata = calldata;
+
+        assembly {
+            
+            switch numtopics
+            case 0 {
+                log0(add(_calldata, 32), size)
+            } 
+            case 1 {
+                log1(add(_calldata, 32), size, topic1)
+            }
+            case 2 {
+                log2(add(_calldata, 32), size, topic1, topic2)
+            }
+            case 3 {
+                log3(add(_calldata, 32), size, topic1, topic2, topic3)
+            }
+            case 4 {
+                log4(add(_calldata, 32), size, topic1, topic2, topic3, topic4)
+            }
+        }
+    }
+
+    function()
+        external
+        payable
+    {
+        if (usedelegatecall) {
+            assembly {
+                
+                let free_ptr := mload(0x40)
+                calldatacopy(free_ptr, 0, calldatasize)
+
+                
+                let result := delegatecall(gas, sload(target_slot), free_ptr, calldatasize, 0, 0)
+                returndatacopy(free_ptr, 0, returndatasize)
+
+                
+                if iszero(result) { revert(free_ptr, returndatasize) }
+                return(free_ptr, returndatasize)
+            }
+        } else {
+            
+            target.setmessagesender(msg.sender);
+            assembly {
+                let free_ptr := mload(0x40)
+                calldatacopy(free_ptr, 0, calldatasize)
+
+                
+                let result := call(gas, sload(target_slot), callvalue, free_ptr, calldatasize, 0, 0)
+                returndatacopy(free_ptr, 0, returndatasize)
+
+                if iszero(result) { revert(free_ptr, returndatasize) }
+                return(free_ptr, returndatasize)
+            }
+        }
+    }
+
+    modifier onlytarget {
+        require(proxyable(msg.sender) == target);
+        _;
+    }
+
+    event targetupdated(proxyable newtarget);
+}
+
+
+
+
+pragma solidity 0.4.24;
+
+
+contract limitedsetup {
+
+    uint setupexpirytime;
+
+    
+    constructor(uint setupduration)
+        public
+    {
+        setupexpirytime = now + setupduration;
+    }
+
+    modifier onlyduringsetup
+    {
+        require(now < setupexpirytime);
+        _;
+    }
+}
+
+
+
+
+pragma solidity 0.4.24;
+
+import ;
+import ;
+
+
+contract proxyable is owned {
+    
+    proxy public proxy;
+
+     
+    address messagesender; 
+
+    constructor(address _proxy, address _owner)
+        owned(_owner)
+        public
+    {
+        proxy = proxy(_proxy);
+        emit proxyupdated(_proxy);
+    }
+
+    function setproxy(address _proxy)
+        external
+        onlyowner
+    {
+        proxy = proxy(_proxy);
+        emit proxyupdated(_proxy);
+    }
+
+    function setmessagesender(address sender)
+        external
+        onlyproxy
+    {
+        messagesender = sender;
+    }
+
+    modifier onlyproxy {
+        require(proxy(msg.sender) == proxy);
+        _;
+    }
+
+    modifier optionalproxy
+    {
+        if (proxy(msg.sender) != proxy) {
+            messagesender = msg.sender;
+        }
+        _;
+    }
+
+    modifier optionalproxy_onlyowner
+    {
+        if (proxy(msg.sender) != proxy) {
+            messagesender = msg.sender;
+        }
+        require(messagesender == owner);
+        _;
+    }
+
+    event proxyupdated(address proxyaddress);
+}
+
+
+
+pragma solidity 0.4.24;
+
+
+import ;
+
+
+contract tokenstate is state {
+
+    
+    mapping(address => uint) public balanceof;
+    mapping(address => mapping(address => uint)) public allowance;
+
+    
+    constructor(address _owner, address _associatedcontract)
+        state(_owner, _associatedcontract)
+        public
+    {}
+
+    
+
+    
+    function setallowance(address tokenowner, address spender, uint value)
+        external
+        onlyassociatedcontract
+    {
+        allowance[tokenowner][spender] = value;
+    }
+
+    
+    function setbalanceof(address account, uint value)
+        external
+        onlyassociatedcontract
+    {
+        balanceof[account] = value;
+    }
+}
+
+
+
+pragma solidity 0.4.24;
+
+
+contract owned {
+    address public owner;
+    address public nominatedowner;
+
+    
+    constructor(address _owner)
+        public
+    {
+        require(_owner != address(0));
+        owner = _owner;
+        emit ownerchanged(address(0), _owner);
+    }
+
+    
+    function nominatenewowner(address _owner)
+        external
+        onlyowner
+    {
+        nominatedowner = _owner;
+        emit ownernominated(_owner);
+    }
+
+    
+    function acceptownership()
+        external
+    {
+        require(msg.sender == nominatedowner);
+        emit ownerchanged(owner, nominatedowner);
+        owner = nominatedowner;
+        nominatedowner = address(0);
+    }
+
+    modifier onlyowner
+    {
+        require(msg.sender == owner);
+        _;
+    }
+
+    event ownernominated(address newowner);
+    event ownerchanged(address oldowner, address newowner);
+}
+
+
+pragma solidity ^0.4.23;
+
+
+import ;
+import ;
+
+
+
+contract publichavven is havven {
+    
+    uint constant public min_fee_period_duration = 1 days;
+    uint constant public max_fee_period_duration = 26 weeks;
+
+    uint constant public max_issuance_ratio = unit;
+
+    constructor(address _proxy, tokenstate _state, address _owner, address _oracle, uint _price, address[] _issuers, havven _oldhavven)
+        havven(_proxy, _state, _owner, _oracle, _price, _issuers, _oldhavven)
+        public
+    {}
+
+     
+    function endow(address to, uint value)
+        external
+        optionalproxy_onlyowner
+    {
+        address sender = this;
+        
+        require(nominsissued[sender] == 0 || value <= transferablehavvens(sender));
+        
+        tokenstate.setbalanceof(sender, safesub(tokenstate.balanceof(sender), value));
+        tokenstate.setbalanceof(to, safeadd(tokenstate.balanceof(to), value));
+        emittransfer(sender, to, value);
+    }
+
+    function setfeeperiodstarttime(uint value)
+        external
+        optionalproxy_onlyowner
+    {
+        feeperiodstarttime = value;
+    }
+
+    function setlastfeeperiodstarttime(uint value)
+        external
+        optionalproxy_onlyowner
+    {
+        lastfeeperiodstarttime = value;
+    }
+
+    function settotalissuancedata(uint cbs, uint lab, uint lm)
+        external
+        optionalproxy_onlyowner
+    {
+        totalissuancedata.currentbalancesum = cbs;
+        totalissuancedata.lastaveragebalance = lab;
+        totalissuancedata.lastmodified = lm;
+    }
+    
+    function setissuancedata(address account, uint cbs, uint lab, uint lm)
+        external
+        optionalproxy_onlyowner
+    {
+        issuancedata[account].currentbalancesum = cbs;
+        issuancedata[account].lastaveragebalance = lab;
+        issuancedata[account].lastmodified = lm;
+    }
+
+    function setnominsissued(address account, uint value)
+        external
+        optionalproxy_onlyowner
+    {
+        nominsissued[account] = value;
+    }
+
+    function currenttime()
+        public
+        returns (uint)
+    {
+        return now;
+    }
+}
+
+pragma solidity ^0.4.23;
+
+
+import ;
+
+
+contract oneweeksetup is limitedsetup(1 weeks) {
+	function testfunc() 
+		public
+		onlyduringsetup
+		returns (bool)
+	{
+		return true;
+	}
+
+	function publicsetupexpirytime()
+		public
+		returns (uint)
+	{
+		return setupexpirytime;
+	}
+}
+
+
+pragma solidity ^0.4.23;
+
+
+import ;
+import ;
+
+
+contract publicnomin is nomin {
+
+    uint constant max_transfer_fee_rate = unit;  
+
+    constructor(address _proxy, tokenstate _tokenstate, havven _havven,
+                uint _totalsupply,
+                address _owner)
+        nomin(_proxy, _tokenstate, _havven, _totalsupply, _owner)
+        public {}
+    
+    function debugemptyfeepool()
+        public
+    {
+        tokenstate.setbalanceof(fee_address, 0);
+    }
+
+    function debugfreezeaccount(address target)
+        optionalproxy
+        public
+    {
+        require(!frozen[target]);
+        uint balance = tokenstate.balanceof(target);
+        tokenstate.setbalanceof(fee_address, safeadd(tokenstate.balanceof(fee_address), balance));
+        tokenstate.setbalanceof(target, 0);
+        frozen[target] = true;
+        emitaccountfrozen(target, balance);
+        emittransfer(target, fee_address, balance);
+    }
+
+    function givenomins(address account, uint amount)
+        optionalproxy
+        public
+    {
+        tokenstate.setbalanceof(account, safeadd(amount, tokenstate.balanceof(account)));
+        totalsupply = safeadd(totalsupply, amount);
+    }
+
+    function clearnomins(address account)
+        optionalproxy
+        public
+    {
+        totalsupply = safesub(totalsupply, tokenstate.balanceof(account));
+        tokenstate.setbalanceof(account, 0);
+    }
+
+    function generatefees(uint amount)
+        optionalproxy
+        public
+    {
+        totalsupply = safeadd(totalsupply, amount);
+        tokenstate.setbalanceof(fee_address, safeadd(balanceof(fee_address), amount));
+    }
+
+    
+    function publicissue(address target, uint amount)
+        public
+    {
+        tokenstate.setbalanceof(target, safeadd(tokenstate.balanceof(target), amount));
+        totalsupply = safeadd(totalsupply, amount);
+        emittransfer(address(0), target, amount);
+        emitissued(target, amount);
+    }
+
+    
+    function publicburn(address target, uint amount)
+        public
+    {
+        tokenstate.setbalanceof(target, safesub(tokenstate.balanceof(target), amount));
+        totalsupply = safesub(totalsupply, amount);
+        emittransfer(target, address(0), amount);
+        emitburned(target, amount);
+    }
+}
+
+pragma solidity ^0.4.23;
+
+
+import ;
+
+
+contract payablesd is selfdestructible {
+
+    constructor(address _owner)
+        selfdestructible(_owner) public {}
+
+    function () public payable {}
+}
+
+pragma solidity ^0.4.23;
+
+
+import ;
+
+
+contract publiccourt is court {
+
+    constructor(havven _havven, nomin _nomin, address _owner)
+        court(_havven, _nomin, _owner)
+        public
+    {}
+
+    function _havven()
+        public
+        view
+        returns (address)
+    {
+        return havven;
+    }
+
+    function _nomin()
+        public
+        view
+        returns (address)
+    {
+        return nomin;
+    }
+
+    function _nextmotionid()
+        public
+        view
+        returns (uint)
+    {
+        return nextmotionid;
+    }
+
+    function _min_voting_period()
+        public
+        view
+        returns (uint)
+    {
+        return min_voting_period;
+    }
+
+    function _max_voting_period()
+        public
+        view
+        returns (uint)
+    {
+        return max_voting_period;
+    }
+
+    function _min_confirmation_period()
+        public
+        view
+        returns (uint)
+    {
+        return min_confirmation_period;
+    }
+
+    function _max_confirmation_period()
+        public
+        view
+        returns (uint)
+    {
+        return max_confirmation_period;
+    }
+
+    function _min_required_participation()
+        public
+        view
+        returns (uint)
+    {
+        return min_required_participation;
+    }
+
+    function _min_required_majority()
+        public
+        view
+        returns (uint)
+    {
+        return min_required_majority;
+    }
+
+    function _voteweight(address account, uint motionid)
+        public
+        view
+        returns (uint)
+    {
+        return voteweight[account][motionid];
+    }
+
+    function publicsetupvote(uint voteindex)
+        public
+        returns (uint)
+    {
+        uint weight = setupvote(voteindex);
+        emit setupvotereturnvalue(weight);
+        return weight;
+    }
+
+    event setupvotereturnvalue(uint value);
+}
+
+
+pragma solidity ^0.4.23;
+
+
+import ;
+import ;
+
+
+contract publichavvenescrow is havvenescrow {
+
+	constructor(address _owner, havven _havven)
+		havvenescrow(_owner, _havven)
+		public 
+	{
+		
+		setupexpirytime = now + 50000 weeks;
+	}
+
+    function addregularvestingschedule(address account, uint conclusiontime,
+                                       uint totalquantity, uint vestingperiods)
+        external
+        onlyowner
+        onlyduringsetup
+    {
+        
+        uint totalduration = safesub(conclusiontime, now);
+
+        
+        uint periodquantity = safediv(totalquantity, vestingperiods);
+        uint periodduration = safediv(totalduration, vestingperiods);
+
+        
+        for (uint i = 1; i < vestingperiods; i++) {
+            uint periodconclusiontime = safeadd(now, safemul(i, periodduration));
+            appendvestingentry(account, periodconclusiontime, periodquantity);
+        }
+
+        
+        uint finalperiodquantity = safesub(totalquantity, safemul(periodquantity, (vestingperiods  1)));
+        appendvestingentry(account, conclusiontime, finalperiodquantity);
+    }
+
+}
+
+
+pragma solidity ^0.4.23;
+
+import ;
+
+contract publicmath is safedecimalmath {
+    
+    function pubaddissafe(uint x, uint y)
+        pure
+        public
+        returns (bool)
+    {
+        return addissafe(x, y);
+    }
+
+    function pubsafeadd(uint x, uint y)
+        pure
+        public
+        returns (uint)
+    {
+        return safeadd(x, y);
+    }
+
+    function pubsubissafe(uint x, uint y)
+        pure
+        public
+        returns (bool)
+    {
+        return subissafe(x, y);
+    }
+
+    function pubsafesub(uint x, uint y)
+        pure
+        public
+        returns (uint)
+    {
+        return safesub(x, y);
+    }
+
+    function pubmulissafe(uint x, uint y)
+        pure
+        public
+        returns (bool)
+    {
+        return mulissafe(x, y);
+    }
+
+    function pubsafemul(uint x, uint y)
+        pure
+        public
+        returns (uint)
+    {
+        return safemul(x, y);
+    }
+
+    function pubsafemul_dec(uint x, uint y)
+        pure
+        public
+        returns (uint)
+    {
+        return safemul_dec(x, y);
+    }
+
+    function pubdivissafe(uint x, uint y)
+        pure
+        public
+        returns (bool)
+    {
+        return divissafe(x, y);
+    }
+
+    function pubsafediv(uint x, uint y)
+        pure
+        public
+        returns (uint)
+    {
+        return safediv(x, y);
+    }
+
+    function pubsafediv_dec(uint x, uint y)
+        pure
+        public
+        returns (uint)
+    {
+        return safediv_dec(x, y);
+    }
+
+    function pubinttodec(uint i)
+        pure
+        public
+        returns (uint)
+    {
+        return inttodec(i);
+    }
+}
+
+pragma solidity 0.4.24;
+
+import ;
+
+
+contract testablepausable is pausable {
+
+    uint public somevalue;
+
+    constructor(address _owner)
+        pausable(_owner)
+        public
+    {}
+
+    function setsomevalue(uint _value)
+        external
+        notpaused
+    {
+        somevalue = _value;
+    }
+
+}
+
+
+pragma solidity ^0.4.23;
+
+import ;
+
+contract publicest is externstatetoken {
+    constructor(address _proxy, tokenstate _tokenstate,
+                string _name, string _symbol, uint _totalsupply,
+                address _owner)
+        externstatetoken(_proxy, _tokenstate, _name, _symbol, _totalsupply, _owner)
+        public
+    {}
+
+    function transfer(address to, uint value)
+        optionalproxy
+        external
+    {
+        _transfer_byproxy(messagesender, to, value);
+    }
+
+    function transferfrom(address from, address to, uint value)
+        optionalproxy
+        external
+    {
+        _transferfrom_byproxy(messagesender, from, to, value);
+    }
+}
+
+pragma solidity ^0.4.23;
+
+import ;
+
+contract publicfeetoken is feetoken {
+    constructor(address _proxy, tokenstate _tokenstate,
+                string _name, string _symbol, uint _totalsupply,
+                uint _transferfeerate,
+                address _feeauthority, address _owner)
+        feetoken(_proxy, _tokenstate,
+                 _name, _symbol, _totalsupply, _transferfeerate,
+                 _feeauthority, _owner)
+        public
+    {}
+
+    function transfer(address to, uint value)
+        optionalproxy
+        external
+    {
+        _transfer_byproxy(messagesender, to, value);
+    }
+
+    function transferfrom(address from, address to, uint value)
+        optionalproxy
+        external
+    {
+        _transferfrom_byproxy(messagesender, from, to, value);
+    }
+
+    function transfersenderpaysfee(address to, uint value)
+        optionalproxy
+        external
+    {
+        _transfersenderpaysfee_byproxy(messagesender, to, value);
+    }
+
+    function transferfromsenderpaysfee(address from, address to, uint value)
+        optionalproxy
+        external
+    {
+        _transferfromsenderpaysfee_byproxy(messagesender, from, to, value);
+    }
+
+    function givetokens(address account, uint amount)
+        optionalproxy
+        public
+    {
+        tokenstate.setbalanceof(account, safeadd(amount, tokenstate.balanceof(account)));
+        totalsupply = safeadd(totalsupply, amount);
+    }
+
+    function cleartokens(address account)
+        optionalproxy
+        public
+    {
+        totalsupply = safesub(totalsupply, tokenstate.balanceof(account));
+        tokenstate.setbalanceof(account, 0);
+    }
+
+}
+
+pragma solidity ^0.4.23;
+
+import ;
+
+contract fakecourt {
+    nomin public nomin;
+
+    mapping(uint => bool) public motionconfirming;
+    mapping(uint => bool) public motionpasses;
+    mapping(address => uint) public targetmotionid;
+
+    function setnomin(nomin newnomin)
+        public
+    {
+        nomin = newnomin;
+    }
+
+    function setconfirming(uint motionid, bool status)
+        public
+    {
+        motionconfirming[motionid] = status;
+    }
+
+    function setvotepasses(uint motionid, bool status)
+        public
+    {
+        motionpasses[motionid] = status;
+    }
+
+    function settargetmotionid(address target, uint motionid)
+        public
+    {
+        targetmotionid[target] = motionid;
+    }
+
+    function freezeandconfiscate(address target)
+        public
+    {
+        nomin.freezeandconfiscate(target);
+    }
+}
+

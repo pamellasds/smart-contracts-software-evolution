@@ -1,0 +1,2 @@
+similarity,combination
+5,['StablecoinEventInterface.sol', 'StablecoinProxy.sol', 'Migrations.sol', 'SafeMath.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']

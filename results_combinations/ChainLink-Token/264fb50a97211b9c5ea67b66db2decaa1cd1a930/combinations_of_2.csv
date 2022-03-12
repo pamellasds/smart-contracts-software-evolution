@@ -1,0 +1,4 @@
+similarity,combination
+1,['SafeMath.sol', 'SmartOracle.sol']
+1,['SafeMath.sol', 'TokenSale.sol']
+1,['SmartOracle.sol', 'TokenSale.sol']

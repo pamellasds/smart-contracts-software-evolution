@@ -1,0 +1,494 @@
+pragma solidity ^0.4.15;
+
+import ;
+
+contract basicnft is nft, nftevents {
+
+  uint public totaltokens;
+
+  
+  mapping(address => uint[]) public ownedtokens;
+  mapping(address => uint) _virtuallength;
+  mapping(uint => uint) _tokenindexinownerarray;
+
+  
+  mapping(uint => address) public tokenowner;
+
+  
+  mapping(uint => address) public allowedtransfer;
+
+  
+  mapping(uint => string) public tokenmetadata;
+
+  function totalsupply() public constant returns (uint) {
+    return totaltokens;
+  }
+
+  function balanceof(address owner) public constant returns (uint) {
+    return _virtuallength[owner];
+  }
+
+  function tokenbyindex(address owner, uint index) public constant returns (uint) {
+    return ownedtokens[owner][index];
+  }
+
+  function ownerof(uint tokenid) public constant returns (address) {
+    return tokenowner[tokenid];
+  }
+
+  function transfer(address to, uint tokenid) public {
+    require(msg.sender == tokenowner[tokenid]);
+    return _transfer(msg.sender, to, tokenid);
+  }
+
+  function approve(address beneficiary, uint tokenid) public {
+    require(msg.sender == beneficiary);
+
+    if (allowedtransfer[tokenid] != 0) {
+      allowedtransfer[tokenid] = 0;
+      tokentransferdisallowed(tokenid, allowedtransfer[tokenid]);
+    }
+    allowedtransfer[tokenid] = beneficiary;
+    tokentransferallowed(tokenid, beneficiary);
+  }
+
+  function transferfrom(address from, address to, uint tokenid) public {
+    return _transfer(from, to, tokenid);
+  }
+
+  function metadata(uint tokenid) constant public returns (string) {
+    return tokenmetadata[tokenid];
+  }
+
+  function updatetokenmetadata(uint tokenid, string _metadata) public {
+    require(msg.sender == tokenowner[tokenid]);
+    tokenmetadata[tokenid] = _metadata;
+    tokenmetadataupdated(tokenid, msg.sender, _metadata);
+  }
+
+  function _transfer(address from, address to, uint tokenid) internal {
+    require(tokenowner[tokenid] == from || allowedtransfer[tokenid] == from);
+
+    allowedtransfer[tokenid] = 0;
+    _removetokenfrom(from, tokenid);
+    _addtokento(to, tokenid);
+    tokentransferred(tokenid, from, to);
+  }
+
+  function _removetokenfrom(address from, uint tokenid) internal {
+    require(_virtuallength[from] > 0);
+
+    uint length = _virtuallength[from];
+    uint index = _tokenindexinownerarray[tokenid];
+    uint swaptoken = ownedtokens[from][length  1];
+
+    ownedtokens[from][index] = swaptoken;
+    _tokenindexinownerarray[swaptoken] = index;
+    _virtuallength[from];
+  }
+
+  function _addtokento(address owner, uint tokenid) internal {
+    if (ownedtokens[owner].length == _virtuallength[owner]) {
+      ownedtokens[owner].push(tokenid);
+    } else {
+      ownedtokens[owner][_virtuallength[owner]] = tokenid;
+    }
+    tokenowner[tokenid] = owner;
+    _tokenindexinownerarray[tokenid] = _virtuallength[owner];
+    _virtuallength[owner]++;
+  }
+}
+
+pragma solidity ^0.4.15;
+
+import ;
+import ;
+
+contract simplelandsell is ownable {
+
+  fakemana public token;
+  land public land;
+
+  function simplelandsell(address _token) {
+    token = fakemana(_token);
+    land = deployland();
+
+    land.assignnewparcel(msg.sender, buildtokenid(0, 0), );
+  }
+
+  function deployland() internal returns (land) {
+    return new land(this);
+  }
+
+  function exists(uint x, uint y) public constant returns (bool) {
+    return land.exists(x, y);
+  }
+
+  function buildtokenid(uint x, uint y) public constant returns (uint256) {
+    return land.buildtokenid(x, y);
+  }
+
+  event log(string info);
+
+  function buy(uint x, uint y, string data) public {
+    _buyland(x, y, data, msg.sender, msg.sender);
+  }
+
+  function _buyland(uint x, uint y, string metadata, address beneficiary, address fromaccount) internal {
+    if (exists(x, y)) {
+      revert();
+    }
+    if (!exists(x1, y) && !exists(x+1, y) && !exists(x, y1) && !exists(x, y+1)) {
+      revert();
+    }
+    uint cost = 1e21;
+    if (!token.transferfrom(fromaccount, this, cost)) {
+      revert();
+    }
+    token.burn(cost);
+    return land.assignnewparcel(beneficiary, buildtokenid(x, y), metadata);
+  }
+}
+
+pragma solidity ^0.4.15;
+
+contract nft {
+  function totalsupply() constant returns (uint);
+  function balanceof(address) constant returns (uint);
+
+  function tokenbyindex(address owner, uint index) constant returns (uint);
+  function ownerof(uint tokenid) constant returns (address);
+
+  function transfer(address to, uint tokenid);
+  function approve(address beneficiary, uint tokenid);
+
+  function transferfrom(address from, address to, uint tokenid);
+
+  function metadata(uint tokenid) constant returns (string);
+}
+
+contract nftevents {
+  event tokencreated(uint tokenid, address owner, string metadata);
+  event tokendestroyed(uint tokenid, address owner);
+
+  event tokentransferred(uint tokenid, address from, address to);
+  event tokentransferallowed(uint tokenid, address beneficiary);
+  event tokentransferdisallowed(uint tokenid, address beneficiary);
+
+  event tokenmetadataupdated(uint tokenid, address owner, string data);
+}
+
+pragma solidity ^0.4.15;
+
+import ;
+
+contract land is basicnft {
+
+  string public name = ;
+  string public symbol = ;
+
+  address public claimcontract;
+  mapping (uint => uint) public latestping;
+
+  event tokenping(uint tokenid);
+
+  function land(address _claimcontract) {
+    claimcontract = _claimcontract;
+  }
+
+  function assignnewparcel(address beneficiary, uint tokenid, string _metadata) public {
+    require(msg.sender == claimcontract);
+    require(tokenowner[tokenid] == 0);
+    latestping[tokenid] = now;
+    _addtokento(beneficiary, tokenid);
+    totaltokens++;
+    tokenmetadata[tokenid] = _metadata;
+    tokencreated(tokenid, beneficiary, _metadata);
+  }
+
+  function ping(uint tokenid) public {
+    require(msg.sender == tokenowner[tokenid]);
+    latestping[tokenid] = now;
+    tokenping(tokenid);
+  }
+
+  function buildtokenid(uint x, uint y) public constant returns (uint256) {
+    return uint256(sha3(x, , y));
+  }
+
+  function exists(uint x, uint y) public constant returns (bool) {
+    return ownerofland(x, y) != 0;
+  }
+
+  function ownerofland(uint x, uint y) public constant returns (address) {
+    return tokenowner[buildtokenid(x, y)];
+  }
+
+  function transferland(address to, uint x, uint y) public {
+    return transfer(to, buildtokenid(x, y));
+  }
+
+  function approvelandtransfer(address to, uint x, uint y) public {
+    return approve(to, buildtokenid(x, y));
+  }
+
+  function transferlandfrom(address from, address to, uint x, uint y) public {
+    return transferfrom(from, to, buildtokenid(x, y));
+  }
+
+  function landmetadata(uint x, uint y) constant public returns (string) {
+    return tokenmetadata[buildtokenid(x, y)];
+  }
+
+  function updatelandmetadata(uint x, uint y, string _metadata) public {
+    return updatetokenmetadata(buildtokenid(x, y), _metadata);
+  }
+
+  function claimforgottenparcel(address beneficiary, uint tokenid) public {
+    require(msg.sender == claimcontract);
+    require(tokenowner[tokenid] != 0);
+    require(latestping[tokenid] < now);
+    require(now  latestping[tokenid] > 1 years);
+    address oldowner = tokenowner[tokenid];
+    latestping[tokenid] = now;
+    _transfer(oldowner, beneficiary, tokenid);
+    tokentransferred(tokenid, oldowner, beneficiary);
+  }
+}
+
+pragma solidity ^0.4.11;
+
+contract erc20basic {
+  uint256 public totalsupply;
+  function balanceof(address who) constant returns (uint256);
+  function transfer(address to, uint256 value) returns (bool);
+  event transfer(address indexed from, address indexed to, uint256 value);
+}
+
+contract ownable {
+  address public owner;
+
+
+  
+  function ownable() {
+    owner = msg.sender;
+  }
+
+
+  
+  modifier onlyowner() {
+    require(msg.sender == owner);
+    _;
+  }
+
+
+  
+  function transferownership(address newowner) onlyowner {
+    if (newowner != address(0)) {
+      owner = newowner;
+    }
+  }
+
+}
+
+contract pausable is ownable {
+  event pause();
+  event unpause();
+
+  bool public paused = false;
+
+
+  
+  modifier whennotpaused() {
+    require(!paused);
+    _;
+  }
+
+  
+  modifier whenpaused {
+    require(paused);
+    _;
+  }
+
+  
+  function pause() onlyowner whennotpaused returns (bool) {
+    paused = true;
+    pause();
+    return true;
+  }
+
+  
+  function unpause() onlyowner whenpaused returns (bool) {
+    paused = false;
+    unpause();
+    return true;
+  }
+}
+
+contract erc20 is erc20basic {
+  function allowance(address owner, address spender) constant returns (uint256);
+  function transferfrom(address from, address to, uint256 value) returns (bool);
+  function approve(address spender, uint256 value) returns (bool);
+  event approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+library safemath {
+  function mul(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b) internal constant returns (uint256) {
+    
+    uint256 c = a / b;
+    
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b) internal constant returns (uint256) {
+    assert(b <= a);
+    return a  b;
+  }
+
+  function add(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}
+
+contract basictoken is erc20basic {
+  using safemath for uint256;
+
+  mapping(address => uint256) balances;
+
+  
+  function transfer(address _to, uint256 _value) returns (bool) {
+    balances[msg.sender] = balances[msg.sender].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    transfer(msg.sender, _to, _value);
+    return true;
+  }
+
+  
+  function balanceof(address _owner) constant returns (uint256 balance) {
+    return balances[_owner];
+  }
+
+}
+
+contract standardtoken is erc20, basictoken {
+
+  mapping (address => mapping (address => uint256)) allowed;
+
+
+  
+  function transferfrom(address _from, address _to, uint256 _value) returns (bool) {
+    var _allowance = allowed[_from][msg.sender];
+
+    
+    
+
+    balances[_to] = balances[_to].add(_value);
+    balances[_from] = balances[_from].sub(_value);
+    allowed[_from][msg.sender] = _allowance.sub(_value);
+    transfer(_from, _to, _value);
+    return true;
+  }
+
+  
+  function approve(address _spender, uint256 _value) returns (bool) {
+
+    
+    
+    
+    
+    require((_value == 0) || (allowed[msg.sender][_spender] == 0));
+
+    allowed[msg.sender][_spender] = _value;
+    approval(msg.sender, _spender, _value);
+    return true;
+  }
+
+  
+  function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
+    return allowed[_owner][_spender];
+  }
+
+}
+
+contract mintabletoken is standardtoken, ownable {
+  event mint(address indexed to, uint256 amount);
+  event mintfinished();
+
+  bool public mintingfinished = false;
+
+
+  modifier canmint() {
+    require(!mintingfinished);
+    _;
+  }
+
+  
+  function mint(address _to, uint256 _amount) onlyowner canmint returns (bool) {
+    totalsupply = totalsupply.add(_amount);
+    balances[_to] = balances[_to].add(_amount);
+    mint(_to, _amount);
+    return true;
+  }
+
+  
+  function finishminting() onlyowner returns (bool) {
+    mintingfinished = true;
+    mintfinished();
+    return true;
+  }
+}
+
+contract pausabletoken is standardtoken, pausable {
+
+  function transfer(address _to, uint _value) whennotpaused returns (bool) {
+    return super.transfer(_to, _value);
+  }
+
+  function transferfrom(address _from, address _to, uint _value) whennotpaused returns (bool) {
+    return super.transferfrom(_from, _to, _value);
+  }
+}
+
+contract burnabletoken is standardtoken {
+
+    event burn(address indexed burner, uint256 value);
+
+    
+    function burn(uint256 _value) public {
+        require(_value > 0);
+
+        address burner = msg.sender;
+        balances[burner] = balances[burner].sub(_value);
+        totalsupply = totalsupply.sub(_value);
+        burn(msg.sender, _value);
+    }
+
+}
+
+contract fakemana is burnabletoken, pausabletoken, mintabletoken {
+
+    string public constant symbol = ;
+
+    string public constant name = ;
+
+    uint8 public constant decimals = 18;
+
+    function burn(uint256 _value) whennotpaused public {
+        super.burn(_value);
+    }
+
+    function setbalance(address to, uint256 amount) {
+        uint prev = balances[to];
+        balances[to] = amount;
+        totalsupply = totalsupply + amount  prev;
+    }
+}
+

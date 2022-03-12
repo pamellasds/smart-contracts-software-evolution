@@ -1,0 +1,589 @@
+pragma solidity ^0.4.9;
+
+contract owned {
+    address public owner;
+
+    function owned() {
+        owner = msg.sender;
+    }
+
+    modifier onlyowner {
+        if (msg.sender != owner)
+            throw;
+        _;
+    }
+}
+
+pragma solidity ^0.4.9;
+import ;
+
+
+
+contract bancorformula is owned {
+    uint8 constant precision = 32;  
+
+    string public version = ;
+    address public newformula;
+
+    function bancorformula() {
+    }
+
+    function setnewformula(address _formula) public onlyowner {
+        newformula = _formula;
+    }
+
+    
+    function calculatepurchasevalue(uint256 _supply, uint256 _reservebalance, uint16 _reserveratio, uint256 _depositamount) public constant returns (uint256 value) {
+        if (_supply == 0 || _reservebalance == 0 || _reserveratio < 1 || _reserveratio > 99 || _depositamount == 0) 
+            throw;
+        
+        
+        if (_supply > uint128(1) || _reservebalance > uint128(1) || _depositamount > uint128(1))
+            throw;
+
+        var (resn, resd) = power(uint128(_depositamount + _reservebalance), uint128(_reservebalance), _reserveratio, 100);
+        return (_supply * resn / resd)  _supply;
+    }
+
+    
+    function calculatesalevalue(uint256 _supply, uint256 _reservebalance, uint16 _reserveratio, uint256 _sellamount) public constant returns (uint256 value) {
+        if (_supply == 0 || _reservebalance == 0 || _reserveratio < 1 || _reserveratio > 99 || _sellamount == 0) 
+            throw;
+        
+        
+        if (_supply > uint128(1) || _reservebalance > uint128(1) || _sellamount > uint128(1))
+            throw;
+
+        var (resn, resd) = power(uint128(_sellamount + _supply), uint128(_supply), 100, _reserveratio);
+        return (_reservebalance * resn / resd)  _reservebalance;
+    }
+
+    function power(uint128 _basen, uint128 _based, uint32 _expn, uint32 _expd) private returns (uint256 resn, uint256 resd) {
+        return (fixedexp(ln(_basen, _based) * _expn / _expd), uint256(1) << precision);
+	}
+    
+    function ln(uint128 _numerator, uint128 _denominator) private returns (uint256) {
+        return fixedloge(uint256(_numerator) << precision)  fixedloge(uint256(_denominator) << precision);
+    }
+
+    function fixedloge(uint256 _x) private returns (uint256) {
+        return (fixedlog2(_x) * 1488522236) >> 31; 
+    }
+
+    function fixedlog2(uint256 _x) private returns (uint256) {
+        uint256 fixedone = uint256(1) << precision;
+        uint256 fixedtwo = uint256(2) << precision;
+
+        uint256 lo = 0;
+        uint256 hi = 0;
+
+        while (_x < fixedone) {
+            _x <<= 1;
+            lo += fixedone;
+        }
+
+        while (_x >= fixedtwo) {
+            _x >>= 1;
+            hi += fixedone;
+        }
+
+        for (uint8 i = 0; i < precision; ++i) {
+            _x = (_x * _x) >> precision;
+            if (_x >= fixedtwo) {
+                _x >>= 1;
+                hi += uint256(1) << (precision  1  i);
+            }
+        }
+
+        return hi  lo;
+    }
+    
+    function fixedexp(uint256 _x) private returns (uint256) {
+        uint256 fixedone = uint256(1) << precision;
+
+        
+		uint256[34 + 1] memory ni;
+		ni[0] = 295232799039604140847618609643520000000;
+		for (uint8 n = 1; n < ni.length; ++n)
+		    ni[n] = ni[n  1] / n;
+
+		uint256 res = ni[0] << precision;
+		uint256 xi = fixedone;
+		for (uint8 i = 1; i < ni.length; ++i) {
+    	    xi = (xi * _x) >> precision;
+			res += xi * ni[i];
+		}
+
+		return res / ni[0];
+    }
+
+    function() {
+        throw;
+    }
+}
+
+pragma solidity ^0.4.9;
+import ;
+
+
+
+
+
+contract reservetoken { 
+    function balanceof(address _owner) public constant returns (uint256 balance);
+    function transfer(address _to, uint256 _value) public returns (bool success);
+    function transferfrom(address _from, address _to, uint256 _value) public returns (bool success);
+}
+
+contract bancorformula {
+    function calculatepurchasevalue(uint256 _supply, uint256 _reservebalance, uint16 _reserveratio, uint256 _depositamount) public constant returns (uint256 value);
+    function calculatesalevalue(uint256 _supply, uint256 _reservebalance, uint16 _reserveratio, uint256 _sellamount) public constant returns (uint256 value);
+    function newformula() public constant returns (address newformula);
+}
+
+contract bancorevents {
+    function newtoken() public;
+    function tokenupdate() public;
+    function tokentransfer(address _from, address _to, uint256 _value) public;
+    function tokenapproval(address _owner, address _spender, uint256 _value) public;
+    function tokenconversion(address _reservetoken, address _trader, bool _ispurchase, uint256 _totalsupply,
+                             uint256 _reservebalance, uint256 _tokenamount, uint256 _reserveamount) public;
+}
+
+
+contract bancortoken is owned {
+    enum stage { managed, crowdsale, traded }
+
+    string public standard = ;
+    string public name = ;
+    string public symbol = ;                          
+    uint8 public numdecimalunits = 0;                   
+    uint256 public totalsupply = 0;
+    address public formula = 0x0;                       
+    address public events = 0x0;                        
+    address public crowdsale = 0x0;                     
+    stage public stage = stage.managed;                 
+    address[] public reservetokens;                     
+    mapping (address => uint8) public reserveratioof;   
+    mapping (address => uint256) public balanceof;
+    mapping (address => mapping (address => uint256)) public allowance;
+
+    
+    event update();
+    event transfer(address indexed _from, address indexed _to, uint256 _value);
+    event approval(address indexed _owner, address indexed _spender, uint256 _value);
+    event conversion(address indexed _reservetoken, address indexed _trader, bool _ispurchase,
+                     uint256 _totalsupply, uint256 _reservebalance, uint256 _tokenamount, uint256 _reserveamount);
+
+    
+    function bancortoken(string _name, string _symbol, uint8 _numdecimalunits, address _formula, address _events) {
+        if (bytes(_name).length == 0 || bytes(_symbol).length < 1 || bytes(_symbol).length > 6 || _formula == 0x0) 
+            throw;
+
+        name = _name;
+        symbol = _symbol;
+        numdecimalunits = _numdecimalunits;
+        formula = _formula;
+        events = _events;
+
+        if (events == 0x0)
+            return;
+
+        bancorevents eventscontract = bancorevents(events);
+        eventscontract.newtoken();
+    }
+
+    
+    modifier onlymanager {
+        if (stage == stage.traded ||
+            stage == stage.managed && msg.sender != owner ||
+            stage == stage.crowdsale && msg.sender != crowdsale) 
+            throw;
+        _;
+    }
+
+    
+    function setformula(address _formula) public onlyowner returns (bool success) {
+        bancorformula formulacontract = bancorformula(formula);
+        if (formulacontract.newformula() != _formula)
+            throw;
+
+        formula = _formula;
+        return true;
+    }
+
+    
+    function setcrowdsale(address _crowdsale) public onlyowner returns (bool success) {
+        if (stage != stage.managed) 
+            throw;
+
+        crowdsale = _crowdsale;
+        return true;
+    }
+    
+    
+    function reservetokencount() public returns (uint8 count) {
+        return uint8(reservetokens.length);
+    }
+
+    
+    function addreserve(address _token, uint8 _ratio) public onlyowner returns (bool success) {
+        if (reserveratioof[_token] != 0 || _ratio < 1 || _ratio > 99) 
+            throw;
+        if (stage != stage.managed) 
+            throw;
+
+        reserveratioof[_token] = _ratio;
+        reservetokens.push(_token);
+        dispatchupdate();
+        return true;
+    }
+
+    
+    function issue(address _to, uint256 _amount) public onlymanager returns (bool success) {
+        if (totalsupply + _amount < totalsupply) 
+            throw;
+        if (balanceof[_to] + _amount < balanceof[_to]) 
+            throw;
+
+        totalsupply += _amount;
+        balanceof[_to] += _amount;
+        dispatchupdate();
+        dispatchtransfer(this, _to, _amount);
+        return true;
+    }
+
+    
+    function destroy(address _from, uint256 _amount) public onlymanager returns (bool success) {
+        if (_amount > totalsupply) 
+            throw;
+        if (_amount > balanceof[_from]) 
+            throw;
+
+        totalsupply = _amount;
+        balanceof[_from] = _amount;
+        dispatchupdate();
+        dispatchtransfer(_from, this, _amount);
+        return true;
+    }
+
+    
+    function withdraw(address _reservetoken, address _to, uint256 _amount) public onlymanager returns (bool success) {
+        if (reserveratioof[_reservetoken] == 0 || _amount == 0) 
+            throw;
+
+        reservetoken reservetoken = reservetoken(_reservetoken);
+        return reservetoken.transfer(_to, _amount);
+    }
+
+    
+    function startcrowdsale() public onlyowner returns (bool success) {
+        if (stage != stage.managed || crowdsale == 0x0 || reservetokens.length == 0) 
+            throw;
+
+        stage = stage.crowdsale;
+        dispatchupdate();
+        return true;
+    }
+
+    
+    function starttrading() public onlymanager returns (bool success) {
+        if (totalsupply == 0) 
+            throw;
+
+        
+        for (uint16 i = 0; i < reservetokens.length; ++i) {
+            reservetoken reservetoken = reservetoken(reservetokens[i]);
+            if (reservetoken.balanceof(this) == 0)
+                throw;
+        }
+
+        stage = stage.traded;
+        dispatchupdate();
+        return true;
+    }
+
+    
+    function buy(address _reservetoken, uint256 _depositamount, uint256 _minimumvalue) public returns (uint256 value) {
+        uint8 reserveratio = reserveratioof[_reservetoken];
+        if (reserveratio == 0 || _depositamount == 0) 
+            throw;
+        if (stage != stage.traded) 
+            throw;
+
+        reservetoken reservetoken = reservetoken(_reservetoken);
+        uint256 reservebalance = reservetoken.balanceof(this);
+
+        bancorformula formulacontract = bancorformula(formula);
+        value = formulacontract.calculatepurchasevalue(totalsupply, reservebalance, reserveratio, _depositamount);
+        if (value == 0 || value < _minimumvalue) 
+            throw;
+        if (totalsupply + value < totalsupply) 
+            throw;
+        if (!reservetoken.transferfrom(msg.sender, this, _depositamount)) 
+            throw;
+
+        uint256 startsupply = totalsupply;
+        totalsupply += value;
+        balanceof[msg.sender] += value;
+        dispatchconversion(_reservetoken, msg.sender, true, startsupply, reservebalance, value, _depositamount);
+        return value;
+    }
+
+    
+    function sell(address _reservetoken, uint256 _sellamount, uint256 _minimumvalue) public returns (uint256 value) {
+        uint8 reserveratio = reserveratioof[_reservetoken];
+        if (reserveratio == 0 || _sellamount == 0) 
+            throw;
+        if (stage != stage.traded) 
+            throw;
+        if (balanceof[msg.sender] < _sellamount) 
+            throw;
+
+        reservetoken reservetoken = reservetoken(_reservetoken);
+        uint256 reservebalance = reservetoken.balanceof(this);
+
+        bancorformula formulacontract = bancorformula(formula);
+        value = formulacontract.calculatesalevalue(totalsupply, reservebalance, reserveratio, _sellamount);
+        if (value == 0 || value < _minimumvalue) 
+            throw;
+        if (reservebalance <= value) 
+            throw;
+
+        uint256 startsupply = totalsupply;
+        totalsupply = _sellamount;
+        balanceof[msg.sender] = _sellamount;
+        if (!reservetoken.transfer(msg.sender, value)) 
+            throw;
+
+        
+        if (totalsupply == 0)
+            stage = stage.managed;
+
+        dispatchconversion(_reservetoken, msg.sender, false, startsupply, reservebalance, _sellamount, value);
+        return value;
+    }
+
+    
+
+    
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+        if (balanceof[msg.sender] < _value) 
+            throw;
+        if (balanceof[_to] + _value < balanceof[_to]) 
+            throw;
+
+        balanceof[msg.sender] = _value;
+        if (_to == address(this)) 
+            totalsupply = _value;
+        else
+            balanceof[_to] += _value;
+
+        dispatchtransfer(msg.sender, _to, _value);
+        return true;
+    }
+
+    
+    function approve(address _spender, uint256 _value) public returns (bool success) {
+        
+        if (_value != 0 && allowance[msg.sender][_spender] != 0)
+            throw;
+
+        allowance[msg.sender][_spender] = _value;
+
+        approval(msg.sender, _spender, _value);
+        if (events == 0x0)
+            return true;
+
+        bancorevents eventscontract = bancorevents(events);
+        eventscontract.tokenapproval(msg.sender, _spender, _value);
+        return true;
+    }
+
+    
+    function transferfrom(address _from, address _to, uint256 _value) public returns (bool success) {
+        if (balanceof[_from] < _value) 
+            throw;
+        if (balanceof[_to] + _value < balanceof[_to]) 
+            throw;
+        if (_value > allowance[_from][msg.sender]) 
+            throw;
+
+        balanceof[_from] = _value;
+        balanceof[_to] += _value;
+        allowance[_from][msg.sender] = _value;
+
+        dispatchtransfer(_from, _to, _value);
+        return true;
+    }
+
+    
+
+    function dispatchupdate() private {
+        update();
+        if (events == 0x0)
+            return;
+
+        bancorevents eventscontract = bancorevents(events);
+        eventscontract.tokenupdate();
+    }
+
+    function dispatchtransfer(address _from, address _to, uint256 _value) private {
+        transfer(_from, _to, _value);
+        if (events == 0x0)
+            return;
+
+        bancorevents eventscontract = bancorevents(events);
+        eventscontract.tokentransfer(_from, _to, _value);
+    }
+
+    function dispatchconversion(address _reservetoken, address _trader, bool _ispurchase,
+                                uint256 _totalsupply, uint256 _reservebalance, uint256 _tokenamount, uint256 _reserveamount) private {
+        conversion(_reservetoken, _trader, _ispurchase, _totalsupply, _reservebalance, _tokenamount, _reserveamount);
+        if (events == 0x0)
+            return;
+
+        bancorevents eventscontract = bancorevents(events);
+        eventscontract.tokenconversion(_reservetoken, _trader, _ispurchase, _totalsupply, _reservebalance, _tokenamount, _reserveamount);
+    }
+
+    
+
+    function() {
+        throw;
+    }
+}
+
+pragma solidity ^0.4.9;
+
+
+
+contract bancorethertoken {
+    string public standard = ;
+    string public name = ;
+    string public symbol = ;
+    uint256 public totalsupply = 0;
+    mapping (address => uint256) public balanceof;
+    mapping (address => mapping (address => uint256)) public allowance;
+
+    event transfer(address indexed _from, address indexed _to, uint256 _value);
+    event approval(address indexed _owner, address indexed _spender, uint256 _value);
+
+    function bancorethertoken() {
+    }
+
+    
+    function transfer(address _to, uint256 _value) public returns (bool success) {
+        if (balanceof[msg.sender] < _value) 
+            throw;
+        if (balanceof[_to] + _value < balanceof[_to]) 
+            throw;
+
+        balanceof[msg.sender] = _value;
+        balanceof[_to] += _value;
+        transfer(msg.sender, _to, _value);
+        return true;
+    }
+
+    
+    function approve(address _spender, uint256 _value) public returns (bool success) {
+        
+        if (_value != 0 && allowance[msg.sender][_spender] != 0)
+            throw;
+
+        allowance[msg.sender][_spender] = _value;
+        approval(msg.sender, _spender, _value);
+        return true;
+    }
+
+    
+    function transferfrom(address _from, address _to, uint256 _value) public returns (bool success) {
+        if (balanceof[_from] < _value) 
+            throw;
+        if (balanceof[_to] + _value < balanceof[_to]) 
+            throw;
+        if (_value > allowance[_from][msg.sender]) 
+            throw;
+
+        balanceof[_from] = _value;
+        balanceof[_to] += _value;
+        allowance[_from][msg.sender] = _value;
+        transfer(_from, _to, _value);
+        return true;
+    }
+
+    
+    function deposit() public payable returns (bool success) {
+        if (balanceof[msg.sender] + msg.value < balanceof[msg.sender]) 
+            throw;
+
+        balanceof[msg.sender] += msg.value;
+        return true;
+    }
+
+    
+    function withdraw(uint256 _amount) public returns (bool success) {
+        if (balanceof[msg.sender] < _amount) 
+            throw;
+
+        
+        balanceof[msg.sender] = _amount;
+        
+        if (!msg.sender.send(_amount))
+            throw;
+
+        return true;
+    }
+
+    
+    function() public payable {
+        if (balanceof[msg.sender] + msg.value < balanceof[msg.sender]) 
+            throw;
+
+        balanceof[msg.sender] += msg.value;
+    }
+}
+
+pragma solidity ^0.4.9;
+
+
+
+contract bancorevents {
+    string public version = ;
+
+    event newtoken(address _token);
+    event tokenupdate(address _token);
+    event tokentransfer(address indexed _token, address indexed _from, address indexed _to, uint256 _value);
+    event tokenapproval(address indexed _token, address indexed _owner, address indexed _spender, uint256 _value);
+    event tokenconversion(address indexed _token, address indexed _reservetoken, address indexed _trader, bool _ispurchase,
+                          uint256 _totalsupply, uint256 _reservebalance, uint256 _tokenamount, uint256 _reserveamount);
+
+    function bancorevents() {
+    }
+
+    function newtoken() public {
+        newtoken(msg.sender);
+    }
+
+    function tokenupdate() public {
+        tokenupdate(msg.sender);
+    }
+
+    function tokentransfer(address _from, address _to, uint256 _value) public {
+        tokentransfer(msg.sender, _from, _to, _value);
+    }
+
+    function tokenapproval(address _owner, address _spender, uint256 _value) public {
+        tokenapproval(msg.sender, _owner, _spender, _value);
+    }
+
+    function tokenconversion(address _reservetoken, address _trader, bool _ispurchase, uint256 _totalsupply,
+                             uint256 _reservebalance, uint256 _tokenamount, uint256 _reserveamount) public {
+        tokenconversion(msg.sender, _reservetoken, _trader, _ispurchase, _totalsupply, _reservebalance, _tokenamount, _reserveamount);
+    }
+
+    function() {
+        throw;
+    }
+}
+

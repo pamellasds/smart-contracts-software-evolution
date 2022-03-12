@@ -1,0 +1,116 @@
+pragma solidity ^0.4.8;
+
+import ;
+
+contract tokensale {
+  using safemath for uint;
+
+  uint public fundinglimit;
+  uint public starttime;
+  address public recipient;
+
+  event purchase(address purchaser, uint paid, uint received);
+
+  function tokensale(
+    address _recipient,
+    uint _limit,
+    uint _start
+  ) {
+    fundinglimit = _limit;
+    recipient = _recipient;
+    starttime = _start;
+  }
+
+  function phaseoneend()
+  constant returns (uint) {
+    return starttime + 1 weeks;
+  }
+
+  function phasetwoend()
+  constant returns (uint) {
+    return starttime + 2 weeks;
+  }
+
+  function endtime()
+  constant returns (uint) {
+    return starttime + 4 weeks;
+  }
+
+  function ()
+  payable ensurestarted {
+    if (recipient.send(msg.value)) {
+      purchase(msg.sender, msg.value, amountreceived());
+    }
+  }
+
+
+  
+
+  function amountreceived()
+  private returns (uint) {
+    if (block.timestamp <= phaseoneend()) {
+      return msg.value.div(10**15);
+    } else if (block.timestamp <= phasetwoend()) {
+      return msg.value.times(75).div(10**17);
+    } else {
+      return msg.value.times(50).div(10**17);
+    }
+  }
+
+
+  
+
+  modifier ensurestarted() {
+    if (block.timestamp < starttime || block.timestamp > endtime()) {
+      throw;
+    } else {
+      _;
+    }
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+library safemath {
+  function times(uint a, uint b) internal returns (uint) {
+    uint c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function div(uint a, uint b) internal returns (uint) {
+    uint c = a / b;
+    return c;
+  }
+
+  function sub(uint a, uint b) internal returns (uint) {
+    assert(b <= a);
+    return a  b;
+  }
+
+  function add(uint a, uint b) internal returns (uint) {
+    uint c = a + b;
+    assert(c >= a);
+    return c;
+  }
+
+  function assert(bool assertion) internal {
+    if (!assertion) {
+      throw;
+    }
+  }
+}
+
+pragma solidity ^0.4.8;
+
+contract smartoracle {
+
+  address public owner;
+
+  function smartoracle() {
+    owner = msg.sender;
+  }
+
+}
+

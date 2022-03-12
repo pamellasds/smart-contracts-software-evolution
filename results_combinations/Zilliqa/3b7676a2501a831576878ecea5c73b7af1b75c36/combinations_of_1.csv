@@ -1,0 +1,11 @@
+similarity,combination
+3,['ERC20Basic.sol']
+5,['PausableToken.sol']
+1,['Pausable.sol']
+2,['StandardToken.sol']
+0,['Migrations.sol']
+2,['SafeMath.sol']
+3,['Ownable.sol']
+2,['ERC20.sol']
+5,['ZilliqaToken.sol']
+3,['BasicToken.sol']

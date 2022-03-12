@@ -1,0 +1,11 @@
+similarity,combination
+1,['ConvertLib.sol', 'SmartOracle.sol']
+1,['ConvertLib.sol', 'TestMetacoin.sol']
+1,['ConvertLib.sol', 'Migrations.sol']
+2,['ConvertLib.sol', 'MetaCoin.sol']
+1,['SmartOracle.sol', 'TestMetacoin.sol']
+1,['SmartOracle.sol', 'Migrations.sol']
+2,['SmartOracle.sol', 'MetaCoin.sol']
+1,['TestMetacoin.sol', 'Migrations.sol']
+2,['TestMetacoin.sol', 'MetaCoin.sol']
+2,['Migrations.sol', 'MetaCoin.sol']

@@ -1,0 +1,11 @@
+similarity,combination
+15,['FaucetRLC.sol', 'TokenSpender.sol']
+24,['FaucetRLC.sol', 'SafeMath.sol']
+8,['FaucetRLC.sol', 'Ownable.sol']
+24,['FaucetRLC.sol', 'ERC20.sol']
+13,['TokenSpender.sol', 'SafeMath.sol']
+1,['TokenSpender.sol', 'Ownable.sol']
+12,['TokenSpender.sol', 'ERC20.sol']
+11,['SafeMath.sol', 'Ownable.sol']
+9,['SafeMath.sol', 'ERC20.sol']
+5,['Ownable.sol', 'ERC20.sol']

@@ -1,0 +1,332 @@
+pragma solidity ^0.4.8;
+
+
+
+contract ownable {
+  address public owner;
+
+
+  
+  function ownable() {
+    owner = msg.sender;
+  }
+
+
+  
+  modifier onlyowner() {
+    if (msg.sender != owner) {
+      throw;
+    }
+    _;
+  }
+
+
+  
+  function transferownership(address newowner) onlyowner {
+    if (newowner != address(0)) {
+      owner = newowner;
+    }
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+import ;
+import ;
+
+contract linktoken is standardtoken {
+  uint public constant totalsupply = 10**18;
+  string public constant name = ;
+  uint8 public constant decimals = 9;
+  string public constant symbol = ;
+
+  function linktoken() {
+    balances[msg.sender] = totalsupply;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+import ;
+import ;
+
+contract tokensale is ownable {
+  using safemath for uint;
+
+  uint public fundinglimit;
+  uint public starttime;
+  uint public fundingreceived;
+  uint public phaseoneend;
+  uint public phasetwoend;
+  uint public endtime;
+  address public recipient;
+  linktoken public token;
+
+  function tokensale(
+    uint _limit,
+    uint _start
+  ) {
+    fundinglimit = _limit;
+    starttime = _start;
+    phaseoneend = _start + 1 weeks;
+    phasetwoend = _start + 2 weeks;
+    endtime = _start + 4 weeks;
+    token = new linktoken();
+  }
+
+  function ()
+  payable ensurestarted ensurenotended underlimit {
+    if (owner.send(msg.value)) {
+      fundingreceived += msg.value;
+      token.transfer(msg.sender, amountreceived());
+    }
+  }
+
+  function closeout()
+  onlyowner ensurestarted ensurecompleted {
+    token.transfer(owner, token.balanceof(this));
+  }
+
+
+  
+
+  function amountreceived()
+  private returns (uint) {
+    if (block.timestamp <= phaseoneend) {
+      return msg.value.div(10**15);
+    } else if (block.timestamp <= phasetwoend) {
+      return msg.value.mul(75).div(10**17);
+    } else {
+      return msg.value.mul(50).div(10**17);
+    }
+  }
+
+  function started()
+  private returns (bool) {
+    return block.timestamp >= starttime;
+  }
+
+  function ended()
+  private returns (bool) {
+    return block.timestamp > endtime;
+  }
+
+  function funded()
+  private returns (bool) {
+    return fundingreceived == fundinglimit;
+  }
+
+  function completed()
+  private returns (bool) {
+    return ended() || funded();
+  }
+
+
+  
+
+  modifier ensurestarted() {
+    if (!started()) {
+      throw;
+    }
+    _;
+  }
+
+  modifier ensurenotended() {
+    if (ended()) {
+      throw;
+    }
+    _;
+  }
+
+  modifier ensurecompleted() {
+    if (!completed()) {
+      throw;
+    }
+    _;
+  }
+
+  modifier underlimit() {
+    if (msg.value + fundingreceived > fundinglimit) {
+      throw;
+    }
+    _;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+
+library safemath {
+  function mul(uint256 a, uint256 b) internal returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b) internal returns (uint256) {
+    
+    uint256 c = a / b;
+    
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b) internal returns (uint256) {
+    assert(b <= a);
+    return a  b;
+  }
+
+  function add(uint256 a, uint256 b) internal returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}
+
+pragma solidity ^0.4.8;
+
+contract smartoracle {
+
+  address public owner;
+
+  function smartoracle() {
+    owner = msg.sender;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract erc20 is erc20basic {
+  function allowance(address owner, address spender) constant returns (uint256);
+  function transferfrom(address from, address to, uint256 value);
+  function approve(address spender, uint256 value);
+  event approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+
+
+
+contract basictoken is erc20basic {
+  using safemath for uint256;
+
+  mapping(address => uint256) balances;
+
+  
+  function transfer(address _to, uint256 _value) {
+    balances[msg.sender] = balances[msg.sender].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    transfer(msg.sender, _to, _value);
+  }
+
+  
+  function balanceof(address _owner) constant returns (uint256 balance) {
+    return balances[_owner];
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+
+
+
+contract standardtoken is erc20, basictoken {
+
+  mapping (address => mapping (address => uint256)) allowed;
+
+
+  
+  function transferfrom(address _from, address _to, uint256 _value) {
+    var _allowance = allowed[_from][msg.sender];
+
+    
+    
+
+    balances[_to] = balances[_to].add(_value);
+    balances[_from] = balances[_from].sub(_value);
+    allowed[_from][msg.sender] = _allowance.sub(_value);
+    transfer(_from, _to, _value);
+  }
+
+  
+  function approve(address _spender, uint256 _value) {
+
+    
+    
+    
+    
+    if ((_value != 0) && (allowed[msg.sender][_spender] != 0)) throw;
+
+    allowed[msg.sender][_spender] = _value;
+    approval(msg.sender, _spender, _value);
+  }
+
+  
+  function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
+    return allowed[_owner][_spender];
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+
+contract erc20basic {
+  uint256 public totalsupply;
+  function balanceof(address who) constant returns (uint256);
+  function transfer(address to, uint256 value);
+  event transfer(address indexed from, address indexed to, uint256 value);
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract basictokenmock is basictoken {
+
+  function basictokenmock(address initialaccount, uint initialbalance) {
+    balances[initialaccount] = initialbalance;
+    totalsupply = initialbalance;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract standardtokenmock is standardtoken {
+
+  function standardtokenmock(address initialaccount, uint initialbalance) {
+    balances[initialaccount] = initialbalance;
+    totalsupply = initialbalance;
+  }
+
+}
+

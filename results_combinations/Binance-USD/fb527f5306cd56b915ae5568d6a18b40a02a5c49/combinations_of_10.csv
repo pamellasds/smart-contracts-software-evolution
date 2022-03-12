@@ -1,0 +1,2 @@
+similarity,combination
+7,['BUSDWithBalance.sol', 'BUSDImplementation.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'TSDImplementation.sol', 'Proxy.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']

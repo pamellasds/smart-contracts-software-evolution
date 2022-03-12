@@ -1,0 +1,416 @@
+pragma solidity ^0.4.24;
+
+
+import ;
+
+
+
+
+
+
+
+
+
+
+contract upgradeabilitystorage {
+    
+    
+    
+    
+    bytes32 private constant implementation_slot = 0x7c1cded848eabd8a60d94bd67445d2326d086da486fef295645c7904d7dd00c2;
+
+
+    
+    function _implementation() internal view returns (address impl) {
+        bytes32 slot = implementation_slot;
+        assembly {
+            impl := sload(slot)
+        }
+    }
+
+    
+    function _setimplementation(address newimplementation) internal {
+        require(addressutils.iscontract(newimplementation), );
+
+        bytes32 slot = implementation_slot;
+
+        assembly {
+            sstore(slot, newimplementation)
+        }
+    }
+}
+
+pragma solidity ^0.4.24;
+
+
+import ;
+
+
+
+contract erc20proxy is upgradeabilitystorage {
+    
+    constructor(address _impl) public {
+        _setimplementation(_impl);
+    }
+
+
+    
+    function () external payable {
+        _delegate();
+    }
+
+    
+    function _delegate() internal {
+        address impl = _implementation();
+
+        assembly {
+            
+            
+            
+            calldatacopy(0, 0, calldatasize)
+
+            
+            
+            let result := delegatecall(gas, impl, 0, calldatasize, 0, 0)
+
+            
+            returndatacopy(0, 0, returndatasize)
+
+            switch result
+            
+            case 0 { revert(0, returndatasize) }
+            default { return(0, returndatasize) }
+        }
+    }
+}
+
+pragma solidity ^0.4.24;
+
+
+import ;
+import ;
+
+
+
+contract stablecoinimplementation is upgradeabilitystorage {
+
+    
+
+    using safemath for uint256;
+
+    
+
+    
+    bool private initialized = false;
+
+    
+    mapping(address => uint256) balances;
+    uint256 totalsupply_;
+    string public constant name = ; 
+    string public constant symbol = ; 
+    uint8 public constant decimals = 18; 
+
+    
+    mapping (address => mapping (address => uint256)) internal allowed;
+
+    
+    address public owner;
+
+    
+    bool public paused = false;
+
+    
+    address public supplycontroller;
+
+    
+
+    
+    event transfer(address indexed from, address indexed to, uint256 value);
+
+    
+    event approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
+
+    
+    event ownershiptransferred(
+        address indexed oldowner,
+        address indexed newowner
+    );
+
+    
+    event pause();
+    event unpause();
+
+    
+    event supplyincreased(address indexed to, uint256 value);
+    event supplydecreased(address indexed from, uint256 value);
+    event supplycontrollerset(
+        address indexed oldsupplycontroller,
+        address indexed newsupplycontroller
+    );
+
+    
+    event upgraded(address implementation);
+
+    
+
+    
+
+    
+    function initialize() public returns (bool) {
+        require(!initialized, );
+        initialized = true;
+        owner = msg.sender;
+        totalsupply_ = 0;
+        supplycontroller = msg.sender;
+        return true;
+    }
+
+    
+    constructor() public {
+        initialize();
+        pause();
+    }
+
+    
+
+    
+    function totalsupply() public view returns (uint256) {
+        return totalsupply_;
+    }
+
+    
+    function transfer(address _to, uint256 _value) public whennotpaused returns (bool) {
+        require(_to != address(0), );
+        require(_value <= balances[msg.sender], );
+
+        balances[msg.sender] = balances[msg.sender].sub(_value);
+        balances[_to] = balances[_to].add(_value);
+        emit transfer(msg.sender, _to, _value);
+        return true;
+    }
+
+    
+    function balanceof(address _addr) public view returns (uint256) {
+        return balances[_addr];
+    }
+
+    
+
+    
+    function transferfrom(
+        address _from,
+        address _to,
+        uint256 _value
+    )
+    public
+    returns (bool)
+    {
+        require(_to != address(0), );
+        require(_value <= balances[_from], );
+        require(_value <= allowed[_from][msg.sender], );
+
+        balances[_from] = balances[_from].sub(_value);
+        balances[_to] = balances[_to].add(_value);
+        allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
+        emit transfer(_from, _to, _value);
+        return true;
+    }
+
+    
+    function approve(address _spender, uint256 _value) public returns (bool) {
+        allowed[msg.sender][_spender] = _value;
+        emit approval(msg.sender, _spender, _value);
+        return true;
+    }
+
+    
+    function allowance(
+        address _owner,
+        address _spender
+    )
+    public
+    view
+    returns (uint256)
+    {
+        return allowed[_owner][_spender];
+    }
+
+    
+
+    
+    modifier onlyowner() {
+        require(msg.sender == owner, );
+        _;
+    }
+
+    
+    function transferownership(address _newowner) public onlyowner {
+        require(_newowner != address(0), );
+        emit ownershiptransferred(owner, _newowner);
+        owner = _newowner;
+    }
+
+    
+
+    
+    modifier whennotpaused() {
+        require(!paused, );
+        _;
+    }
+
+    
+    function pause() public onlyowner {
+        require(!paused, );
+        paused = true;
+        emit pause();
+    }
+
+    
+    function unpause() public onlyowner {
+        require(paused, );
+        paused = false;
+        emit unpause();
+    }
+
+    
+
+    
+    function setsupplycontroller(address _newsupplycontroller) public {
+        require(msg.sender == supplycontroller || msg.sender == owner, );
+        emit supplycontrollerset(supplycontroller, _newsupplycontroller);
+        supplycontroller = _newsupplycontroller;
+    }
+
+    modifier onlysupplycontroller() {
+        require(msg.sender == supplycontroller, );
+        _;
+    }
+
+    
+    function increasesupply(uint256 _value) public onlysupplycontroller returns (bool success) {
+        totalsupply_ = totalsupply_.add(_value);
+        balances[supplycontroller] = balances[supplycontroller].add(_value);
+        emit supplyincreased(supplycontroller, _value);
+        emit transfer(address(0), supplycontroller, _value);
+        return true;
+    }
+
+    
+    function decreasesupply(uint256 _value) public onlysupplycontroller returns (bool success) {
+        require(_value <= balances[supplycontroller], );
+        
+        
+
+        balances[supplycontroller] = balances[supplycontroller].sub(_value);
+        totalsupply_ = totalsupply_.sub(_value);
+        emit supplydecreased(supplycontroller, _value);
+        emit transfer(supplycontroller, address(0), _value);
+        return true;
+    }
+
+    
+
+    
+    function upgradeto(address newimplementation) public onlyowner {
+        _setimplementation(newimplementation);
+        emit upgraded(newimplementation);
+    }
+
+    
+    function implementation() public view returns (address) {
+        return _implementation();
+    }
+}
+
+pragma solidity ^0.4.24;
+
+
+
+contract migrations {
+    uint public last_completed_migration;
+
+    function setcompleted(uint completed) public {
+        last_completed_migration = completed;
+    }
+
+    function upgrade(address new_address) public {
+        migrations upgraded = migrations(new_address);
+        upgraded.setcompleted(last_completed_migration);
+    }
+}
+
+pragma solidity ^0.4.24;
+
+
+
+library safemath {
+    
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        assert(b <= a);
+        return a  b;
+    }
+
+    
+    function add(uint256 a, uint256 b) internal pure returns (uint256 c) {
+        c = a + b;
+        assert(c >= a);
+        return c;
+    }
+}
+
+pragma solidity ^0.4.24;
+
+
+
+library addressutils {
+
+    
+    function iscontract(address addr) internal view returns (bool) {
+        uint256 size;
+        
+        
+        
+        
+        
+        
+        
+        assembly { size := extcodesize(addr) }
+        return size > 0;
+    }
+
+}
+
+pragma solidity ^0.4.24;
+
+import ;
+
+
+contract stablecoinwithbalance is stablecoinimplementation {
+
+    function initializebalance(address initialaccount, uint initialbalance) public {
+        balances[initialaccount] = initialbalance;
+        totalsupply_ = initialbalance;
+    }
+
+}
+
+pragma solidity ^0.4.24;
+
+
+import ;
+
+
+contract safemathmock {
+    function sub(uint256 a, uint256 b) public pure returns (uint256) {
+        return safemath.sub(a, b);
+    }
+
+    function add(uint256 a, uint256 b) public pure returns (uint256) {
+        return safemath.add(a, b);
+    }
+}
+

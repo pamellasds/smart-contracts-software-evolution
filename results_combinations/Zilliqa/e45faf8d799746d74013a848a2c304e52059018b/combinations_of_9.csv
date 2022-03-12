@@ -1,0 +1,11 @@
+similarity,combination
+31,['ERC20Basic.sol', 'PausableToken.sol', 'Pausable.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'Ownable.sol', 'ERC20.sol', 'ZilliqaToken.sol']
+11,['ERC20Basic.sol', 'PausableToken.sol', 'Pausable.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'Ownable.sol', 'ERC20.sol', 'BasicToken.sol']
+40,['ERC20Basic.sol', 'PausableToken.sol', 'Pausable.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'Ownable.sol', 'ZilliqaToken.sol', 'BasicToken.sol']
+71,['ERC20Basic.sol', 'PausableToken.sol', 'Pausable.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'ERC20.sol', 'ZilliqaToken.sol', 'BasicToken.sol']
+62,['ERC20Basic.sol', 'PausableToken.sol', 'Pausable.sol', 'StandardToken.sol', 'Migrations.sol', 'Ownable.sol', 'ERC20.sol', 'ZilliqaToken.sol', 'BasicToken.sol']
+98,['ERC20Basic.sol', 'PausableToken.sol', 'Pausable.sol', 'StandardToken.sol', 'SafeMath.sol', 'Ownable.sol', 'ERC20.sol', 'ZilliqaToken.sol', 'BasicToken.sol']
+24,['ERC20Basic.sol', 'PausableToken.sol', 'Pausable.sol', 'Migrations.sol', 'SafeMath.sol', 'Ownable.sol', 'ERC20.sol', 'ZilliqaToken.sol', 'BasicToken.sol']
+61,['ERC20Basic.sol', 'PausableToken.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'Ownable.sol', 'ERC20.sol', 'ZilliqaToken.sol', 'BasicToken.sol']
+50,['ERC20Basic.sol', 'Pausable.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'Ownable.sol', 'ERC20.sol', 'ZilliqaToken.sol', 'BasicToken.sol']
+39,['PausableToken.sol', 'Pausable.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'Ownable.sol', 'ERC20.sol', 'ZilliqaToken.sol', 'BasicToken.sol']

@@ -1,0 +1,10 @@
+similarity,combination
+1,['PAXWithBalance.sol']
+1,['Migrations.sol']
+10,['UpgradeabilityProxy.sol']
+11,['SafeMath.sol']
+5,['Proxy.sol']
+2,['PAXImplementation.sol']
+1,['SafeMathMock.sol']
+12,['AddressUtils.sol']
+22,['AdminUpgradeabilityProxy.sol']

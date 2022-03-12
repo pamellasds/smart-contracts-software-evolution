@@ -1,0 +1,7 @@
+similarity,combination
+6,['SimpleToken.sol', 'EthLend.sol']
+5,['SimpleToken.sol', 'ENS.sol']
+6,['SimpleToken.sol', 'ReputationToken.sol']
+2,['EthLend.sol', 'ENS.sol']
+6,['EthLend.sol', 'ReputationToken.sol']
+5,['ENS.sol', 'ReputationToken.sol']

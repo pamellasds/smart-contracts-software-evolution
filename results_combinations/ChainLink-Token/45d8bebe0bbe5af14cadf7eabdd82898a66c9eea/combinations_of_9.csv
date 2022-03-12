@@ -1,0 +1,2 @@
+similarity,combination
+17,['SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']

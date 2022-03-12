@@ -1,0 +1,9 @@
+similarity,combination
+2,['Migrations.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol']
+5,['Migrations.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'UpgradeabilityStorage.sol']
+3,['Migrations.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+5,['Migrations.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+5,['Migrations.sol', 'SafeMath.sol', 'Proxy.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+4,['Migrations.sol', 'SafeMath.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+6,['Migrations.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+6,['SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']

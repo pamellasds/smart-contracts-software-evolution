@@ -1,0 +1,3280 @@
+pragma solidity 0.4.8;
+
+
+
+
+contract multisigwallet {
+
+    uint constant public max_owner_count = 50;
+
+    event confirmation(address indexed sender, uint indexed transactionid);
+    event revocation(address indexed sender, uint indexed transactionid);
+    event submission(uint indexed transactionid);
+    event execution(uint indexed transactionid);
+    event executionfailure(uint indexed transactionid);
+    event deposit(address indexed sender, uint value);
+    event owneraddition(address indexed owner);
+    event ownerremoval(address indexed owner);
+    event requirementchange(uint required);
+
+    mapping (uint => transaction) public transactions;
+    mapping (uint => mapping (address => bool)) public confirmations;
+    mapping (address => bool) public isowner;
+    address[] public owners;
+    uint public required;
+    uint public transactioncount;
+
+    struct transaction {
+        address destination;
+        uint value;
+        bytes data;
+        bool executed;
+    }
+
+    modifier onlywallet() {
+        if (msg.sender != address(this))
+            throw;
+        _;
+    }
+
+    modifier ownerdoesnotexist(address owner) {
+        if (isowner[owner])
+            throw;
+        _;
+    }
+
+    modifier ownerexists(address owner) {
+        if (!isowner[owner])
+            throw;
+        _;
+    }
+
+    modifier transactionexists(uint transactionid) {
+        if (transactions[transactionid].destination == 0)
+            throw;
+        _;
+    }
+
+    modifier confirmed(uint transactionid, address owner) {
+        if (!confirmations[transactionid][owner])
+            throw;
+        _;
+    }
+
+    modifier notconfirmed(uint transactionid, address owner) {
+        if (confirmations[transactionid][owner])
+            throw;
+        _;
+    }
+
+    modifier notexecuted(uint transactionid) {
+        if (transactions[transactionid].executed)
+            throw;
+        _;
+    }
+
+    modifier notnull(address _address) {
+        if (_address == 0)
+            throw;
+        _;
+    }
+
+    modifier validrequirement(uint ownercount, uint _required) {
+        if (   ownercount > max_owner_count
+            || _required > ownercount
+            || _required == 0
+            || ownercount == 0)
+            throw;
+        _;
+    }
+
+    
+    function()
+        payable
+    {
+        if (msg.value > 0)
+            deposit(msg.sender, msg.value);
+    }
+
+    
+    
+    
+    
+    function multisigwallet(address[] _owners, uint _required)
+        public
+        validrequirement(_owners.length, _required)
+    {
+        for (uint i=0; i<_owners.length; i++) {
+            if (isowner[_owners[i]] || _owners[i] == 0)
+                throw;
+            isowner[_owners[i]] = true;
+        }
+        owners = _owners;
+        required = _required;
+    }
+
+    
+    
+    function addowner(address owner)
+        public
+        onlywallet
+        ownerdoesnotexist(owner)
+        notnull(owner)
+        validrequirement(owners.length + 1, required)
+    {
+        isowner[owner] = true;
+        owners.push(owner);
+        owneraddition(owner);
+    }
+
+    
+    
+    function removeowner(address owner)
+        public
+        onlywallet
+        ownerexists(owner)
+    {
+        isowner[owner] = false;
+        for (uint i=0; i<owners.length  1; i++)
+            if (owners[i] == owner) {
+                owners[i] = owners[owners.length  1];
+                break;
+            }
+        owners.length = 1;
+        if (required > owners.length)
+            changerequirement(owners.length);
+        ownerremoval(owner);
+    }
+
+    
+    
+    
+    function replaceowner(address owner, address newowner)
+        public
+        onlywallet
+        ownerexists(owner)
+        ownerdoesnotexist(newowner)
+    {
+        for (uint i=0; i<owners.length; i++)
+            if (owners[i] == owner) {
+                owners[i] = newowner;
+                break;
+            }
+        isowner[owner] = false;
+        isowner[newowner] = true;
+        ownerremoval(owner);
+        owneraddition(newowner);
+    }
+
+    
+    
+    function changerequirement(uint _required)
+        public
+        onlywallet
+        validrequirement(owners.length, _required)
+    {
+        required = _required;
+        requirementchange(_required);
+    }
+
+    
+    
+    
+    
+    
+    function submittransaction(address destination, uint value, bytes data)
+        public
+        returns (uint transactionid)
+    {
+        transactionid = addtransaction(destination, value, data);
+        confirmtransaction(transactionid);
+    }
+
+    
+    
+    function confirmtransaction(uint transactionid)
+        public
+        ownerexists(msg.sender)
+        transactionexists(transactionid)
+        notconfirmed(transactionid, msg.sender)
+    {
+        confirmations[transactionid][msg.sender] = true;
+        confirmation(msg.sender, transactionid);
+        executetransaction(transactionid);
+    }
+
+    
+    
+    function revokeconfirmation(uint transactionid)
+        public
+        ownerexists(msg.sender)
+        confirmed(transactionid, msg.sender)
+        notexecuted(transactionid)
+    {
+        confirmations[transactionid][msg.sender] = false;
+        revocation(msg.sender, transactionid);
+    }
+
+    
+    
+    function executetransaction(uint transactionid)
+        public
+        notexecuted(transactionid)
+    {
+        if (isconfirmed(transactionid)) {
+            transaction tx = transactions[transactionid];
+            tx.executed = true;
+            if (tx.destination.call.value(tx.value)(tx.data))
+                execution(transactionid);
+            else {
+                executionfailure(transactionid);
+                tx.executed = false;
+            }
+        }
+    }
+
+    
+    
+    
+    function isconfirmed(uint transactionid)
+        public
+        constant
+        returns (bool)
+    {
+        uint count = 0;
+        for (uint i=0; i<owners.length; i++) {
+            if (confirmations[transactionid][owners[i]])
+                count += 1;
+            if (count == required)
+                return true;
+        }
+    }
+
+    
+    
+    
+    
+    
+    
+    function addtransaction(address destination, uint value, bytes data)
+        internal
+        notnull(destination)
+        returns (uint transactionid)
+    {
+        transactionid = transactioncount;
+        transactions[transactionid] = transaction({
+            destination: destination,
+            value: value,
+            data: data,
+            executed: false
+        });
+        transactioncount += 1;
+        submission(transactionid);
+    }
+
+    
+    
+    
+    
+    function getconfirmationcount(uint transactionid)
+        public
+        constant
+        returns (uint count)
+    {
+        for (uint i=0; i<owners.length; i++)
+            if (confirmations[transactionid][owners[i]])
+                count += 1;
+    }
+
+    
+    
+    
+    
+    function gettransactioncount(bool pending, bool executed)
+        public
+        constant
+        returns (uint count)
+    {
+        for (uint i=0; i<transactioncount; i++)
+            if (   pending && !transactions[i].executed
+                || executed && transactions[i].executed)
+                count += 1;
+    }
+
+    
+    
+    function getowners()
+        public
+        constant
+        returns (address[])
+    {
+        return owners;
+    }
+
+    
+    
+    
+    function getconfirmations(uint transactionid)
+        public
+        constant
+        returns (address[] _confirmations)
+    {
+        address[] memory confirmationstemp = new address[](owners.length);
+        uint count = 0;
+        uint i;
+        for (i=0; i<owners.length; i++)
+            if (confirmations[transactionid][owners[i]]) {
+                confirmationstemp[count] = owners[i];
+                count += 1;
+            }
+        _confirmations = new address[](count);
+        for (i=0; i<count; i++)
+            _confirmations[i] = confirmationstemp[i];
+    }
+
+    
+    
+    
+    
+    
+    
+    function gettransactionids(uint from, uint to, bool pending, bool executed)
+        public
+        constant
+        returns (uint[] _transactionids)
+    {
+        uint[] memory transactionidstemp = new uint[](transactioncount);
+        uint count = 0;
+        uint i;
+        for (i=0; i<transactioncount; i++)
+            if (   pending && !transactions[i].executed
+                || executed && transactions[i].executed)
+            {
+                transactionidstemp[count] = i;
+                count += 1;
+            }
+        _transactionids = new uint[](to  from);
+        for (i=from; i<to; i++)
+            _transactionids[i  from] = transactionidstemp[i];
+    }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+import ;
+import ;
+
+
+
+contract minimetoken is erc20, controlled {
+    string public name;                
+    uint8 public decimals;             
+    string public symbol;              
+    string public version = ; 
+
+
+    
+    
+    
+    struct  checkpoint {
+
+        
+        uint128 fromblock;
+
+        
+        uint128 value;
+    }
+
+    
+    
+    minimetoken public parenttoken;
+
+    
+    
+    uint public parentsnapshotblock;
+
+    
+    uint public creationblock;
+
+    
+    
+    
+    mapping (address => checkpoint[]) balances;
+
+    
+    mapping (address => mapping (address => uint256)) allowed;
+
+    
+    checkpoint[] totalsupplyhistory;
+
+    
+    bool public transfersenabled;
+
+    
+    minimetokenfactory public tokenfactory;
+
+
+
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    function minimetoken(
+        address _tokenfactory,
+        address _parenttoken,
+        uint _parentsnapshotblock,
+        string _tokenname,
+        uint8 _decimalunits,
+        string _tokensymbol,
+        bool _transfersenabled
+    ) {
+        tokenfactory = minimetokenfactory(_tokenfactory);
+        name = _tokenname;                                 
+        decimals = _decimalunits;                          
+        symbol = _tokensymbol;                             
+        parenttoken = minimetoken(_parenttoken);
+        parentsnapshotblock = _parentsnapshotblock;
+        transfersenabled = _transfersenabled;
+        creationblock = block.number;
+    }
+
+
+
+
+
+
+    
+    
+    
+    
+    function transfer(address _to, uint256 _amount) returns (bool success) {
+        if (!transfersenabled) throw;
+        return dotransfer(msg.sender, _to, _amount);
+    }
+
+    
+    
+    
+    
+    
+    
+    function transferfrom(address _from, address _to, uint256 _amount
+    ) returns (bool success) {
+
+        
+        
+        
+        
+        if (msg.sender != controller) {
+            if (!transfersenabled) throw;
+
+            
+            if (allowed[_from][msg.sender] < _amount) throw;
+            allowed[_from][msg.sender] = _amount;
+        }
+        return dotransfer(_from, _to, _amount);
+    }
+
+    
+    
+    
+    
+    
+    
+    function dotransfer(address _from, address _to, uint _amount
+    ) internal returns(bool) {
+
+           if (_amount == 0) {
+               return true;
+           }
+
+           
+           if ((_to == 0) || (_to == address(this))) throw;
+
+           
+           
+           var previousbalancefrom = balanceofat(_from, block.number);
+           if (previousbalancefrom < _amount) {
+               throw;
+           }
+
+           
+           if (iscontract(controller)) {
+               if (!controller(controller).ontransfer(_from, _to, _amount))
+               throw;
+           }
+
+           
+           
+           updatevalueatnow(balances[_from], previousbalancefrom  _amount);
+
+           
+           
+           var previousbalanceto = balanceofat(_to, block.number);
+           updatevalueatnow(balances[_to], previousbalanceto + _amount);
+
+           
+           transfer(_from, _to, _amount);
+
+           return true;
+    }
+
+    
+    
+    function balanceof(address _owner) constant returns (uint256 balance) {
+        return balanceofat(_owner, block.number);
+    }
+
+    
+    
+    
+    
+    
+    
+    function approve(address _spender, uint256 _amount) returns (bool success) {
+        if (!transfersenabled) throw;
+
+        
+        
+        
+        
+        if ((_amount!=0) && (allowed[msg.sender][_spender] !=0)) throw;
+
+        
+        if (iscontract(controller)) {
+            if (!controller(controller).onapprove(msg.sender, _spender, _amount))
+                throw;
+        }
+
+        allowed[msg.sender][_spender] = _amount;
+        approval(msg.sender, _spender, _amount);
+        return true;
+    }
+
+    
+    
+    
+    
+    
+    function allowance(address _owner, address _spender
+    ) constant returns (uint256 remaining) {
+        return allowed[_owner][_spender];
+    }
+
+    
+    
+    
+    
+    
+    
+    
+    function approveandcall(address _spender, uint256 _amount, bytes _extradata
+    ) returns (bool success) {
+        approve(_spender, _amount);
+
+        
+        
+        
+        
+        
+        
+        if(!_spender.call(
+            bytes4(bytes32(sha3())),
+            msg.sender,
+            _amount,
+            this,
+            uint256(byte(0x80)), uint256(_extradata.length), rightpad(_extradata) 
+            )) { throw;
+        }
+        return true;
+    }
+
+    function rightpad(bytes _data) internal constant returns (bytes) {
+      uint k = 32; 
+      uint n = _data.length / k + _data.length % k > 0 ? 1 : 0; 
+      uint l = n * k; 
+
+      if (_data.length == l) return _data; 
+
+      bytes memory paddeddata = new bytes(l);
+      for (uint i = 0; i < _data.length; i++) {
+        paddeddata[i] = _data[i];   
+      }
+
+      return paddeddata;
+    }
+
+    
+    
+    function totalsupply() constant returns (uint) {
+        return totalsupplyat(block.number);
+    }
+
+
+
+
+
+
+    
+    
+    
+    
+    function balanceofat(address _owner, uint _blocknumber) constant
+        returns (uint) {
+
+        
+        
+        if (_blocknumber < creationblock) {
+            return 0;
+
+        
+        
+        
+        
+        
+        } else if ((balances[_owner].length == 0)
+            || (balances[_owner][0].fromblock > _blocknumber)) {
+            if (address(parenttoken) != 0) {
+                return parenttoken.balanceofat(_owner, parentsnapshotblock);
+            } else {
+                
+                return 0;
+            }
+
+        
+        } else {
+            return getvalueat(balances[_owner], _blocknumber);
+        }
+
+    }
+
+    
+    
+    
+    function totalsupplyat(uint _blocknumber) constant returns(uint) {
+
+        
+        
+        if (_blocknumber < creationblock) {
+            return 0;
+
+        
+        
+        
+        
+        
+        } else if ((totalsupplyhistory.length == 0)
+            || (totalsupplyhistory[0].fromblock > _blocknumber)) {
+            if (address(parenttoken) != 0) {
+                return parenttoken.totalsupplyat(parentsnapshotblock);
+            } else {
+                return 0;
+            }
+
+        
+        } else {
+            return getvalueat(totalsupplyhistory, _blocknumber);
+        }
+    }
+
+
+
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    function createclonetoken(
+        string _clonetokenname,
+        uint8 _clonedecimalunits,
+        string _clonetokensymbol,
+        uint _snapshotblock,
+        bool _transfersenabled
+        ) returns(address) {
+        if (_snapshotblock > block.number) _snapshotblock = block.number;
+        minimetoken clonetoken = tokenfactory.createclonetoken(
+            this,
+            _snapshotblock,
+            _clonetokenname,
+            _clonedecimalunits,
+            _clonetokensymbol,
+            _transfersenabled
+            );
+
+        clonetoken.changecontroller(msg.sender);
+
+        
+        newclonetoken(address(clonetoken), _snapshotblock);
+        return address(clonetoken);
+    }
+
+
+
+
+
+    
+    
+    
+    
+    function generatetokens(address _owner, uint _amount
+    ) onlycontroller returns (bool) {
+        uint curtotalsupply = getvalueat(totalsupplyhistory, block.number);
+        updatevalueatnow(totalsupplyhistory, curtotalsupply + _amount);
+        var previousbalanceto = balanceof(_owner);
+        updatevalueatnow(balances[_owner], previousbalanceto + _amount);
+        transfer(0, _owner, _amount);
+        return true;
+    }
+
+
+    
+    
+    
+    
+    function destroytokens(address _owner, uint _amount
+    ) onlycontroller returns (bool) {
+        uint curtotalsupply = getvalueat(totalsupplyhistory, block.number);
+        if (curtotalsupply < _amount) throw;
+        updatevalueatnow(totalsupplyhistory, curtotalsupply  _amount);
+        var previousbalancefrom = balanceof(_owner);
+        if (previousbalancefrom < _amount) throw;
+        updatevalueatnow(balances[_owner], previousbalancefrom  _amount);
+        transfer(_owner, 0, _amount);
+        return true;
+    }
+
+
+
+
+
+
+    
+    
+    function enabletransfers(bool _transfersenabled) onlycontroller {
+        transfersenabled = _transfersenabled;
+    }
+
+
+
+
+
+    
+    
+    
+    
+    function getvalueat(checkpoint[] storage checkpoints, uint _block
+    ) constant internal returns (uint) {
+        if (checkpoints.length == 0) return 0;
+
+        
+        if (_block >= checkpoints[checkpoints.length1].fromblock)
+            return checkpoints[checkpoints.length1].value;
+        if (_block < checkpoints[0].fromblock) return 0;
+
+        
+        uint min = 0;
+        uint max = checkpoints.length1;
+        while (max > min) {
+            uint mid = (max + min + 1)/ 2;
+            if (checkpoints[mid].fromblock<=_block) {
+                min = mid;
+            } else {
+                max = mid1;
+            }
+        }
+        return checkpoints[min].value;
+    }
+
+    
+    
+    
+    
+    function updatevalueatnow(checkpoint[] storage checkpoints, uint _value
+    ) internal  {
+        if ((checkpoints.length == 0)
+        || (checkpoints[checkpoints.length 1].fromblock < block.number)) {
+               checkpoint newcheckpoint = checkpoints[ checkpoints.length++ ];
+               newcheckpoint.fromblock =  uint128(block.number);
+               newcheckpoint.value = uint128(_value);
+           } else {
+               checkpoint oldcheckpoint = checkpoints[checkpoints.length1];
+               oldcheckpoint.value = uint128(_value);
+           }
+    }
+
+    
+    
+    
+    function iscontract(address _addr) constant internal returns(bool) {
+        uint size;
+        if (_addr == 0) return false;
+        assembly {
+            size := extcodesize(_addr)
+        }
+        return size>0;
+    }
+
+    
+    
+    
+    function ()  payable {
+        if (iscontract(controller)) {
+            if (! controller(controller).proxypayment.value(msg.value)(msg.sender))
+                throw;
+        } else {
+            throw;
+        }
+    }
+
+
+
+
+
+    event newclonetoken(address indexed _clonetoken, uint _snapshotblock);
+}
+
+
+
+
+
+
+
+
+
+contract minimetokenfactory {
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    function createclonetoken(
+        address _parenttoken,
+        uint _snapshotblock,
+        string _tokenname,
+        uint8 _decimalunits,
+        string _tokensymbol,
+        bool _transfersenabled
+    ) returns (minimetoken) {
+        minimetoken newtoken = new minimetoken(
+            this,
+            _parenttoken,
+            _snapshotblock,
+            _tokenname,
+            _decimalunits,
+            _tokensymbol,
+            _transfersenabled
+            );
+
+        newtoken.changecontroller(msg.sender);
+        return newtoken;
+    }
+}
+
+pragma solidity ^0.4.8;
+
+
+
+
+
+
+contract salewallet {
+  
+  address public multisig;
+  uint public finalblock;
+
+  
+  
+  
+  function salewallet(address _multisig, uint _finalblock) {
+    multisig = _multisig;
+    finalblock = _finalblock;
+  }
+
+  
+  function () payable {}
+
+  
+  function withdraw() {
+    if (msg.sender != multisig) throw;        
+    if (block.number < finalblock) throw;     
+    suicide(multisig);                        
+  }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+import ;
+
+
+
+
+contract anplaceholder is controller {
+  address public sale;
+  ant public token;
+
+  function anplaceholder(address _sale, address _ant) {
+    sale = _sale;
+    token = ant(_ant);
+  }
+
+  function changecontroller(address network) {
+    if (msg.sender != sale) throw;
+    token.changecontroller(network);
+    suicide(network);
+  }
+
+  
+  function proxypayment(address _owner) payable returns (bool) {
+    return false;
+  }
+
+  function ontransfer(address _from, address _to, uint _amount) returns (bool) {
+    return true;
+  }
+
+  function onapprove(address _owner, address _spender, uint _amount) returns (bool) {
+    return true;
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+
+import ;
+import ;
+
+
+
+
+
+
+
+
+
+
+
+contract minimeirrevocablevestedtoken is minimetoken, safemath {
+  
+  struct tokengrant {
+    address granter;
+    uint256 value;
+    uint64 cliff;
+    uint64 vesting;
+    uint64 start;
+  }
+
+  event newtokengrant(address from, address to, uint256 value, uint64 start, uint64 cliff, uint64 vesting);
+
+  mapping (address => tokengrant[]) public grants;
+
+  mapping (address => bool) cancreategrants;
+  address vestingwhitelister;
+
+  modifier cantransfer(address _sender, uint _value) {
+    if (_value > spendablebalanceof(_sender)) throw;
+    _;
+  }
+
+  modifier onlyvestingwhitelister {
+    if (msg.sender != vestingwhitelister) throw;
+    _;
+  }
+
+  function minimeirrevocablevestedtoken (
+      address _tokenfactory,
+      address _parenttoken,
+      uint _parentsnapshotblock,
+      string _tokenname,
+      uint8 _decimalunits,
+      string _tokensymbol,
+      bool _transfersenabled
+  ) minimetoken(_tokenfactory, _parenttoken, _parentsnapshotblock, _tokenname, _decimalunits, _tokensymbol, _transfersenabled) {
+    vestingwhitelister = msg.sender;
+    dosetcancreategrants(vestingwhitelister, true);
+  }
+
+  
+  function transfer(address _to, uint _value)
+           cantransfer(msg.sender, _value)
+           returns (bool success) {
+    return super.transfer(_to, _value);
+  }
+
+  function transferfrom(address _from, address _to, uint _value)
+           cantransfer(_from, _value)
+           returns (bool success) {
+    return super.transferfrom(_from, _to, _value);
+  }
+
+  function spendablebalanceof(address _holder) constant public returns (uint) {
+    return transferabletokens(_holder, uint64(now));
+  }
+
+  function grantvestedtokens(
+    address _to,
+    uint256 _value,
+    uint64 _start,
+    uint64 _cliff,
+    uint64 _vesting) {
+
+    
+    if (_cliff < _start) throw;
+    if (_vesting < _start) throw;
+    if (_vesting < _cliff) throw;
+
+    if (!cancreategrants[msg.sender]) throw;
+    if (grants[_to].length > 20) throw;   
+
+    tokengrant memory grant = tokengrant(msg.sender, _value, _cliff, _vesting, _start);
+    grants[_to].push(grant);
+
+    if (!transfer(_to, _value)) throw;
+
+    newtokengrant(msg.sender, _to, _value, _cliff, _vesting, _start);
+  }
+
+  function setcancreategrants(address _addr, bool _allowed)
+           onlyvestingwhitelister {
+    dosetcancreategrants(_addr, _allowed);
+  }
+
+  function dosetcancreategrants(address _addr, bool _allowed)
+           internal {
+    cancreategrants[_addr] = _allowed;
+  }
+
+  function changevestingwhitelister(address _newwhitelister) onlyvestingwhitelister {
+    dosetcancreategrants(vestingwhitelister, false);
+    vestingwhitelister = _newwhitelister;
+    dosetcancreategrants(vestingwhitelister, true);
+  }
+
+  
+  function revoketokengrant(address _holder, uint _grantid) {
+    throw;
+  }
+
+  
+    return grants[_holder].length;
+  }
+
+  function tokengrant(address _holder, uint _grantid) constant returns (address granter, uint256 value, uint256 vested, uint64 start, uint64 cliff, uint64 vesting) {
+    tokengrant grant = grants[_holder][_grantid];
+
+    granter = grant.granter;
+    value = grant.value;
+    start = grant.start;
+    cliff = grant.cliff;
+    vesting = grant.vesting;
+
+    vested = vestedtokens(grant, uint64(now));
+  }
+
+  function vestedtokens(tokengrant grant, uint64 time) internal constant returns (uint256) {
+    return calculatevestedtokens(
+      grant.value,
+      uint256(time),
+      uint256(grant.start),
+      uint256(grant.cliff),
+      uint256(grant.vesting)
+    );
+  }
+
+  function calculatevestedtokens(
+    uint256 tokens,
+    uint256 time,
+    uint256 start,
+    uint256 cliff,
+    uint256 vesting) internal constant returns (uint256)
+    {
+
+    
+    if (time < cliff) return 0;
+    if (time >= vesting) return tokens;
+
+    
+    
+
+    
+    
+
+    
+    uint256 clifftokens = safediv(
+                            safemul(
+                              tokens,
+                              safesub(cliff, start)
+                              ),
+                            safesub(vesting, start)
+                            );
+
+    
+    
+    uint256 vestingtokens = safesub(tokens, clifftokens);
+
+    
+
+    
+    uint256 vestedvestingtokens = safediv(
+                                    safemul(
+                                      vestingtokens,
+                                      safesub(time, cliff)
+                                      ),
+                                    safesub(vesting, cliff)
+                                    );
+
+    
+    return safeadd(clifftokens, vestedvestingtokens);
+  }
+
+  function nonvestedtokens(tokengrant grant, uint64 time) internal constant returns (uint256) {
+    
+    
+    return safesub(grant.value, vestedtokens(grant, time));
+  }
+
+  
+  
+  function lasttokenistransferabledate(address holder) constant public returns (uint64 date) {
+    date = uint64(now);
+    uint256 grantindex = grants[holder].length;
+    for (uint256 i = 0; i < grantindex; i++) {
+      date = max64(grants[holder][i].vesting, date);
+    }
+  }
+
+  
+  function transferabletokens(address holder, uint64 time) constant public returns (uint256) {
+    uint256 grantindex = grants[holder].length;
+
+    if (grantindex == 0) return balanceof(holder); 
+
+    
+    uint256 nonvested = 0;
+    for (uint256 i = 0; i < grantindex; i++) {
+      nonvested = safeadd(nonvested, nonvestedtokens(grants[holder][i], time));
+    }
+
+    
+    return safesub(balanceof(holder), nonvested);
+  }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+
+
+
+contract ant is minimeirrevocablevestedtoken {
+  
+  function ant(
+    address _tokenfactory
+  ) minimeirrevocablevestedtoken(
+    _tokenfactory,
+    0x0,                    
+    0,                      
+    , 
+    18,                     
+    ,                  
+    true                    
+    ) {}
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+
+contract aragontokensale is controller, safemath {
+    uint public initialblock;             
+    uint public finalblock;               
+    uint public initialprice;             
+    uint public finalprice;               
+    uint8 public pricestages;             
+    address public aragondevmultisig;     
+    address public communitymultisig;     
+    bytes32 public capcommitment;
+
+    uint public totalcollected = 0;               
+    bool public salestopped = false;              
+    bool public salefinalized = false;            
+
+    mapping (address => bool) public activated;   
+
+    ant public token;                             
+    anplaceholder public networkplaceholder;      
+    salewallet public salewallet;                    
+
+    uint constant public dust = 1 finney;         
+    uint constant public hardcap = 1500000 ether; 
+
+    event newpresaleallocation(address holder, uint256 antamount);
+    event newbuyer(address holder, uint256 antamount, uint256 etheramount);
+
+
+
+
+
+
+
+
+
+
+
+
+  function aragontokensale (
+      uint _initialblock,
+      uint _finalblock,
+      address _aragondevmultisig,
+      address _communitymultisig,
+      uint256 _initialprice,
+      uint256 _finalprice,
+      uint8 _pricestages,
+      bytes32 _capcommitment
+  )
+      non_zero_address(_aragondevmultisig)
+      non_zero_address(_communitymultisig)
+  {
+      if (_initialblock < getblocknumber()) throw;
+      if (_initialblock >= _finalblock) throw;
+      if (_initialprice <= _finalprice) throw;
+      if (_pricestages < 2) throw;
+      if (_pricestages > _initialprice  _finalprice) throw;
+      if (uint(_capcommitment) == 0) throw;
+
+      
+      initialblock = _initialblock;
+      finalblock = _finalblock;
+      aragondevmultisig = _aragondevmultisig;
+      communitymultisig = _communitymultisig;
+      initialprice = _initialprice;
+      finalprice = _finalprice;
+      pricestages = _pricestages;
+      capcommitment = _capcommitment;
+  }
+
+  
+  
+  
+  
+
+  function setant(address _token, address _networkplaceholder, address _salewallet)
+           non_zero_address(_token)
+           non_zero_address(_networkplaceholder)
+           non_zero_address(_salewallet)
+           only(aragondevmultisig) {
+
+    
+    if (activated[this]) throw;
+
+    token = ant(_token);
+    networkplaceholder = anplaceholder(_networkplaceholder);
+    salewallet = salewallet(_salewallet);
+
+    if (token.controller() != address(this)) throw; 
+    if (networkplaceholder.sale() != address(this)) throw; 
+    if (networkplaceholder.token() != address(token)) throw; 
+    if (token.totalsupply() > 0) throw; 
+    if (salewallet.finalblock() != finalblock) throw; 
+    if (salewallet.multisig() != aragondevmultisig) throw; 
+
+    
+    doactivatesale(this);
+  }
+
+  
+  
+  
+  function activatesale() {
+    doactivatesale(msg.sender);
+  }
+
+  function doactivatesale(address _entity)
+    non_zero_address(token)               
+    only_before_sale
+    private {
+    activated[_entity] = true;
+  }
+
+  
+  
+  function isactivated() constant returns (bool) {
+    return activated[this] && activated[aragondevmultisig] && activated[communitymultisig];
+  }
+
+  
+  
+  
+  
+  function getprice(uint _blocknumber) constant returns (uint256) {
+    if (_blocknumber < initialblock || _blocknumber >= finalblock) return 0;
+
+    return priceforstage(stageforblock(_blocknumber));
+  }
+
+  
+  
+  
+  function stageforblock(uint _blocknumber) constant returns (uint8) {
+    uint blockn = safesub(_blocknumber, initialblock);
+    uint totalblocks = safesub(finalblock, initialblock);
+
+    return uint8(safediv(safemul(pricestages, blockn), totalblocks));
+  }
+
+  
+  
+  
+  
+  function priceforstage(uint8 _stage) constant returns (uint256) {
+    if (_stage >= pricestages) return 0;
+    uint pricedifference = safesub(initialprice, finalprice);
+    uint stagedelta = safediv(pricedifference, uint(pricestages  1));
+    return safesub(initialprice, safemul(uint256(_stage), stagedelta));
+  }
+
+  
+  
+  
+  
+  
+  function allocatepresaletokens(address _receiver, uint _amount, uint64 cliffdate, uint64 vestingdate)
+           only_before_sale_activation
+           only_before_sale
+           non_zero_address(_receiver)
+           only(aragondevmultisig) {
+
+    if (_amount > 10 ** 24) throw; 
+
+    if (!token.generatetokens(address(this), _amount)) throw;
+    token.grantvestedtokens(_receiver, _amount, uint64(now), cliffdate, vestingdate);
+
+    newpresaleallocation(_receiver, _amount);
+  }
+
+
+
+
+
+
+  function () payable {
+    return dopayment(msg.sender);
+  }
+
+
+
+
+
+
+
+
+
+  function proxypayment(address _owner) payable returns (bool) {
+    dopayment(_owner);
+    return true;
+  }
+
+
+
+
+
+
+
+  function ontransfer(address _from, address _to, uint _amount) returns (bool) {
+    
+    
+    return _from == address(this);
+  }
+
+
+
+
+
+
+
+  function onapprove(address _owner, address _spender, uint _amount) returns (bool) {
+    
+    return false;
+  }
+
+
+
+
+
+  function dopayment(address _owner)
+           only_during_sale_period
+           only_sale_not_stopped
+           only_sale_activated
+           non_zero_address(_owner)
+           minimum_value(dust)
+           internal {
+
+    if (totalcollected + msg.value > hardcap) throw; 
+
+    uint256 boughttokens = safemul(msg.value, getprice(getblocknumber())); 
+
+    if (!salewallet.send(msg.value)) throw; 
+    if (!token.generatetokens(_owner, boughttokens)) throw; 
+
+    totalcollected = safeadd(totalcollected, msg.value); 
+
+    newbuyer(_owner, boughttokens, msg.value);
+  }
+
+  
+  
+  function emergencystopsale()
+           only_sale_activated
+           only_sale_not_stopped
+           only(aragondevmultisig) {
+
+    salestopped = true;
+  }
+
+  
+  
+  function restartsale()
+           only_during_sale_period
+           only_sale_stopped
+           only(aragondevmultisig) {
+
+    salestopped = false;
+  }
+
+  function revealcap(uint256 _cap, uint256 _cap_secure)
+           only_during_sale_period
+           only_sale_activated {
+
+    if (totalcollected < _cap) throw;
+    dofinalizesale(_cap, _cap_secure); 
+  }
+
+  
+  
+  function finalizesale(uint256 _cap, uint256 _cap_secure)
+           only_after_sale
+           only(aragondevmultisig) {
+
+    dofinalizesale(_cap, _cap_secure);
+  }
+
+  function dofinalizesale(uint256 _cap, uint256 _cap_secure)
+           verify_cap(_cap, _cap_secure)
+           internal {
+    
+    
+    
+
+    
+    uint256 aragontokens = token.totalsupply() * 3 / 7;
+    if (!token.generatetokens(aragondevmultisig, aragontokens)) throw;
+    token.changecontroller(networkplaceholder); 
+
+    salefinalized = true;  
+    salestopped = true;
+  }
+
+  
+  
+  function deploynetwork(address networkaddress)
+           only_finalized_sale
+           non_zero_address(networkaddress)
+           only(communitymultisig) {
+
+    networkplaceholder.changecontroller(networkaddress);
+    suicide(networkaddress);
+  }
+
+  function setaragondevmultisig(address _newmultisig)
+           non_zero_address(_newmultisig)
+           only(aragondevmultisig) {
+
+    aragondevmultisig = _newmultisig;
+  }
+
+  function setcommunitymultisig(address _newmultisig)
+           non_zero_address(_newmultisig)
+           only(communitymultisig) {
+
+    communitymultisig = _newmultisig;
+  }
+
+  function getblocknumber() constant returns (uint) {
+    return block.number;
+  }
+
+  function computecap(uint256 _cap, uint256 _cap_secure) constant returns (bytes32) {
+    return sha3(_cap, _cap_secure);
+  }
+
+  function isvalidcap(uint256 _cap, uint256 _cap_secure) constant returns (bool) {
+    return computecap(_cap, _cap_secure) == capcommitment;
+  }
+
+  modifier only(address x) {
+    if (msg.sender != x) throw;
+    _;
+  }
+
+  modifier verify_cap(uint256 _cap, uint256 _cap_secure) {
+    if (!isvalidcap(_cap, _cap_secure)) throw;
+    _;
+  }
+
+  modifier only_before_sale {
+    if (getblocknumber() >= initialblock) throw;
+    _;
+  }
+
+  modifier only_during_sale_period {
+    if (getblocknumber() < initialblock) throw;
+    if (getblocknumber() >= finalblock) throw;
+    _;
+  }
+
+  modifier only_after_sale {
+    if (getblocknumber() < finalblock) throw;
+    _;
+  }
+
+  modifier only_sale_stopped {
+    if (!salestopped) throw;
+    _;
+  }
+
+  modifier only_sale_not_stopped {
+    if (salestopped) throw;
+    _;
+  }
+
+  modifier only_before_sale_activation {
+    if (isactivated()) throw;
+    _;
+  }
+
+  modifier only_sale_activated {
+    if (!isactivated()) throw;
+    _;
+  }
+
+  modifier only_finalized_sale {
+    if (getblocknumber() < finalblock) throw;
+    if (!salefinalized) throw;
+    _;
+  }
+
+  modifier non_zero_address(address x) {
+    if (x == 0) throw;
+    _;
+  }
+
+  modifier minimum_value(uint256 x) {
+    if (msg.value < x) throw;
+    _;
+  }
+}
+
+pragma solidity ^0.4.8;
+
+contract migrations {
+  address public owner;
+  uint public last_completed_migration;
+
+  modifier restricted() {
+    if (msg.sender == owner) _;
+  }
+
+  function migrations() {
+    owner = msg.sender;
+  }
+
+  function setcompleted(uint completed) restricted {
+    last_completed_migration = completed;
+  }
+
+  function upgrade(address new_address) restricted {
+    migrations upgraded = migrations(new_address);
+    upgraded.setcompleted(last_completed_migration);
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+
+
+contract controller {
+    
+    
+    
+    function proxypayment(address _owner) payable returns(bool);
+
+    
+    
+    
+    
+    
+    
+    function ontransfer(address _from, address _to, uint _amount) returns(bool);
+
+    
+    
+    
+    
+    
+    
+    function onapprove(address _owner, address _spender, uint _amount)
+        returns(bool);
+}
+
+pragma solidity ^0.4.8;
+
+
+
+contract controlled {
+    
+    
+    modifier onlycontroller { if (msg.sender != controller) throw; _; }
+
+    address public controller;
+
+    function controlled() { controller = msg.sender;}
+
+    
+    
+    function changecontroller(address _newcontroller) onlycontroller {
+        controller = _newcontroller;
+    }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+
+contract testtokensale {
+  uint public initialbalance = 200 finney;
+
+  address factory;
+
+  throwproxy throwproxy;
+
+  function beforeall() {
+    factory = address(new minimetokenfactory());
+  }
+
+  function beforeeach() {
+    throwproxy = new throwproxy(address(this));
+  }
+
+  function testhascorrectpriceforstages() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), address(this), 3, 1, 2);
+    assert.equal(sale.getprice(10), 3, );
+    assert.equal(sale.getprice(13), 3, );
+    assert.equal(sale.getprice(14), 3, );
+    assert.equal(sale.getprice(15), 1, );
+    assert.equal(sale.getprice(18), 1, );
+    assert.equal(sale.getprice(19), 1, );
+
+    assert.equal(sale.getprice(9), 0, );
+    assert.equal(sale.getprice(20), 0, );
+  }
+
+  function testhascorrectpriceformultistage() {
+    aragontokensalemock sale = new aragontokensalemock(10, 40, address(this), address(this), 5, 1, 3);
+    assert.equal(sale.getprice(10), 5, );
+    assert.equal(sale.getprice(19), 5, );
+    assert.equal(sale.getprice(20), 3, );
+    assert.equal(sale.getprice(25), 3, );
+    assert.equal(sale.getprice(30), 1, );
+    assert.equal(sale.getprice(39), 1, );
+
+    assert.equal(sale.getprice(9), 0, );
+    assert.equal(sale.getprice(41), 0, );
+  }
+
+  function testallocatestokensinsale() {
+    multisigmock ms = new multisigmock();
+
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 3, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+
+    sale.setmockedblocknumber(12);
+    assert.istrue(sale.proxypayment.value(25 finney)(address(this)), ); 
+    assert.equal(sale.totalcollected(), 25 finney, );
+
+    sale.setmockedblocknumber(17);
+    if (!sale.proxypayment.value(10 finney)(address(this))) throw; 
+
+    assert.equal(erc20(sale.token()).balanceof(address(this)), 85 finney, );
+    assert.equal(erc20(sale.token()).totalsupply(), 85 finney, );
+    assert.equal(sale.salewallet().balance, 35 finney, );
+    assert.equal(sale.totalcollected(), 35 finney, );
+  }
+
+  function testcannotgettokensinnotinitiatedsale() {
+    testtokensale(throwproxy).throwswhengettingtokensinnotinitiatedsale();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhengettingtokensinnotinitiatedsale() {
+    multisigmock ms = new multisigmock();
+
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(this), 3, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    
+
+    sale.setmockedblocknumber(12);
+    sale.proxypayment.value(50 finney)(address(this));
+  }
+
+  function testemergencystop() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 3, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+
+    sale.setmockedblocknumber(12);
+    assert.istrue(sale.proxypayment.value(15 finney)(address(this)), );
+    assert.equal(erc20(sale.token()).balanceof(address(this)), 45 finney, );
+
+    ms.emergencystopsale(address(sale));
+    assert.istrue(sale.salestopped(), );
+
+    ms.restartsale(sale);
+
+    sale.setmockedblocknumber(16);
+    assert.isfalse(sale.salestopped(), );
+    assert.istrue(sale.proxypayment.value(1 finney)(address(this)), );
+    assert.equal(erc20(sale.token()).balanceof(address(this)), 46 finney, );
+  }
+
+  function testcantbuytokensinstoppedsale() {
+    testtokensale(throwproxy).throwswhengettingtokenswithstoppedsale();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhengettingtokenswithstoppedsale() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 3, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    sale.setmockedblocknumber(12);
+
+    ms.emergencystopsale(address(sale));
+    sale.proxypayment.value(20 finney)(address(this));
+  }
+
+  function testcantbuytokensinendedsale() {
+    testtokensale(throwproxy).throwswhengettingtokenswithendedsale();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhengettingtokenswithendedsale() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 3, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    sale.setmockedblocknumber(21);
+
+    sale.proxypayment.value(20 finney)(address(this));
+  }
+
+
+  function testcantfinalizenotendedsale() {
+    testtokensale(throwproxy).throwswhenfinalizingnotendedsale();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhenfinalizingnotendedsale() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 3, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    sale.setmockedblocknumber(19);
+    ms.finalizesale(sale);
+  }
+
+  function testcantfinalizeifnotmultisig() {
+    testtokensale(throwproxy).throwswhenfinalizingifnotmultisig();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhenfinalizingifnotmultisig() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 3, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    sale.setmockedblocknumber(30);
+    sale.finalizesale(1, 1);
+  }
+
+  function testcantfinalizewithincorrectcap() {
+    testtokensale(throwproxy).throwswhenfinalizingwithincorrectcap();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhenfinalizingwithincorrectcap() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 5, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    sale.setmockedblocknumber(21);
+    ms.finalizesale(sale, 101 finney); 
+  }
+
+  function testcanfinalizeoncap() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 5, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    sale.setmockedblocknumber(12);
+    sale.proxypayment.value(100 finney)(address(this));
+
+    sale.revealcap(100 finney, sale.mock_capsecret());
+
+    assert.istrue(sale.salefinalized(), );
+  }
+
+  function testcantfinalizebeforecap() {
+    testtokensale(throwproxy).throwswhenfinalizingbeforecap();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhenfinalizingbeforecap() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 5, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    sale.setmockedblocknumber(12);
+    sale.proxypayment.value(99 finney)(address(this));
+
+    sale.revealcap(100 finney, sale.mock_capsecret());
+
+    assert.istrue(sale.salefinalized(), );
+  }
+
+  function testhardcap() {
+    testtokensale(throwproxy).throwswhenhittinghardcap();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhenhittinghardcap() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 5, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    sale.setmockedblocknumber(12);
+    sale.setmockedtotalcollected(1499999 ether + 950 finney); 
+    sale.proxypayment.value(100 finney)(address(this));
+  }
+
+  function testcanfinalizeendedsale() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 5, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    sale.setmockedblocknumber(12);
+    sale.proxypayment.value(14 finney)(address(this));
+
+    assert.equal(erc20(sale.token()).balanceof(address(this)), 70 finney, );
+    assert.equal(erc20(sale.token()).totalsupply(), 70 finney, );
+
+    sale.setmockedblocknumber(21);
+    ms.finalizesale(sale);
+
+    assert.equal(erc20(sale.token()).balanceof(address(ms)), 30 finney, );
+    assert.equal(erc20(sale.token()).totalsupply(), 100 finney, );
+  }
+
+  function testtokensarelockedduringsale() {
+    testtokensale(throwproxy).throwswhentransferingduringsale();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhentransferingduringsale() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 3, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+    sale.setmockedblocknumber(12);
+    sale.proxypayment.value(15 finney)(address(this));
+
+    erc20(sale.token()).transfer(0x1, 10 finney);
+  }
+
+  function testtokensaretransferrableaftersale() {
+    multisigmock ms = new multisigmock();
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(ms), address(ms), 3, 1, 2);
+    ms.deployandsetant(sale);
+    ms.activatesale(sale);
+
+    assert.equal(ant(sale.token()).controller(), address(sale), );
+
+    sale.setmockedblocknumber(12);
+    sale.proxypayment.value(15 finney)(address(this));
+    sale.setmockedblocknumber(22);
+    ms.finalizesale(sale);
+
+    assert.equal(ant(sale.token()).controller(), sale.networkplaceholder(), );
+
+    erc20(sale.token()).transfer(0x1, 10 finney);
+    assert.equal(erc20(sale.token()).balanceof(0x1), 10 finney, );
+  }
+
+  function testnetworkdeployment() {
+    multisigmock devmultisig = new multisigmock();
+    multisigmock communitymultisig = new multisigmock();
+
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(devmultisig), address(communitymultisig), 3, 1, 2);
+    devmultisig.deployandsetant(sale);
+    devmultisig.activatesale(sale);
+    communitymultisig.activatesale(sale);
+
+    assert.equal(ant(sale.token()).controller(), address(sale), );
+    sale.setmockedblocknumber(12);
+    sale.proxypayment.value(15 finney)(address(this));
+    sale.setmockedblocknumber(22);
+    devmultisig.finalizesale(sale);
+
+    assert.equal(ant(sale.token()).controller(), sale.networkplaceholder(), );
+
+    dotransfer(sale.token());
+
+    communitymultisig.deploynetwork(sale, new networkmock());
+
+    testtokensale(throwproxy).dotransfer(sale.token());
+    throwproxy.assertthrows();
+  }
+
+  function dotransfer(address token) {
+    erc20(token).transfer(0x1, 10 finney);
+  }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+import ;
+import ;
+import ;
+import ;
+
+contract testtokenpresale {
+  uint public initialbalance = 200 finney;
+
+  ant token;
+
+  throwproxy throwproxy;
+
+  function beforeeach() {
+    throwproxy = new throwproxy(address(this));
+  }
+
+  function deployandsetant(aragontokensale sale) {
+    ant a = new ant(new minimetokenfactory());
+    a.changecontroller(sale);
+    a.setcancreategrants(sale, true);
+    sale.setant(a, new anplaceholder(address(sale), a), new salewallet(sale.aragondevmultisig(), sale.finalblock()));
+  }
+
+  function testcreatesale() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, 0x1, 0x2, 3, 1, 2);
+
+    assert.isfalse(sale.isactivated(), );
+    assert.equal(sale.totalcollected(), 0, );
+  }
+
+  function testcantinitiateincorrectsale() {
+    testtokenpresale(throwproxy).throwifstartpastblocktime();
+    throwproxy.assertthrows();
+  }
+
+  function throwifstartpastblocktime() {
+    new aragontokensalemock(0, 20, 0x1, 0x2, 3, 1, 2);
+  }
+
+  function testactivatesale() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), address(this), 3, 1, 2);
+    deployandsetant(sale);
+    sale.activatesale();
+    assert.istrue(sale.isactivated(), );
+  }
+
+  function testcannotactivatebeforedeployingant() {
+    testtokenpresale(throwproxy).throwswhenactivatingbeforedeployingant();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhenactivatingbeforedeployingant() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), address(this), 3, 1, 2);
+    sale.activatesale();
+  }
+
+  function testcannotredeployant() {
+    testtokenpresale(throwproxy).throwswhenredeployingant();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhenredeployingant() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), address(this), 3, 1, 2);
+    deployandsetant(sale);
+    deployandsetant(sale);
+  }
+
+  function testonlymultisigcandeployant() {
+    testtokenpresale(throwproxy).throwswhennonmultisigdeploysant();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhennonmultisigdeploysant() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, 0x1, 0x3, 3, 1, 2);
+    deployandsetant(sale);
+  }
+
+  function testthrowsifplaceholderisbad() {
+    testtokenpresale(throwproxy).throwswhennetworkplaceholderisbad();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhennetworkplaceholderisbad() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), address(this), 3, 1, 2);
+    ant a = new ant(new minimetokenfactory());
+    a.changecontroller(sale);
+    sale.setant(a, new anplaceholder(address(sale), address(sale)), new salewallet(sale.aragondevmultisig(), sale.finalblock())); 
+  }
+
+  function testthrowsifsaleisnottokencontroller() {
+    testtokenpresale(throwproxy).throwswhensaleisnottokencontroller();
+    throwproxy.assertthrows();
+  }
+
+  function throwswhensaleisnottokencontroller() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), address(this), 3, 1, 2);
+    ant a = new ant(new minimetokenfactory());
+    
+    sale.setant(a, new anplaceholder(address(sale), a), new salewallet(sale.aragondevmultisig(), sale.finalblock())); 
+  }
+
+  function testthrowssalewalletincorrectblock() {
+    testtokenpresale(throwproxy).throwssalewalletincorrectblock();
+    throwproxy.assertthrows();
+  }
+
+  function throwssalewalletincorrectblock() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), address(this), 3, 1, 2);
+    ant a = new ant(new minimetokenfactory());
+    a.changecontroller(sale);
+    sale.setant(a, new anplaceholder(address(sale), a), new salewallet(sale.aragondevmultisig(), sale.finalblock()  1));
+  }
+
+  function testthrowssalewalletincorrectmultisig() {
+    testtokenpresale(throwproxy).throwssalewalletincorrectmultisig();
+    throwproxy.assertthrows();
+  }
+
+  function throwssalewalletincorrectmultisig() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), address(this), 3, 1, 2);
+    ant a = new ant(new minimetokenfactory());
+    a.changecontroller(sale);
+    sale.setant(a, new anplaceholder(address(sale), a), new salewallet(0x1a77ed, sale.finalblock()));
+  }
+
+  function testsetpresaletokens() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), 0x2, 3, 1, 2);
+    deployandsetant(sale);
+    sale.allocatepresaletokens(0x1, 100 finney, uint64(now + 12 weeks), uint64(now + 24 weeks));
+    sale.allocatepresaletokens(0x2, 30 finney, uint64(now + 12 weeks), uint64(now + 24 weeks));
+    sale.allocatepresaletokens(address(this), 20 finney, uint64(now + 12 weeks), uint64(now + 24 weeks));
+    assert.equal(erc20(sale.token()).balanceof(0x1), 100 finney, );
+    assert.equal(minimeirrevocablevestedtoken(sale.token()).transferabletokens(0x1, uint64(now)), 0, );
+    assert.equal(minimeirrevocablevestedtoken(sale.token()).transferabletokens(0x1, uint64(now + 12 weeks  1)), 0, );
+    assert.equal(minimeirrevocablevestedtoken(sale.token()).transferabletokens(0x1, uint64(now + 12 weeks)), 50 finney, );
+    assert.equal(minimeirrevocablevestedtoken(sale.token()).transferabletokens(0x1, uint64(now + 18 weeks)), 75 finney, );
+    assert.equal(minimeirrevocablevestedtoken(sale.token()).transferabletokens(0x1, uint64(now + 21 weeks)), 87500 szabo, );
+    assert.equal(minimeirrevocablevestedtoken(sale.token()).transferabletokens(0x1, uint64(now + 24 weeks)), 100 finney, );
+    assert.equal(erc20(sale.token()).totalsupply(), 150 finney, );
+
+    assert.equal(erc20(sale.token()).balanceof(this), 20 finney, );
+    testtokenpresale(throwproxy).throwswhentransferingpresaletokensbeforecliff(sale.token());
+    throwproxy.assertthrows();
+  }
+
+  function throwswhentransferingpresaletokensbeforecliff(address token) {
+    erc20(token).transfer(0xdead, 1);
+  }
+
+  function testcannotsetpresaletokensafteractivation() {
+    testtokenpresale(throwproxy).throwifsetpresaletokensafteractivation();
+    throwproxy.assertthrows();
+  }
+
+  function throwifsetpresaletokensafteractivation() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), address(this), 3, 1, 2);
+    deployandsetant(sale);
+    sale.activatesale(); 
+    sale.allocatepresaletokens(0x1, 100, uint64(now + 12 weeks), uint64(now + 24 weeks));
+  }
+
+  function testcannotsetpresaletokensaftersalestarts() {
+    testtokenpresale(throwproxy).throwifsetpresaletokensaftersalestarts();
+    throwproxy.assertthrows();
+  }
+
+  function throwifsetpresaletokensaftersalestarts() {
+    aragontokensalemock sale = new aragontokensalemock(10, 20, address(this), address(this), 3, 1, 2);
+    deployandsetant(sale);
+    sale.setmockedblocknumber(13);
+    sale.allocatepresaletokens(0x1, 100, uint64(now + 12 weeks), uint64(now + 24 weeks));
+  }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+
+contract multisigmock {
+  function deployandsetant(address sale) {
+    ant token = new ant(new minimetokenfactory());
+    anplaceholder networkplaceholder = new anplaceholder(sale, token);
+    token.changecontroller(address(sale));
+
+    aragontokensale s = aragontokensale(sale);
+    token.setcancreategrants(sale, true);
+    s.setant(token, networkplaceholder, new salewallet(s.aragondevmultisig(), s.finalblock()));
+  }
+
+  function activatesale(address sale) {
+    aragontokensale(sale).activatesale();
+  }
+
+  function emergencystopsale(address sale) {
+    aragontokensale(sale).emergencystopsale();
+  }
+
+  function restartsale(address sale) {
+    aragontokensale(sale).restartsale();
+  }
+
+  function finalizesale(address sale) {
+    finalizesale(sale, aragontokensalemock(sale).mock_hiddencap());
+  }
+
+  function finalizesale(address sale, uint256 cap) {
+    aragontokensale(sale).finalizesale(cap, aragontokensalemock(sale).mock_capsecret());
+  }
+
+  function deploynetwork(address sale, address network) {
+    aragontokensale(sale).deploynetwork(network);
+  }
+
+  function () payable {}
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+
+
+
+
+contract throwproxy {
+  address public target;
+  bytes data;
+
+  function throwproxy(address _target) {
+    target = _target;
+  }
+
+  
+  function() {
+    data = msg.data;
+  }
+
+  function assertthrows(string msg) {
+    assert.isfalse(execute(), msg);
+  }
+
+  function assertitdoesntthrow(string msg) {
+    assert.istrue(execute(), msg);
+  }
+
+  function execute() returns (bool) {
+    return target.call(data);
+  }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+
+
+
+
+contract aragontokensaletokenmock is aragontokensalemock {
+  function aragontokensaletokenmock(address initialaccount, uint initialbalance)
+    aragontokensalemock(10, 20, msg.sender, msg.sender, 100, 50, 2)
+    {
+      ant token = new ant(new minimetokenfactory());
+      anplaceholder networkplaceholder = new anplaceholder(this, token);
+      token.changecontroller(address(this));
+
+      setant(token, networkplaceholder, new salewallet(msg.sender, 20));
+      allocatepresaletokens(initialaccount, initialbalance, uint64(now), uint64(now));
+      activatesale();
+      setmockedblocknumber(21);
+      finalizesale(mock_hiddencap, mock_capsecret);
+
+      token.changevestingwhitelister(msg.sender);
+  }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+
+contract networkmock {
+  function proxypayment(address _owner) payable returns (bool) {
+    return false;
+  }
+
+  function ontransfer(address _from, address _to, uint _amount) returns (bool) {
+    return false;
+  }
+
+  function onapprove(address _owner, address _spender, uint _amount) returns (bool) {
+    return false;
+  }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+
+
+
+contract aragontokensalemock is aragontokensale {
+
+  function aragontokensalemock (
+      uint _initialblock,
+      uint _finalblock,
+      address _aragondevmultisig,
+      address _communitymultisig,
+      uint256 _initialprice,
+      uint256 _finalprice,
+      uint8 _pricestages
+  ) aragontokensale(_initialblock, _finalblock, _aragondevmultisig, _communitymultisig, _initialprice, _finalprice, _pricestages, computecap(mock_hiddencap, mock_capsecret)) {
+
+  }
+
+  function getblocknumber() constant returns (uint) {
+    return mock_blocknumber;
+  }
+
+  function setmockedblocknumber(uint _b) {
+    mock_blocknumber = _b;
+  }
+
+  function setmockedtotalcollected(uint _totalcollected) {
+    totalcollected = _totalcollected;
+  }
+
+  uint mock_blocknumber = 1;
+
+  uint public mock_hiddencap = 100 finney;
+  uint public mock_capsecret = 1;
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+import ;
+
+
+
+contract multisigwallet is multisig, shareable, daylimit {
+
+  struct transaction {
+    address to;
+    uint value;
+    bytes data;
+  }
+
+  function multisigwallet(address[] _owners, uint _required, uint _daylimit)       
+    shareable(_owners, _required)        
+    daylimit(_daylimit) { }
+
+  
+  function kill(address _to) onlymanyowners(sha3(msg.data)) external {
+    suicide(_to);
+  }
+
+  
+  function() payable {
+    
+    if (msg.value > 0)
+      deposit(msg.sender, msg.value);
+  }
+
+  
+  
+  
+  
+  function execute(address _to, uint _value, bytes _data) external onlyowner returns (bytes32 _r) {
+    
+    if (underlimit(_value)) {
+      singletransact(msg.sender, _value, _to, _data);
+      
+      if (!_to.call.value(_value)(_data)) {
+        throw;
+      }
+      return 0;
+    }
+    
+    _r = sha3(msg.data, block.number);
+    if (!confirm(_r) && txs[_r].to == 0) {
+      txs[_r].to = _to;
+      txs[_r].value = _value;
+      txs[_r].data = _data;
+      confirmationneeded(_r, msg.sender, _value, _to, _data);
+    }
+  }
+
+  
+  
+  function confirm(bytes32 _h) onlymanyowners(_h) returns (bool) {
+    if (txs[_h].to != 0) {
+      if (!txs[_h].to.call.value(txs[_h].value)(txs[_h].data)) {
+        throw;
+      }
+      multitransact(msg.sender, _h, txs[_h].value, txs[_h].to, txs[_h].data);
+      delete txs[_h];
+      return true;
+    }
+  }
+
+  function setdailylimit(uint _newlimit) onlymanyowners(sha3(msg.data)) external {
+    _setdailylimit(_newlimit);
+  }
+
+  function resetspenttoday() onlymanyowners(sha3(msg.data)) external {
+    _resetspenttoday();
+  }
+
+
+  
+
+  function clearpending() internal {
+    uint length = pendingsindex.length;
+    for (uint i = 0; i < length; ++i) {
+      delete txs[pendingsindex[i]];
+    }
+    super.clearpending();
+  }
+
+
+  
+
+  
+  mapping (bytes32 => transaction) txs;
+}
+
+pragma solidity ^0.4.8;
+
+
+
+contract limitbalance {
+
+  uint public limit;
+
+  function limitbalance(uint _limit) {
+    limit = _limit;
+  }
+
+  modifier limitedpayable() { 
+    if (this.balance > limit) {
+      throw;
+    }
+    _;
+    
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+
+contract safemath {
+  function safemul(uint a, uint b) internal returns (uint) {
+    uint c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function safediv(uint a, uint b) internal returns (uint) {
+    assert(b > 0);
+    uint c = a / b;
+    assert(a == b * c + a % b);
+    return c;
+  }
+
+  function safesub(uint a, uint b) internal returns (uint) {
+    assert(b <= a);
+    return a  b;
+  }
+
+  function safeadd(uint a, uint b) internal returns (uint) {
+    uint c = a + b;
+    assert(c>=a && c>=b);
+    return c;
+  }
+
+  function max64(uint64 a, uint64 b) internal constant returns (uint64) {
+    return a >= b ? a : b;
+  }
+
+  function min64(uint64 a, uint64 b) internal constant returns (uint64) {
+    return a < b ? a : b;
+  }
+
+  function max256(uint256 a, uint256 b) internal constant returns (uint256) {
+    return a >= b ? a : b;
+  }
+
+  function min256(uint256 a, uint256 b) internal constant returns (uint256) {
+    return a < b ? a : b;
+  }
+
+  function assert(bool assertion) internal {
+    if (!assertion) {
+      throw;
+    }
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+
+
+
+contract bounty is pullpayment, killable {
+  bool public claimed;
+  mapping(address => address) public researchers;
+
+  event targetcreated(address createdaddress);
+
+  function() payable {
+    if (claimed) {
+      throw;
+    }
+  }
+
+  function createtarget() returns(target) {
+    target target = target(deploycontract());
+    researchers[target] = msg.sender;
+    targetcreated(target);
+    return target;
+  }
+
+  function deploycontract() internal returns(address);
+
+  function claim(target target) {
+    address researcher = researchers[target];
+    if (researcher == 0) {
+      throw;
+    }
+    
+    if (target.checkinvariant()) {
+      throw;
+    }
+    asyncsend(researcher, this.balance);
+    claimed = true;
+  }
+
+}
+
+
+
+contract target {
+  function checkinvariant() returns(bool);
+}
+
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract daylimit {
+
+  uint public dailylimit;
+  uint public spenttoday;
+  uint public lastday;
+
+
+  function daylimit(uint _limit) {
+    dailylimit = _limit;
+    lastday = today();
+  }
+
+  
+  function _setdailylimit(uint _newlimit) internal {
+    dailylimit = _newlimit;
+  }
+
+  
+  function _resetspenttoday() internal {
+    spenttoday = 0;
+  }
+
+  
+  
+  function underlimit(uint _value) internal returns (bool) {
+    
+    if (today() > lastday) {
+      spenttoday = 0;
+      lastday = today();
+    }
+    
+    
+    if (spenttoday + _value >= spenttoday && spenttoday + _value <= dailylimit) {
+      spenttoday += _value;
+      return true;
+    }
+    return false;
+  }
+
+  
+  function today() private constant returns (uint) {
+    return now / 1 days;
+  }
+
+
+  
+  modifier limiteddaily(uint _value) {
+    if (!underlimit(_value)) {
+      throw;
+    }
+    _;
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+
+contract pullpayment {
+  mapping(address => uint) public payments;
+
+  
+  function asyncsend(address dest, uint amount) internal {
+    payments[dest] += amount;
+  }
+
+  
+  function withdrawpayments() {
+    address payee = msg.sender;
+    uint payment = payments[payee];
+    
+    if (payment == 0) {
+      throw;
+    }
+
+    if (this.balance < payment) {
+      throw;
+    }
+
+    payments[payee] = 0;
+
+    if (!payee.send(payment)) {
+      throw;
+    }
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+
+contract erc20 {
+  function totalsupply() constant returns (uint);
+  function balanceof(address who) constant returns (uint);
+  function allowance(address owner, address spender) constant returns (uint);
+
+  function transfer(address to, uint value) returns (bool ok);
+  function transferfrom(address from, address to, uint value) returns (bool ok);
+  function approve(address spender, uint value) returns (bool ok);
+  event transfer(address indexed from, address indexed to, uint value);
+  event approval(address indexed owner, address indexed spender, uint value);
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract crowdsaletoken is standardtoken {
+
+  string public name = ;
+  string public symbol = ;
+  uint public decimals = 18;
+
+  
+  uint price = 500;
+
+  function () payable {
+    createtokens(msg.sender);
+  }
+  
+  function createtokens(address recipient) payable {
+    if (msg.value == 0) {
+      throw;
+    }
+
+    uint tokens = safemul(msg.value, getprice());
+
+    totalsupply = safeadd(totalsupply, tokens);
+    balances[recipient] = safeadd(balances[recipient], tokens);
+  }
+  
+  
+  function getprice() constant returns (uint result) {
+    return price;
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+
+
+
+contract basictoken is erc20basic, safemath {
+
+  mapping(address => uint) balances;
+
+  function transfer(address _to, uint _value) {
+    balances[msg.sender] = safesub(balances[msg.sender], _value);
+    balances[_to] = safeadd(balances[_to], _value);
+    transfer(msg.sender, _to, _value);
+  }
+
+  function balanceof(address _owner) constant returns (uint balance) {
+    return balances[_owner];
+  }
+  
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+
+
+
+contract standardtoken is erc20, safemath {
+
+  mapping(address => uint) balances;
+  mapping (address => mapping (address => uint)) allowed;
+
+  function transfer(address _to, uint _value) returns (bool success) {
+    balances[msg.sender] = safesub(balances[msg.sender], _value);
+    balances[_to] = safeadd(balances[_to], _value);
+    transfer(msg.sender, _to, _value);
+    return true;
+  }
+
+  function transferfrom(address _from, address _to, uint _value) returns (bool success) {
+    var _allowance = allowed[_from][msg.sender];
+
+    
+    
+
+    balances[_to] = safeadd(balances[_to], _value);
+    balances[_from] = safesub(balances[_from], _value);
+    allowed[_from][msg.sender] = safesub(_allowance, _value);
+    transfer(_from, _to, _value);
+    return true;
+  }
+
+  function balanceof(address _owner) constant returns (uint balance) {
+    return balances[_owner];
+  }
+
+  function approve(address _spender, uint _value) returns (bool success) {
+    allowed[msg.sender][_spender] = _value;
+    approval(msg.sender, _spender, _value);
+    return true;
+  }
+
+  function allowance(address _owner, address _spender) constant returns (uint remaining) {
+    return allowed[_owner][_spender];
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract simpletoken is standardtoken {
+
+  string public name = ;
+  string public symbol = ;
+  uint public decimals = 18;
+  uint public initial_supply = 10000;
+  
+  function simpletoken() {
+    totalsupply = initial_supply;
+    balances[msg.sender] = initial_supply;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+contract vestedtoken is standardtoken {
+  struct tokengrant {
+    address granter;
+    uint256 value;
+    uint64 cliff;
+    uint64 vesting;
+    uint64 start;
+  }
+
+  mapping (address => tokengrant[]) public grants;
+
+  modifier cantransfer(address _sender, uint _value) {
+    if (_value > transferabletokens(_sender, uint64(now))) throw;
+    _;
+  }
+
+  function transfer(address _to, uint _value) cantransfer(msg.sender, _value) returns (bool success) {
+    return super.transfer(_to, _value);
+  }
+
+  function transferfrom(address _from, address _to, uint _value) cantransfer(_from, _value) returns (bool success) {
+    return super.transferfrom(_from, _to, _value);
+  }
+
+  function grantvestedtokens(
+    address _to,
+    uint256 _value,
+    uint64 _start,
+    uint64 _cliff,
+    uint64 _vesting) {
+
+    if (_cliff < _start) {
+      throw;
+    }
+    if (_vesting < _start) {
+      throw;
+    }
+    if (_vesting < _cliff) {
+      throw;
+    }
+
+
+    tokengrant memory grant = tokengrant(msg.sender, _value, _cliff, _vesting, _start);
+    grants[_to].push(grant);
+
+    transfer(_to, _value);
+  }
+
+  function revoketokengrant(address _holder, uint _grantid) {
+    tokengrant grant = grants[_holder][_grantid];
+
+    if (grant.granter != msg.sender) {
+      throw;
+    }
+    uint256 nonvested = nonvestedtokens(grant, uint64(now));
+
+    
+    delete grants[_holder][_grantid];
+    grants[_holder][_grantid] = grants[_holder][grants[_holder].length  1];
+    grants[_holder].length = 1;
+
+    balances[msg.sender] = safeadd(balances[msg.sender], nonvested);
+    balances[_holder] = safesub(balances[_holder], nonvested);
+    transfer(_holder, msg.sender, nonvested);
+  }
+
+  function tokengrantscount(address _holder) constant returns (uint index) {
+    return grants[_holder].length;
+  }
+
+  function tokengrant(address _holder, uint _grantid) constant returns (address granter, uint256 value, uint256 vested, uint64 start, uint64 cliff, uint64 vesting) {
+    tokengrant grant = grants[_holder][_grantid];
+
+    granter = grant.granter;
+    value = grant.value;
+    start = grant.start;
+    cliff = grant.cliff;
+    vesting = grant.vesting;
+
+    vested = vestedtokens(grant, uint64(now));
+  }
+
+  function vestedtokens(tokengrant grant, uint64 time) private constant returns (uint256) {
+    return calculatevestedtokens(
+      grant.value,
+      uint256(time),
+      uint256(grant.start),
+      uint256(grant.cliff),
+      uint256(grant.vesting)
+    );
+  }
+
+  function calculatevestedtokens(
+    uint256 tokens,
+    uint256 time,
+    uint256 start,
+    uint256 cliff,
+    uint256 vesting) constant returns (uint256 vestedtokens)
+    {
+
+    if (time < cliff) {
+      return 0;
+    }
+    if (time > vesting) {
+      return tokens;
+    }
+
+    uint256 clifftokens = safediv(safemul(tokens, safesub(cliff, start)), safesub(vesting, start));
+    vestedtokens = clifftokens;
+
+    uint256 vestingtokens = safesub(tokens, clifftokens);
+
+    vestedtokens = safeadd(vestedtokens, safediv(safemul(vestingtokens, safesub(time, cliff)), safesub(vesting, start)));
+  }
+
+  function nonvestedtokens(tokengrant grant, uint64 time) private constant returns (uint256) {
+    return safesub(grant.value, vestedtokens(grant, time));
+  }
+
+  function lasttokenistransferabledate(address holder) constant public returns (uint64 date) {
+    date = uint64(now);
+    uint256 grantindex = grants[holder].length;
+    for (uint256 i = 0; i < grantindex; i++) {
+      date = max64(grants[holder][i].vesting, date);
+    }
+  }
+
+  function transferabletokens(address holder, uint64 time) constant public returns (uint256 nonvested) {
+    uint256 grantindex = grants[holder].length;
+
+    for (uint256 i = 0; i < grantindex; i++) {
+      nonvested = safeadd(nonvested, nonvestedtokens(grants[holder][i], time));
+    }
+
+    return safesub(balances[holder], nonvested);
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+
+contract erc20basic {
+  uint public totalsupply;
+  function balanceof(address who) constant returns (uint);
+  function transfer(address to, uint value);
+  event transfer(address indexed from, address indexed to, uint value);
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+contract migrations is ownable {
+  uint public lastcompletedmigration;
+
+  function setcompleted(uint completed) onlyowner {
+    lastcompletedmigration = completed;
+  }
+
+  function upgrade(address newaddress) onlyowner {
+    migrations upgraded = migrations(newaddress);
+    upgraded.setcompleted(lastcompletedmigration);
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract killable is ownable {
+  function kill() onlyowner {
+    selfdestruct(owner);
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract pausable is ownable {
+  bool public stopped;
+
+  modifier stopinemergency {
+    if (!stopped) {
+      _;
+    }
+  }
+  
+  modifier onlyinemergency {
+    if (stopped) {
+      _;
+    }
+  }
+
+  
+  function emergencystop() external onlyowner {
+    stopped = true;
+  }
+
+  
+  function release() external onlyowner onlyinemergency {
+    stopped = false;
+  }
+
+}
+
+pragma solidity ^0.4.0;
+
+import ;
+
+contract contactable is ownable{
+
+     string public contactinformation;
+
+     function setcontactinformation(string info) onlyowner{
+         contactinformation = info;
+     }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+
+contract ownable {
+  address public owner;
+
+  function ownable() {
+    owner = msg.sender;
+  }
+
+  modifier onlyowner() {
+    if (msg.sender != owner) {
+      throw;
+    }
+    _;
+  }
+
+  function transferownership(address newowner) onlyowner {
+    if (newowner != address(0)) {
+      owner = newowner;
+    }
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+
+contract multisig {
+  
+
+  
+  
+  event deposit(address _from, uint value);
+  
+  event singletransact(address owner, uint value, address to, bytes data);
+  
+  event multitransact(address owner, bytes32 operation, uint value, address to, bytes data);
+  
+  event confirmationneeded(bytes32 operation, address initiator, uint value, address to, bytes data);
+
+
+  
+
+  
+  function changeowner(address _from, address _to) external;
+  function execute(address _to, uint _value, bytes _data) external returns (bytes32);
+  function confirm(bytes32 _h) returns (bool);
+}
+
+
+pragma solidity ^0.4.8;
+
+
+
+contract shareable {
+  
+  struct pendingstate {
+    uint yetneeded;
+    uint ownersdone;
+    uint index;
+  }
+
+  
+  uint public required;
+
+  
+  uint[256] owners;
+  
+  mapping(uint => uint) ownerindex;
+  
+  mapping(bytes32 => pendingstate) pendings;
+  bytes32[] pendingsindex;
+
+
+  
+  
+  event confirmation(address owner, bytes32 operation);
+  event revoke(address owner, bytes32 operation);
+
+
+  
+  modifier onlyowner {
+    if (!isowner(msg.sender)) {
+      throw;
+    }
+    _;
+  }
+
+  
+  
+  
+  modifier onlymanyowners(bytes32 _operation) {
+    if (confirmandcheck(_operation)) {
+      _;
+    }
+  }
+
+  
+  
+  function shareable(address[] _owners, uint _required) {
+    owners[1] = uint(msg.sender);
+    ownerindex[uint(msg.sender)] = 1;
+    for (uint i = 0; i < _owners.length; ++i) {
+      owners[2 + i] = uint(_owners[i]);
+      ownerindex[uint(_owners[i])] = 2 + i;
+    }
+    required = _required;
+  }
+
+  
+  function revoke(bytes32 _operation) external {
+    uint index = ownerindex[uint(msg.sender)];
+    
+    if (index == 0) {
+      return;
+    }
+    uint ownerindexbit = 2**index;
+    var pending = pendings[_operation];
+    if (pending.ownersdone & ownerindexbit > 0) {
+      pending.yetneeded++;
+      pending.ownersdone = ownerindexbit;
+      revoke(msg.sender, _operation);
+    }
+  }
+
+  
+  function getowner(uint ownerindex) external constant returns (address) {
+    return address(owners[ownerindex + 1]);
+  }
+
+  function isowner(address _addr) constant returns (bool) {
+    return ownerindex[uint(_addr)] > 0;
+  }
+
+  function hasconfirmed(bytes32 _operation, address _owner) constant returns (bool) {
+    var pending = pendings[_operation];
+    uint index = ownerindex[uint(_owner)];
+
+    
+    if (index == 0) {
+      return false;
+    }
+
+    
+    uint ownerindexbit = 2**index;
+    return !(pending.ownersdone & ownerindexbit == 0);
+  }
+
+  function confirmandcheck(bytes32 _operation) internal returns (bool) {
+    
+    uint index = ownerindex[uint(msg.sender)];
+    
+    if (index == 0) {
+      return;
+    }
+
+    var pending = pendings[_operation];
+    
+    if (pending.yetneeded == 0) {
+      
+      pending.yetneeded = required;
+      
+      pending.ownersdone = 0;
+      pending.index = pendingsindex.length++;
+      pendingsindex[pending.index] = _operation;
+    }
+    
+    uint ownerindexbit = 2**index;
+    
+    if (pending.ownersdone & ownerindexbit == 0) {
+      confirmation(msg.sender, _operation);
+      
+      if (pending.yetneeded <= 1) {
+        
+        delete pendingsindex[pendings[_operation].index];
+        delete pendings[_operation];
+        return true;
+      } else {
+        
+        pending.yetneeded;
+        pending.ownersdone |= ownerindexbit;
+      }
+    }
+  }
+
+  function clearpending() internal {
+    uint length = pendingsindex.length;
+    for (uint i = 0; i < length; ++i) {
+      if (pendingsindex[i] != 0) {
+        delete pendings[pendingsindex[i]];
+      }
+    }
+    delete pendingsindex;
+  }
+
+}
+
+pragma solidity ^0.4.0;
+
+
+import ;
+
+
+
+contract claimable is ownable {
+  address public pendingowner;
+
+  modifier onlypendingowner() {
+    if (msg.sender != pendingowner) {
+      throw;
+    }
+    _;
+  }
+
+  function transferownership(address newowner) onlyowner {
+    pendingowner = newowner;
+  }
+
+  function claimownership() onlypendingowner {
+    owner = pendingowner;
+    pendingowner = 0x0;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+
+
+
+contract delayedclaimable is ownable, claimable {
+
+  uint public end;
+  uint public start;
+
+  function setlimits(uint _start, uint _end) onlyowner {
+    if (_start > _end)
+        throw;
+    end = _end;
+    start = _start;
+  }
+
+  function claimownership() onlypendingowner {
+    if ((block.number > end) || (block.number < start))
+        throw;
+    owner = pendingowner;
+    pendingowner = 0x0;
+    end = 0;
+  }
+
+}
+

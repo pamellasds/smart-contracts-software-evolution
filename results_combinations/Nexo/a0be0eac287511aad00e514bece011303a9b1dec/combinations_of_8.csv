@@ -1,0 +1,2 @@
+similarity,combination
+64,['NexoToken.sol', 'StandardToken.sol', 'Owned.sol', 'Token.sol', 'Migrations.sol', 'SafeMath.sol', 'TokenMock.sol', 'AbstractToken.sol']

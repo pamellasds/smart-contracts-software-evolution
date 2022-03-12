@@ -1,0 +1,492 @@
+pragma solidity ^0.4.11;
+
+
+
+contract ownable {
+  address public owner;
+
+
+  
+  function ownable()
+  {
+    owner = msg.sender;
+  }
+
+
+  
+  function transferownership(address newowner)
+  onlyowner
+  {
+    if (newowner != address(0)) {
+      owner = newowner;
+    }
+  }
+
+
+  
+
+  
+  modifier onlyowner()
+  {
+    require(msg.sender == owner);
+    _;
+  }
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+import ;
+
+
+contract linktoken is standardtoken {
+
+  uint public constant totalsupply = 10**18;
+  string public constant name = ;
+  uint8 public constant decimals = 9;
+  string public constant symbol = ;
+
+  function linktoken()
+  public
+  {
+    balances[msg.sender] = totalsupply;
+  }
+
+  
+  function transfer(address _to, uint _value)
+  public validrecipient(_to) returns (bool success)
+  {
+    super.transfer(_to, _value);
+  }
+
+  
+  function approveandcall(address _receiver, uint _value, bytes _data)
+  public returns (bool success)
+  {
+    approve(_receiver, _value);
+    erc677receiver receiver = erc677receiver(_receiver);
+    return receiver.receiveapproval(msg.sender, _value, this, _data);
+  }
+
+  function transferandcall(address _receiver, uint _value, bytes _data)
+  public returns (bool success)
+  {
+    transfer(_receiver, _value);
+    erc677receiver receiver = erc677receiver(_receiver);
+    return receiver.receivetokentransfer(msg.sender, _value, _data);
+  }
+
+
+  
+
+  modifier validrecipient(address _recipient) {
+    require(_recipient != address(0) && _recipient != address(this));
+    _;
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+import ;
+
+
+contract tokensale is ownable {
+
+  using safemath for uint;
+
+  uint public limit;
+  uint public starttime;
+  uint public distributed;
+  uint constant public phase1end = 1 days;
+  uint constant public phase2end = 7 days;
+  uint constant public phase3end = 14 days;
+  uint constant public phase4end = 21 days;
+  uint constant public endtime = 28 days;
+  address public recipient;
+  address public distributionupdater;
+  linktoken public token;
+
+  function tokensale(
+    uint _limit,
+    uint _prepurchased,
+    uint _start,
+    address _owner,
+    address _distributionupdater
+  )
+  public
+  {
+    limit = _limit;
+    distributed = _prepurchased;
+    starttime = _start;
+    token = new linktoken();
+    owner = _owner;
+    distributionupdater = _distributionupdater;
+
+    require(limit <= token.totalsupply());
+  }
+
+  function ()
+  public payable
+  {
+    purchase(msg.sender);
+  }
+
+  function purchase(address _recipient)
+  public payable ensurestarted ensurenotcompleted
+  {
+    uint purchaseamount = calculatepurchased();
+
+    require(underlimit(purchaseamount) && owner.send(msg.value));
+
+    distributed = distributed.add(purchaseamount);
+    token.transfer(_recipient, purchaseamount);
+  }
+
+  function completed()
+  public constant returns (bool)
+  {
+    return ended() || funded() || finalized;
+  }
+
+  function closeout()
+  public onlyowner ensurestarted ensurecompleted
+  {
+    token.transfer(owner, token.balanceof(this));
+  }
+
+  function finalize()
+  public onlyowner ensurestarted
+  {
+    finalized = true;
+  }
+
+  function updatedistributed(uint amountchanged)
+  public onlydistributionupdater
+  {
+    distributed = distributed.add(amountchanged);
+  }
+
+
+  
+
+  bool finalized;
+
+  function calculatepurchased()
+  private returns (uint)
+  {
+    uint start = starttime;
+    if (block.timestamp <= start + phase1end) {
+      return msg.value.mul(200).div(10**8);
+    } else if (block.timestamp <= start + phase2end) {
+      return msg.value.mul(175).div(10**8);
+    } else if (block.timestamp <= start + phase3end) {
+      return msg.value.mul(165).div(10**8);
+    } else if (block.timestamp <= start + phase4end) {
+      return msg.value.mul(155).div(10**8);
+    } else {
+      return msg.value.mul(145).div(10**8);
+    }
+  }
+
+  function started()
+  private returns (bool)
+  {
+    return block.timestamp >= starttime;
+  }
+
+  function ended()
+  private returns (bool)
+  {
+    return block.timestamp > starttime + endtime;
+  }
+
+  function funded()
+  private returns (bool)
+  {
+    return distributed == limit;
+  }
+
+  function underlimit(uint _purchasedamount)
+  private returns (bool)
+  {
+    return (_purchasedamount + distributed <= limit);
+  }
+
+
+  
+
+  modifier ensurestarted()
+  {
+    require(started());
+    _;
+  }
+
+  modifier ensurenotcompleted()
+  {
+    require(!completed());
+    _;
+  }
+
+  modifier ensurecompleted()
+  {
+    require(completed());
+    _;
+  }
+
+  modifier onlydistributionupdater()
+  {
+    require(msg.sender == distributionupdater);
+    _;
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+
+
+
+contract erc20 is erc20basic {
+  function allowance(address owner, address spender) constant returns (uint256);
+  function transferfrom(address from, address to, uint256 value) returns (bool);
+  function approve(address spender, uint256 value) returns (bool);
+  event approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+
+
+
+contract basictoken is erc20basic {
+  using safemath for uint256;
+
+  mapping(address => uint256) balances;
+
+  
+  function transfer(address _to, uint256 _value) returns (bool) {
+    balances[msg.sender] = balances[msg.sender].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    transfer(msg.sender, _to, _value);
+    return true;
+  }
+
+  
+  function balanceof(address _owner) constant returns (uint256 balance) {
+    return balances[_owner];
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+
+
+
+contract standardtoken is erc20, basictoken {
+
+  mapping (address => mapping (address => uint256)) allowed;
+
+
+  
+  function transferfrom(address _from, address _to, uint256 _value) returns (bool) {
+    var _allowance = allowed[_from][msg.sender];
+
+    
+    
+
+    balances[_to] = balances[_to].add(_value);
+    balances[_from] = balances[_from].sub(_value);
+    allowed[_from][msg.sender] = _allowance.sub(_value);
+    transfer(_from, _to, _value);
+    return true;
+  }
+
+  
+  function approve(address _spender, uint256 _value) returns (bool) {
+
+    
+    
+    
+    
+    if ((_value != 0) && (allowed[msg.sender][_spender] != 0)) throw;
+
+    allowed[msg.sender][_spender] = _value;
+    approval(msg.sender, _spender, _value);
+    return true;
+  }
+
+  
+  function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
+    return allowed[_owner][_spender];
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+
+contract erc677receiver {
+  function receiveapproval(address from, uint256 amount, address token, bytes data) returns (bool success);
+  function receivetokentransfer(address from, uint256 amount, bytes data) returns (bool success);
+}
+
+pragma solidity ^0.4.11;
+
+
+
+contract erc20basic {
+  uint256 public totalsupply;
+  function balanceof(address who) constant returns (uint256);
+  function transfer(address to, uint256 value) returns (bool);
+  event transfer(address indexed from, address indexed to, uint256 value);
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract basictokenmock is basictoken {
+
+  function basictokenmock(address initialaccount, uint initialbalance)
+  {
+    balances[initialaccount] = initialbalance;
+    totalsupply = initialbalance;
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+
+
+contract linkreceiver is erc677receiver {
+
+  bool public callbackcalled;
+  bool public calldatacalled;
+  uint public tokensreceived;
+  uint public lasttransferamount;
+  address public lasttransfersender;
+
+  function receiveapproval(
+    address _from,
+    uint256 _amount,
+    address _token,
+    bytes _data
+  )
+  public returns (bool _success)
+  {
+    callbackcalled = true;
+    if (_data.length > 0) {
+      require(this.call(_data));
+    }
+    return true;
+  }
+
+  function receivetokentransfer(
+    address _from,
+    uint256 _amount,
+    bytes _data
+  )
+  public returns (bool _success)
+  {
+    callbackcalled = true;
+    lasttransfersender = _from;
+    lasttransferamount = _amount;
+    if (_data.length > 0) {
+      require(this.call(_data));
+    }
+    return true;
+  }
+
+  function callbackwithoutwithdrawl() {
+    calldatacalled = true;
+  }
+
+  function callbackwithwithdrawl(uint _value, address _from, address _token) {
+    calldatacalled = true;
+    erc20 token = erc20(_token);
+    token.transferfrom(_from, this, _value);
+    tokensreceived = _value;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+contract standardtokenmock is standardtoken {
+
+  function standardtokenmock(address initialaccount, uint initialbalance)
+  {
+    balances[initialaccount] = initialbalance;
+    totalsupply = initialbalance;
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+
+library safemath {
+
+  
+
+  function mul(uint256 a, uint256 b)
+  internal returns (uint256)
+  {
+    uint256 c = a * b;
+    require(a == 0 || c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b)
+  internal returns (uint256)
+  {
+    
+    uint256 c = a / b;
+    
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b)
+  internal returns (uint256)
+  {
+    require(b <= a);
+    return a  b;
+  }
+
+  function add(uint256 a, uint256 b)
+  internal returns (uint256)
+  {
+    uint256 c = a + b;
+    require(c >= a);
+    return c;
+  }
+}
+

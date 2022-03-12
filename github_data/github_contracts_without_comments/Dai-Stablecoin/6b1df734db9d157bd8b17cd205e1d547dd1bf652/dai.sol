@@ -1,0 +1,131 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+pragma solidity >=0.4.24;
+
+contract dai {
+    
+    mapping (address => bool) public wards;
+    function rely(address guy) public auth { wards[guy] = true; }
+    function deny(address guy) public auth { wards[guy] = false; }
+    modifier auth { require(wards[msg.sender]); _; }
+
+    
+    uint8   public decimals = 18;
+    string  public name;
+    string  public symbol;
+    uint256 public totalsupply;
+
+    mapping (address => uint)                      public balanceof;
+    mapping (address => mapping (address => uint)) public allowance;
+    mapping (address => uint)                      public nonces;
+
+    event approval(address indexed src, address indexed guy, uint wad);
+    event transfer(address indexed src, address indexed dst, uint wad);
+
+    
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x, );
+    }
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        require((z = x  y) <= x, );
+    }
+
+    
+    bytes32 public domain_separator;
+    bytes32 public permit_typehash = keccak256(
+        
+    );
+
+    constructor(string memory symbol_, string memory name_, string memory version_, uint256 chainid_) public {
+        wards[msg.sender] = true;
+        symbol = symbol_;
+        name = name_;
+        domain_separator = keccak256(abi.encode(
+            keccak256(),
+            keccak256(bytes()),
+            keccak256(bytes(version_)),
+            chainid_,
+            address(this)
+        ));
+    }
+
+    
+    function transfer(address dst, uint wad) public returns (bool) {
+        transferfrom(msg.sender, dst, wad);
+        return true;
+    }
+    function transferfrom(address src, address dst, uint wad)
+        public returns (bool)
+    {
+        if (src != msg.sender && allowance[src][msg.sender] != uint(1)) {
+            allowance[src][msg.sender] = sub(allowance[src][msg.sender], wad);
+        }
+        balanceof[src] = sub(balanceof[src], wad);
+        balanceof[dst] = add(balanceof[dst], wad);
+        emit transfer(src, dst, wad);
+        return true;
+    }
+    function mint(address usr, uint wad) public auth {
+        balanceof[usr] = add(balanceof[usr], wad);
+        totalsupply    = add(totalsupply, wad);
+        emit transfer(address(0), usr, wad);
+    }
+    function burn(address usr, uint wad) public {
+        if (usr != msg.sender && allowance[usr][msg.sender] != uint(1)) {
+            allowance[usr][msg.sender] = sub(allowance[usr][msg.sender], wad);
+        }
+        balanceof[usr] = sub(balanceof[usr], wad);
+        totalsupply    = sub(totalsupply, wad);
+        emit transfer(usr, address(0), wad);
+    }
+    function approve(address usr, uint wad) public returns (bool) {
+        allowance[msg.sender][usr] = wad;
+        emit approval(msg.sender, usr, wad);
+        return true;
+    }
+
+    
+    function push(address usr, uint wad) public {
+        transferfrom(msg.sender, usr, wad);
+    }
+    function pull(address usr, uint wad) public {
+        transferfrom(usr, msg.sender, wad);
+    }
+    function move(address src, address dst, uint wad) public {
+        transferfrom(src, dst, wad);
+    }
+
+    
+    function permit(address holder, address spender, uint256 nonce, uint256 deadline,
+                    bool allowed, uint8 v, bytes32 r, bytes32 s) public
+    {
+        bytes32 digest =
+            keccak256(abi.encodepacked(
+                ,
+                domain_separator,
+                keccak256(abi.encode(permit_typehash,
+                                     holder,
+                                     spender,
+                                     nonce,
+                                     deadline,
+                                     allowed))
+        ));
+        require(holder == ecrecover(digest, v, r, s), );
+        require(deadline == 0 || deadline < now, );
+        require(nonce == nonces[holder]++, );
+        uint wad = allowed ? uint(1) : 0;
+        allowance[holder][spender] = wad;
+        emit approval(holder, spender, wad);
+    }
+}

@@ -1,0 +1,11 @@
+similarity,combination
+4,['prototype.sol', 'Migrations.sol', 'CommodityInfo.sol', 'params.sol', 'Voting.sol', 'energy.sol', 'extension.sol', 'executor.sol', 'authority.sol']
+4,['prototype.sol', 'Migrations.sol', 'CommodityInfo.sol', 'params.sol', 'Voting.sol', 'energy.sol', 'extension.sol', 'executor.sol', 'builtin.sol']
+4,['prototype.sol', 'Migrations.sol', 'CommodityInfo.sol', 'params.sol', 'Voting.sol', 'energy.sol', 'extension.sol', 'authority.sol', 'builtin.sol']
+4,['prototype.sol', 'Migrations.sol', 'CommodityInfo.sol', 'params.sol', 'Voting.sol', 'energy.sol', 'executor.sol', 'authority.sol', 'builtin.sol']
+3,['prototype.sol', 'Migrations.sol', 'CommodityInfo.sol', 'params.sol', 'Voting.sol', 'extension.sol', 'executor.sol', 'authority.sol', 'builtin.sol']
+5,['prototype.sol', 'Migrations.sol', 'CommodityInfo.sol', 'params.sol', 'energy.sol', 'extension.sol', 'executor.sol', 'authority.sol', 'builtin.sol']
+4,['prototype.sol', 'Migrations.sol', 'CommodityInfo.sol', 'Voting.sol', 'energy.sol', 'extension.sol', 'executor.sol', 'authority.sol', 'builtin.sol']
+4,['prototype.sol', 'Migrations.sol', 'params.sol', 'Voting.sol', 'energy.sol', 'extension.sol', 'executor.sol', 'authority.sol', 'builtin.sol']
+5,['prototype.sol', 'CommodityInfo.sol', 'params.sol', 'Voting.sol', 'energy.sol', 'extension.sol', 'executor.sol', 'authority.sol', 'builtin.sol']
+4,['Migrations.sol', 'CommodityInfo.sol', 'params.sol', 'Voting.sol', 'energy.sol', 'extension.sol', 'executor.sol', 'authority.sol', 'builtin.sol']

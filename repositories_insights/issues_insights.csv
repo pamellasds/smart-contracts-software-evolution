@@ -1,0 +1,273 @@
+token,number,title,user_name,status,created_at,updated_at,closed_at
+,1,Fix minor spelling error.,davidwparker,closed,2017-10-18T01:58:18Z,2018-03-07T04:37:38Z,2018-03-07T04:37:30Z
+,2,Use imported OpenZeppelin contracts,thodges-gh,closed,2018-09-12T23:40:39Z,2018-09-13T16:22:22Z,2018-09-13T16:22:22Z
+,3,Rename vendored contracts for compatibility,thodges-gh,closed,2018-09-13T14:40:21Z,2018-09-13T18:01:48Z,2018-09-13T18:01:45Z
+,4,bump dependencies,se3000,closed,2018-09-13T21:45:08Z,2018-09-13T22:20:25Z,2018-09-13T22:20:25Z
+,5,update package version number,se3000,closed,2018-09-28T19:19:32Z,2018-09-28T19:21:33Z,2018-09-28T19:21:33Z
+,6,update name to fix npm's rules,se3000,closed,2018-09-28T19:29:15Z,2018-09-28T19:32:37Z,2018-09-28T19:32:37Z
+,7,bump dependencies and version,se3000,closed,2019-03-14T02:55:29Z,2019-03-14T02:58:19Z,2019-03-14T02:58:19Z
+,8,remove truffle config from dependencies,se3000,closed,2019-03-14T04:26:49Z,2019-03-14T13:54:01Z,2019-03-14T13:54:01Z
+,9,move dependencies to dev dependencies,se3000,closed,2019-04-18T21:32:11Z,2019-04-18T21:34:29Z,2019-04-18T21:33:58Z
+,10,ignore dev files,se3000,closed,2019-04-18T21:47:14Z,2019-04-18T21:49:38Z,2019-04-18T21:49:37Z
+,11,cut down dependencies,se3000,closed,2019-04-19T19:44:16Z,2019-04-19T19:45:58Z,2019-04-19T19:45:55Z
+,12,bump version,se3000,closed,2019-04-19T20:53:00Z,2019-04-19T21:00:54Z,2019-04-19T20:58:49Z
+,13,add flattened solidity file,se3000,closed,2019-05-28T22:52:53Z,2019-05-29T06:04:18Z,2019-05-29T06:04:18Z
+,14,bump dependencies,se3000,closed,2019-06-14T14:29:52Z,2019-06-14T14:32:58Z,2019-06-14T14:32:58Z
+,15,Bump lodash from 4.17.11 to 4.17.14,dependabot[bot],closed,2019-07-13T16:34:32Z,2019-07-13T18:29:58Z,2019-07-13T18:29:48Z
+,16,Bump truffle to 5.x,rupurt,closed,2019-09-04T00:48:09Z,2019-09-12T15:59:15Z,2019-09-12T15:59:15Z
+,17,Truffle,danforbes,closed,2019-11-07T05:20:55Z,2019-12-16T21:09:15Z,2019-12-16T21:09:15Z
+,18,Bump lodash from 4.17.14 to 4.17.19,dependabot[bot],closed,2020-07-17T08:01:52Z,2020-09-21T15:41:03Z,2020-09-21T15:40:55Z
+,19,Feature/solc v0.6,krebernisak,closed,2020-09-05T20:57:53Z,2020-09-24T07:19:24Z,2020-09-24T07:19:19Z
+,20,Add Solidity syntax highlight,cleanunicorn,open,2020-11-10T17:19:47Z,2020-11-10T17:19:47Z,None
+ChainLink-Token, , , , , , ,  
+HuobiToken, , , , , , ,  
+,1,let github recognize solidity language,qianbin,closed,2018-07-11T07:29:51Z,2018-07-11T11:42:35Z,2018-07-11T11:42:35Z
+,2,Contract for Multi Party Protocol,zubietaroberto,closed,2018-07-23T15:02:10Z,2018-08-17T06:16:58Z,2018-08-17T06:14:40Z
+,3,Fix minor typo,dmelo,closed,2018-08-16T20:23:50Z,2018-08-17T06:13:20Z,2018-08-17T06:13:20Z
+,4,Fixed typos & improved grammar in README.md,samvaughton,closed,2018-09-13T15:25:25Z,2019-03-27T09:30:43Z,2019-03-27T09:30:43Z
+,5,customize builtin repo definitions for powerplay,realChainLife,closed,2019-08-02T15:57:35Z,2019-08-02T16:03:12Z,2019-08-02T16:03:12Z
+,6,customize builtin repo definitions for powerplay,realChainLife,closed,2019-08-02T16:02:42Z,2019-08-02T16:16:46Z,2019-08-02T16:16:46Z
+VeChain, , , , , , ,  
+,1,How to deploy and interact with pax contract?,qiluge,closed,2018-11-27T07:56:52Z,2019-03-28T12:49:13Z,2018-11-27T08:53:15Z
+,4,Rinkeby testnet address,alfetopito,closed,2019-09-23T16:58:39Z,2019-09-25T14:24:47Z,2019-09-25T14:24:47Z
+,5,Is this bug of your unit test ?,biigpongsatorn,closed,2019-12-23T09:53:50Z,2019-12-30T16:03:46Z,2019-12-30T15:58:48Z
+,6,corrected mixup of approved address <> approved by address,lsharir,closed,2019-12-27T21:02:00Z,2019-12-30T15:58:52Z,2019-12-30T15:58:49Z
+,10,Bump mixin-deep from 1.3.1 to 1.3.2,dependabot[bot],open,2020-02-04T21:45:14Z,2020-02-04T21:45:15Z,None
+,11,Bump handlebars from 4.1.2 to 4.7.2,dependabot[bot],closed,2020-02-04T21:45:14Z,2020-09-07T22:40:00Z,2020-09-07T22:39:58Z
+,12,Bump axios from 0.18.0 to 0.18.1,dependabot[bot],open,2020-02-04T21:45:16Z,2020-04-26T04:02:07Z,None
+,13,Cool.,RyanKruse,open,2020-04-18T07:36:20Z,2020-05-13T03:39:19Z,None
+,15,Bump npm-registry-fetch from 4.0.2 to 4.0.5,dependabot[bot],open,2020-07-08T03:10:33Z,2020-07-08T03:10:34Z,None
+,16,Issue when changing address in 2_deploy_contract.js,commentors-net,closed,2020-07-18T19:43:59Z,2020-07-22T07:26:27Z,2020-07-22T07:24:28Z
+,17,Bump lodash from 4.17.11 to 4.17.19,dependabot[bot],open,2020-07-19T11:54:25Z,2020-07-19T11:54:26Z,None
+,18,Bump decompress from 4.2.0 to 4.2.1,dependabot[bot],open,2020-09-04T08:38:13Z,2020-09-04T08:38:14Z,None
+,19,Bump handlebars from 4.1.2 to 4.7.6,dependabot[bot],open,2020-09-07T22:39:55Z,2020-09-07T22:39:56Z,None
+Paxos-Standard, , , , , , ,  
+TrueUSD, , , , , , ,  
+Reputation, , , , , , ,  
+KyberNetwork, , , , , , ,  
+,1,Log events. WIP,desaperados,closed,2018-07-02T01:05:12Z,2018-07-03T01:46:43Z,2018-07-03T01:46:20Z
+,2,Event logging - first pass,desaperados,closed,2018-07-03T01:51:05Z,2018-08-24T23:45:18Z,2018-08-24T23:42:40Z
+,3,Add dach a Dai automated clearing house,MrChico,closed,2018-08-12T16:52:31Z,2019-05-13T15:33:46Z,2019-01-23T00:28:35Z
+,4,Group interfaces in a file,gbalabasquer,closed,2018-08-17T15:35:30Z,2018-08-23T14:12:07Z,2018-08-23T14:11:51Z
+,5,Events,desaperados,closed,2018-08-24T23:48:23Z,2018-10-16T23:35:43Z,2018-08-27T17:46:44Z
+,6,readme: link wiki & developing.md,xwvvvvwx,closed,2018-09-19T20:15:50Z,2018-11-23T09:43:58Z,2018-11-23T09:43:58Z
+,7,add Ink to frob and bite events,desaperados,closed,2018-10-16T23:40:33Z,2018-10-16T23:43:44Z,2018-10-16T23:43:30Z
+,8,drip event,desaperados,closed,2018-10-22T22:54:26Z,2019-09-10T12:17:47Z,2019-01-16T00:31:01Z
+,9,README: specify independently from whom,asymmetric,closed,2018-11-16T14:20:23Z,2018-11-16T14:22:38Z,2018-11-16T14:22:32Z
+,10,Use transfer in exit instead of transferFrom,nanexcool,closed,2018-11-19T17:28:40Z,2018-11-24T06:40:32Z,2018-11-24T06:40:28Z
+,11,Add .travis.yml,asymmetric,closed,2018-11-21T18:01:27Z,2018-11-23T09:50:55Z,2018-11-23T09:50:50Z
+,12,Enable solidity styling on github,gbalabasquer,closed,2018-11-22T13:49:56Z,2019-03-08T17:47:52Z,2018-11-23T09:43:11Z
+,13,Make daiMove can access to any urn,gbalabasquer,closed,2018-12-11T14:12:12Z,2018-12-12T18:14:13Z,2018-12-12T16:12:33Z
+,14,traivs: run tests with solc 0.5.0,asymmetric,closed,2018-12-12T18:18:33Z,2019-01-10T15:38:21Z,2019-01-10T15:38:14Z
+,15,expand docs re: maths & multiplication,xwvvvvwx,closed,2019-01-10T15:17:36Z,2019-01-14T18:24:03Z,2019-01-14T18:23:59Z
+,16,travis: use solc 0.5.0,xwvvvvwx,closed,2019-01-10T15:19:44Z,2019-01-10T15:37:41Z,2019-01-10T15:37:36Z
+,18,DaiMove and GemMove can access to the full rad value in vat,gbalabasquer,closed,2019-01-16T17:46:27Z,2019-03-08T17:48:31Z,2019-03-08T17:46:04Z
+,19,add messages to requires in frob,levity,closed,2019-01-18T01:51:24Z,2019-03-29T19:21:27Z,2019-03-29T19:21:27Z
+,21,Debt dust limit. Closes #20,gbalabasquer,closed,2019-01-18T13:50:54Z,2019-03-08T17:46:51Z,2019-03-08T17:41:05Z
+,22,uint multiplication for flip flap n' flop,MrChico,closed,2019-01-23T00:28:03Z,2019-03-20T17:41:48Z,2019-03-18T15:14:46Z
+,23,How to calculate total collateral for an ilk,levity,closed,2019-03-06T22:06:39Z,2019-03-08T01:08:55Z,2019-03-08T01:08:55Z
+,24,Math opinions,MrChico,closed,2019-03-18T15:15:02Z,2019-05-29T23:40:43Z,2019-04-07T19:28:15Z
+,25,rename slip's quantity arg to wad,kmbarry1,closed,2019-03-27T01:52:18Z,2019-03-27T10:07:41Z,2019-03-27T10:07:37Z
+,26,request slots for art slab,nmushegian,closed,2019-03-27T19:11:13Z,2019-09-10T19:05:46Z,2019-09-10T19:05:46Z
+,27,Dai dai.t.sol; Use bytes32 instead of dynamic string type.,MrChico,closed,2019-04-07T19:26:41Z,2019-04-12T08:54:14Z,2019-04-10T00:23:44Z
+,28,Consider removing 1.3 of the purple paper for readability,prestonvanloon,open,2019-04-19T00:11:39Z,2019-04-19T02:14:25Z,None
+,29,Add descriptive comments,rhuairahrighairidh,closed,2019-04-19T22:06:07Z,2019-04-19T22:12:14Z,2019-04-19T22:06:50Z
+,31,Remove EthJoin from dss; weth suffices,MrChico,closed,2019-05-01T17:35:00Z,2019-05-02T16:29:36Z,2019-05-02T15:18:25Z
+,33,Pip value is a wad,gbalabasquer,closed,2019-05-23T18:06:42Z,2019-05-25T13:45:25Z,2019-05-25T07:43:51Z
+,34,fix: note,desaperados,closed,2019-05-25T10:56:11Z,2019-09-10T12:17:39Z,2019-05-25T12:45:41Z
+Dai-Stablecoin, , , , , , ,  
+,1,added details on the minting process,Clearwood,open,2017-12-30T15:52:38Z,2017-12-30T15:52:38Z,None
+,2,Add Contract source & ABI To Etherscan please,moeadham,open,2018-06-08T15:02:36Z,2018-06-08T15:02:36Z,None
+,3,Fix: Minor Spelling Mistake,Justbeingjustin,open,2019-02-07T06:45:59Z,2019-02-07T06:45:59Z,None
+,4,Node/JS SDK for Theta,roccomuso,open,2020-02-20T14:04:38Z,2020-02-20T14:08:17Z,None
+Theta-Token, , , , , , ,  
+,2,600Create nodejs.yml,Gitwilhub,open,2020-05-15T18:32:14Z,2020-07-21T06:20:04Z,None
+Nexo, , , , , , ,  
+EnjinCoin, , , , , , ,  
+MCO, , , , , , ,  
+,1,[Snyk] Security upgrade solc from 0.4.24 to 0.5.11,snyk-bot,closed,2020-06-05T05:54:51Z,2020-07-10T13:09:41Z,2020-07-10T13:09:37Z
+,2,[Snyk] Security upgrade truffle from 5.0.35 to 5.1.34,snyk-bot,closed,2020-07-10T05:33:33Z,2020-07-10T13:08:52Z,2020-07-10T13:08:49Z
+,3,build(deps): bump handlebars from 4.2.0 to 4.7.6,dependabot[bot],open,2020-07-10T13:16:23Z,2020-07-10T13:16:24Z,None
+,4,build(deps): bump lodash from 4.17.15 to 4.17.19,dependabot[bot],open,2020-07-21T11:53:47Z,2020-07-21T11:53:49Z,None
+,5,build(deps): bump decompress from 4.2.0 to 4.2.1,dependabot[bot],open,2020-09-04T09:00:12Z,2020-09-04T09:00:15Z,None
+,6,build(deps): bump tree-kill from 1.2.1 to 1.2.2,dependabot[bot],open,2020-09-07T06:55:44Z,2020-09-07T06:55:45Z,None
+Binance-USD, , , , , , ,  
+Bytom, , , , , , ,  
+DxChain-Token, , , , , , ,  
+Swipe, , , , , , ,  
+,1,Minor changes to README,Sajjon,closed,2018-01-09T09:20:27Z,2018-01-09T09:37:02Z,2018-01-09T09:37:02Z
+,2,Adding .gitignore removing irrelevant .DS_Store,Sajjon,closed,2018-01-09T10:15:08Z,2018-01-10T02:06:01Z,2018-01-10T02:06:01Z
+,3,Removing 10 compilation errors by adding explicit visibility to functions,Sajjon,closed,2018-01-09T10:34:43Z,2018-01-09T14:43:32Z,2018-01-09T10:51:58Z
+,4,Adding installation/compilation instructions to README,Sajjon,closed,2018-01-09T10:40:29Z,2018-01-10T02:05:59Z,2018-01-10T02:05:59Z
+,5,update hoek,sidthekidder,open,2018-05-01T19:54:01Z,2018-05-01T19:54:01Z,None
+,6,I was doing the token swap. And now my funds are somewhere in blockchain,angelsonly,open,2019-05-24T07:24:26Z,2019-05-24T07:24:26Z,None
+Zilliqa, , , , , , ,  
+,1,remove insecure dependency remove obsolete tests,qoire,open,2018-06-08T13:25:36Z,2018-06-08T13:25:36Z,None
+AION, , , , , , ,  
+SeeleToken, , , , , , ,  
+,1,Try populus,chfast,open,2016-10-05T07:44:21Z,2016-10-18T13:12:04Z,None
+,2,Try formal verification,chfast,closed,2016-10-05T07:44:59Z,2016-11-07T13:46:02Z,2016-11-07T13:46:02Z
+,3,Composition crowdfunding,chfast,closed,2016-10-05T08:56:02Z,2016-10-06T11:09:25Z,2016-10-06T11:09:21Z
+,4,Separate balance DB from Token logic,chfast,closed,2016-10-05T11:19:31Z,2016-10-06T11:08:54Z,2016-10-06T11:08:50Z
+,5,sketch minimum functionality token abstraction and access permissions,subtly,closed,2016-10-06T10:04:12Z,2016-10-17T11:39:36Z,2016-10-17T11:39:33Z
+,6,Migration by voting,chfast,closed,2016-10-07T10:57:52Z,2016-10-11T11:10:12Z,2016-10-11T11:10:09Z
+,7,Unit tests,chfast,closed,2016-10-11T12:20:33Z,2016-10-13T10:15:23Z,2016-10-13T10:15:19Z
+,8,How to finalize funding?,chfast,closed,2016-10-11T18:08:38Z,2016-10-24T10:47:04Z,2016-10-24T10:46:59Z
+,9,Tests for payments transferFrom,mfranciszkiewicz,closed,2016-10-11T18:23:00Z,2016-10-13T10:02:46Z,2016-10-13T10:02:42Z
+,10,Simple tests,badb,closed,2016-10-11T18:25:35Z,2016-10-13T10:12:19Z,2016-10-13T10:12:16Z
+,11,Tests ideas,chfast,closed,2016-10-11T19:10:21Z,2016-10-17T12:26:07Z,2016-10-17T12:26:03Z
+,12,Test example migration process,chfast,closed,2016-10-11T19:11:04Z,2016-10-17T12:26:47Z,2016-10-17T12:26:47Z
+,13,Compile contract,paulperegud,closed,2016-10-12T14:58:56Z,2016-10-12T14:59:14Z,2016-10-12T14:59:10Z
+,14,Compile contract,paulperegud,closed,2016-10-12T15:02:37Z,2016-10-13T10:16:56Z,2016-10-13T10:16:56Z
+,15,Migration tests,mfranciszkiewicz,closed,2016-10-12T18:25:15Z,2016-10-12T18:26:54Z,2016-10-12T18:26:50Z
+,16,Migration test,mfranciszkiewicz,closed,2016-10-12T18:31:33Z,2016-10-17T11:20:38Z,2016-10-17T11:20:38Z
+,17,[one liner] fix *tests* target in Makefile,paulperegud,closed,2016-10-13T10:58:30Z,2016-10-13T11:14:12Z,2016-10-13T11:14:08Z
+,18,Do we need allowance mechanism?,chfast,closed,2016-10-13T15:02:48Z,2016-10-17T11:01:23Z,2016-10-17T11:01:23Z
+,19,remove virtual-multisig wallet features,subtly,closed,2016-10-13T15:13:21Z,2016-10-17T10:54:32Z,2016-10-17T10:54:28Z
+,20,Fix Token decimals,chfast,closed,2016-10-13T15:29:05Z,2016-10-17T11:00:50Z,2016-10-17T11:00:50Z
+,21,stop on overflow,paulperegud,closed,2016-10-13T15:50:44Z,2016-10-13T16:45:28Z,2016-10-13T16:45:28Z
+,22,Fix makefile,banasiakadam60,closed,2016-10-13T16:13:19Z,2016-10-13T16:43:02Z,2016-10-13T16:43:01Z
+,23,Automatic finalize example,viggith,closed,2016-10-14T09:43:31Z,2016-10-19T09:30:00Z,2016-10-19T09:29:56Z
+,24,Set token creation rate to 1000,chfast,closed,2016-10-14T12:59:17Z,2016-10-17T08:56:04Z,2016-10-17T08:56:01Z
+,25,create Contract Safety and Security Checklist,paulperegud,closed,2016-10-17T09:05:27Z,2016-11-14T17:08:21Z,2016-11-14T17:08:14Z
+,26,More tests,chfast,closed,2016-10-17T10:52:42Z,2016-10-17T12:26:07Z,2016-10-17T12:26:03Z
+,27,Implement refunding,chfast,closed,2016-10-17T15:15:25Z,2016-10-24T10:47:13Z,2016-10-24T10:47:09Z
+,28,Separate crowdfunding and migration agents,chfast,closed,2016-10-17T15:19:36Z,2016-10-24T10:47:37Z,2016-10-24T10:47:37Z
+,29,test failing send,paulperegud,closed,2016-10-17T15:54:22Z,2016-10-20T13:09:05Z,2016-10-20T13:09:05Z
+,30,Update min and cap values,chfast,closed,2016-10-17T17:07:34Z,2016-10-24T10:37:07Z,2016-10-24T10:37:03Z
+Golem, , , , , , ,  
+WAX-Token, , , , , , ,  
+,1,Mainnet support,sulliwane,closed,2017-11-21T14:10:44Z,2017-11-21T14:34:36Z,2017-11-21T14:14:43Z
+,2,Faucet RLC deployed on Rsk ,HantongJI,closed,2018-03-14T16:20:11Z,2018-03-14T16:42:41Z,2018-03-14T16:22:58Z
+,3,RLC faucet deployed on testnet RSK networkid = 31,HantongJI,closed,2018-03-14T16:44:38Z,2018-03-14T16:49:03Z,2018-03-14T16:49:03Z
+,4,use the same token contract name as original RLC,sulliwane,closed,2018-04-18T08:13:33Z,2018-04-18T09:43:51Z,2018-04-18T09:43:33Z
+,5,add goerli deployment,PierreJeanjacquot,closed,2019-10-28T10:11:38Z,2019-10-28T12:57:07Z,2019-10-28T12:57:07Z
+RLC, , , , , , ,  
+PowerLedger, , , , , , ,  
+,1,claimForgottenParcel allows anyone to steal forgotten parcels,dafky2000,closed,2017-10-03T20:19:27Z,2017-10-03T22:46:58Z,2017-10-03T22:46:58Z
+,2,claimForgottenParcel could be executed endlessly,dafky2000,closed,2017-10-03T20:21:40Z,2017-10-03T22:46:30Z,2017-10-03T22:46:30Z
+,3,After claimForgottenParcel tokenOwner is not updated,dafky2000,closed,2017-10-03T20:34:48Z,2017-10-03T22:46:56Z,2017-10-03T22:46:56Z
+,4,Creating a basic Renting Contract,Alonzo-Coeus,closed,2017-10-26T18:07:31Z,2017-11-06T19:02:26Z,2017-11-06T19:02:25Z
+,5,Make land ownable,abarmat,closed,2017-10-26T20:52:59Z,2018-01-16T19:22:22Z,2017-10-26T21:18:26Z
+,6,Fix array init,abarmat,closed,2017-10-26T20:57:33Z,2018-01-16T19:22:17Z,2017-10-26T21:18:13Z
+,7,Terraform sale contract,abarmat,closed,2017-11-02T20:44:09Z,2017-11-06T18:37:40Z,2017-11-06T18:37:40Z
+,8,Add comments and style check,abarmat,closed,2017-11-03T03:35:49Z,2018-01-16T19:22:20Z,2017-11-06T18:45:43Z
+,9,Update tests for testrpc@6.0.1 (revert opcode),abarmat,closed,2017-11-03T16:15:13Z,2018-01-16T19:22:12Z,2017-11-06T18:37:52Z
+,10,Feature terraform sale with new changes,abarmat,closed,2017-11-06T19:27:01Z,2018-01-16T19:22:18Z,2017-11-06T19:34:58Z
+,11,Fix and add tests to the Continuous Sale contract,abarmat,closed,2017-11-07T04:10:39Z,2018-01-16T19:22:13Z,2017-11-08T20:49:07Z
+,12,Deploy scripts,abarmat,closed,2017-11-14T21:08:20Z,2017-11-14T21:10:16Z,2017-11-14T21:10:16Z
+,13,Remove empty metadata constant to reduce contract gas cost,abarmat,closed,2017-11-15T18:38:46Z,2018-01-16T19:22:13Z,2017-11-24T13:03:47Z
+,14,Make Continuous Sale transferable and add tests,abarmat,closed,2017-11-15T20:09:45Z,2018-01-16T19:21:58Z,2017-11-24T13:03:24Z
+,15,Update RentingContract.sol making it more simple and allowing you to rent out multiple land tiles,Alonzo-Coeus,closed,2017-11-30T20:48:39Z,2017-12-07T21:33:46Z,2017-12-07T21:33:45Z
+,16,transferFrom check token owner,7flash,closed,2017-12-10T22:59:03Z,2017-12-20T06:09:45Z,2017-12-20T06:09:45Z
+,17,call transferFrom explicitly in order to transfer from another account,7flash,closed,2017-12-10T23:02:23Z,2017-12-20T06:10:41Z,2017-12-20T06:10:21Z
+,18,Fix warnings,abarmat,closed,2017-12-27T23:17:09Z,2018-01-16T19:21:58Z,2017-12-28T15:24:04Z
+,19,Update token id hash,abarmat,closed,2018-01-03T19:45:08Z,2018-01-16T14:54:44Z,2018-01-16T14:54:31Z
+,20,Bulk return MANA function in Terraform Sale Contract,abarmat,closed,2018-01-04T20:20:27Z,2018-01-04T21:23:59Z,2018-01-04T21:23:58Z
+,21,Reorg all contracts into subfolders,eordano,closed,2018-01-05T01:00:26Z,2018-01-16T19:22:05Z,2018-01-12T13:34:00Z
+,22,Terraform contract that performs buys with no burning,abarmat,closed,2018-01-08T03:23:10Z,2018-01-16T19:22:04Z,2018-01-15T17:07:37Z
+,23,Add landOf function to get lands coordinates for owner,abarmat,closed,2018-01-12T18:53:53Z,2018-01-12T18:54:43Z,2018-01-12T18:54:40Z
+,24,Use ERC821,eordano,closed,2018-01-18T17:01:12Z,2018-01-22T03:38:11Z,2018-01-18T17:42:52Z
+,25,Multideploy,eordano,closed,2018-01-18T17:42:33Z,2018-01-22T03:38:12Z,2018-01-19T13:28:56Z
+,26,(TEST) Land centric getters,belohlavek,closed,2018-01-19T17:13:02Z,2018-01-19T20:43:19Z,2018-01-19T20:41:39Z
+,27,Should holders have to authorize themselves to updateLandData?,belohlavek,closed,2018-01-19T17:43:02Z,2018-01-19T23:26:43Z,2018-01-19T23:26:43Z
+,28,(TEST) Inactive test,nachomazzara,closed,2018-01-19T18:02:54Z,2018-01-22T03:38:01Z,2018-01-19T20:05:30Z
+,29,Return is stopping land transfer,nachomazzara,closed,2018-01-19T18:59:12Z,2018-01-19T19:51:55Z,2018-01-19T19:51:55Z
+,30,(TEST) Test transfer,nachomazzara,closed,2018-01-19T19:02:16Z,2018-01-22T03:38:00Z,2018-01-19T19:51:55Z
+Decentraland, , , , , , ,   
+,1,Hidden + hard cap,izqui,closed,2017-04-23T11:23:28Z,2017-04-23T11:24:38Z,2017-04-23T11:23:37Z
+,2,Hidden cap and hard cap implementation,izqui,closed,2017-04-23T11:24:19Z,2020-08-15T08:46:51Z,2017-04-23T11:28:34Z
+,3,Fix link to MultisigWallet.sol in README,aesedepece,closed,2017-05-01T14:28:28Z,2017-05-01T15:13:19Z,2017-05-01T14:40:10Z
+,4,Fix ANT amount miscalculation when generating tokens and assigning them to buyers,aesedepece,closed,2017-05-01T17:02:15Z,2017-05-02T09:58:25Z,2017-05-02T09:45:57Z
+,5,Fix Travis CI badge in README,aesedepece,closed,2017-05-01T20:56:14Z,2017-05-02T09:49:49Z,2017-05-02T09:47:45Z
+,6,Give minime clones the ability to retrieve parent history prior to clone token genesis block,izqui,closed,2017-05-02T11:19:18Z,2020-08-15T08:46:54Z,2017-05-03T08:40:15Z
+,7,Added missing return value,RFV,closed,2017-05-05T06:13:16Z,2017-05-06T12:19:35Z,2017-05-06T12:19:35Z
+,8,rearrange overflow logic on the receiver address,skiral,closed,2017-07-28T06:40:04Z,2017-07-31T08:02:36Z,2017-07-31T08:02:36Z
+,9,Some bug or very smart logic,logvik,closed,2017-09-07T09:05:56Z,2017-09-07T12:38:07Z,2017-09-07T10:13:21Z
+,10,Update README with audits,luisivan,closed,2017-12-28T14:59:58Z,2017-12-29T11:51:07Z,2017-12-29T11:51:07Z
+,11,Add ANT Rinkeby deployment to README,bingen,closed,2018-11-14T18:20:48Z,2020-08-16T07:43:03Z,2020-08-15T08:50:09Z
+,12,chore: update license to Aragon Association,sohkai,closed,2018-12-12T11:49:11Z,2020-08-15T08:51:52Z,2020-08-15T08:51:51Z
+,13,Re-organize into monorepo and move technical documentation into GitBooks,sohkai,closed,2020-08-16T20:28:40Z,2020-08-17T21:06:13Z,2020-08-17T21:06:11Z
+,14,Implement final ANT controller,sohkai,closed,2020-08-16T22:50:54Z,2020-09-05T10:16:39Z,2020-08-18T15:24:31Z
+,15,Controller: add E2E tests,sohkai,closed,2020-08-18T16:55:37Z,2020-08-19T14:43:24Z,2020-08-19T14:43:23Z
+,16,controller: clean e2e folder,sohkai,closed,2020-08-19T14:57:29Z,2020-08-19T14:58:08Z,2020-08-19T14:58:07Z
+,17,controller: update mint() interface to generateTokens(),sohkai,closed,2020-08-19T16:09:50Z,2020-08-20T08:30:34Z,2020-08-20T08:30:33Z
+,18,Controller: update docs after deployment,sohkai,closed,2020-09-05T10:14:54Z,2020-09-05T10:16:02Z,2020-09-05T10:16:01Z
+,19,Controller: update buidler config and strip keys,sohkai,closed,2020-09-05T10:16:03Z,2020-09-05T10:16:20Z,2020-09-05T10:16:19Z
+,20,docs: update missed line about the pass-through controller,sohkai,closed,2020-09-05T10:27:47Z,2020-09-05T10:27:58Z,2020-09-05T10:27:57Z
+,21,Add ANTv2,sohkai,closed,2020-10-09T01:03:44Z,2020-10-13T13:06:37Z,2020-10-12T18:45:56Z
+,22,Rename repo to aragon/ANT or aragon/ant?,izqui,open,2020-10-11T09:48:00Z,2020-10-12T10:24:15Z,None
+,23,Possible replay attack in ANTv2 on hardfork,eduadiez,closed,2020-10-13T10:51:25Z,2020-10-15T10:48:45Z,2020-10-15T10:48:45Z
+,24,ANTv2: re-compute `domainSeparator` during signature validation,eduadiez,closed,2020-10-13T21:54:09Z,2020-10-15T10:48:35Z,2020-10-15T10:48:35Z
+,25,Transfer to `0x0` and burn tokens emit the same event,eduadiez,closed,2020-10-13T22:15:49Z,2020-10-14T22:26:58Z,2020-10-14T22:26:57Z
+,26,ANTv2: revert on transfers to address(0),sohkai,closed,2020-10-14T22:25:23Z,2020-10-14T22:25:39Z,2020-10-14T22:25:38Z
+,27,ANTv2: audit review,sohkai,closed,2020-10-15T10:49:26Z,2020-10-15T13:18:27Z,2020-10-15T13:18:26Z
+,28,docs: revamp for ANTv2,sohkai,closed,2020-10-27T05:17:17Z,2020-10-27T05:17:58Z,2020-10-27T05:17:57Z
+,29,docs: fix links,sohkai,closed,2020-10-27T05:36:22Z,2020-10-27T05:36:37Z,2020-10-27T05:36:36Z
+,30,docs: polish links cosmetics,sohkai,closed,2020-10-27T05:44:20Z,2020-10-27T05:44:28Z,2020-10-27T05:44:27Z
+Aragon, , , , , , ,  
+,1,Truffle,holiman,closed,2017-03-29T12:27:53Z,2017-04-03T11:31:36Z,2017-04-03T11:31:36Z
+,2,Truffle testsuite,holiman,closed,2017-04-03T11:35:03Z,2017-04-05T12:28:46Z,2017-04-05T12:28:46Z
+,3,More fixes to formula,holiman,closed,2017-04-19T10:10:58Z,2017-04-20T13:45:14Z,2017-04-20T13:45:14Z
+,4,New testdata for updated formula,holiman,closed,2017-05-15T11:38:55Z,2017-05-15T11:49:36Z,2017-05-15T11:49:36Z
+,5,Updated testdata,holiman,closed,2017-05-16T12:49:21Z,2017-05-18T09:29:11Z,2017-05-18T09:29:11Z
+,6,Updated formula testdata and py impl,holiman,closed,2017-05-18T09:39:19Z,2017-05-18T09:40:06Z,2017-05-18T09:40:06Z
+,7,Smart Token issue destroy and EIP 621,ethers,open,2017-05-23T08:56:10Z,2019-03-29T08:34:47Z,None
+,8,Added hypothesis tests,Arachnid,closed,2017-06-10T17:03:46Z,2017-06-11T09:11:14Z,2017-06-11T09:11:14Z
+,9,MAX_GAS_PRICE Degrades Ecosystem UX and Helps Whales,naterush,closed,2017-06-10T18:26:35Z,2017-06-16T13:18:42Z,2017-06-16T13:18:42Z
+,10,Moving the special case for selling the entire supply after the case of CRR=100,sidko,closed,2017-06-10T18:39:34Z,2017-06-16T13:12:05Z,2017-06-16T13:11:49Z
+,11,Formula updates,holiman,closed,2017-06-10T21:22:16Z,2017-06-11T09:10:22Z,2017-06-11T09:10:22Z
+,12,Updated the hypothesis to be more accurate,holiman,closed,2017-06-13T09:15:33Z,2017-06-14T08:13:28Z,2017-06-14T08:13:28Z
+,13,Pretty cosmetic,barakman,closed,2017-06-19T09:50:58Z,2017-06-19T09:55:45Z,2017-06-19T09:55:45Z
+,14,Changes to formula,holiman,closed,2017-06-19T10:01:00Z,2017-06-19T10:12:24Z,2017-06-19T10:12:24Z
+,15,Added back precision-loss guards,holiman,closed,2017-06-19T10:50:31Z,2017-06-19T11:05:03Z,2017-06-19T11:05:03Z
+,16,Documentation + python test framework changes,holiman,closed,2017-06-20T07:35:13Z,2017-06-20T08:01:08Z,2017-06-20T08:01:08Z
+,17,Make HIGHEST_VALUE constant depend on PRECISION,holiman,closed,2017-06-20T09:12:21Z,2017-06-20T09:48:24Z,2017-06-20T09:48:24Z
+,18,Fix the max-value assertion.,barakman,closed,2017-06-21T07:27:32Z,2017-06-21T10:17:40Z,2017-06-21T10:17:40Z
+,19,Huge exchange threat!!!,osgee,closed,2017-06-22T08:25:57Z,2017-06-23T09:47:21Z,2017-06-23T09:47:21Z
+,20,How to add another ERC20 Token to the BNT network???,osgee,closed,2017-06-23T09:20:57Z,2017-07-24T16:02:45Z,2017-07-24T16:02:45Z
+,21,Add worst accuracy measurement,barakman,closed,2017-06-23T23:20:29Z,2017-06-24T11:15:12Z,2017-06-24T11:15:12Z
+,22,Add assertions to safeMul and safeAdd,barakman,closed,2017-06-23T23:23:15Z,2017-06-24T11:15:30Z,2017-06-24T11:15:30Z
+,23,Add an assertion to safeMul,barakman,closed,2017-06-23T23:24:45Z,2017-06-24T11:15:44Z,2017-06-24T11:15:44Z
+,24,Remove precision-loss guards,barakman,closed,2017-06-24T09:47:50Z,2017-07-09T11:08:20Z,2017-07-09T11:08:20Z
+,25,Remove precision-loss guards,barakman,closed,2017-06-24T09:49:14Z,2017-06-24T11:18:26Z,2017-06-24T11:18:26Z
+,26,Writing a DApp that buys/sells BNT,CurrencyTycoon,closed,2017-07-03T02:17:47Z,2017-08-01T14:33:05Z,2017-08-01T14:23:44Z
+,27,Cosmetic,barakman,closed,2017-07-10T10:48:27Z,2017-07-10T11:12:20Z,2017-07-10T11:12:20Z
+,28,Cosmetic,barakman,closed,2017-07-10T10:50:06Z,2017-07-10T11:12:02Z,2017-07-10T11:12:02Z
+,29,Fix the first 23 Taylor coefficients,barakman,closed,2017-07-12T07:39:08Z,2017-07-12T12:58:08Z,2017-07-12T12:58:08Z
+,30,Fix the first 23 Taylor coefficients,barakman,closed,2017-07-12T07:47:28Z,2017-07-12T12:58:16Z,2017-07-12T12:58:16Z
+Bancor, , , , , , ,  
+HEDG, , , , , , ,  
+EthLend, , , , , , ,  
+,1,Initial tokensale scaffolding,industrialist,closed,2017-11-30T23:28:50Z,2017-11-30T23:29:05Z,2017-11-30T23:28:59Z
+,2,Fix minor typo in token sale contract licence header.,zyzek,closed,2017-12-04T00:39:51Z,2017-12-04T02:46:09Z,2017-12-04T02:45:49Z
+,3,Modularisation of monolithic solidity contract.,zyzek,closed,2018-01-03T03:00:34Z,2018-01-04T01:28:18Z,2018-01-03T22:25:27Z
+,4,Updates for oracle.py,DominicRomanowski,closed,2018-01-10T03:32:26Z,2018-01-10T08:25:45Z,2018-01-10T04:34:01Z
+,5,median cutoff for outliers used average of rest for price calculation,DominicRomanowski,closed,2018-01-10T08:30:09Z,2018-01-21T03:25:36Z,2018-01-21T03:25:32Z
+,6,changes from workshop day,DominicRomanowski,closed,2018-01-18T04:59:59Z,2018-01-20T10:11:24Z,2018-01-20T10:11:20Z
+,7,Pre-test 1.0 havven contracts,zyzek,closed,2018-01-22T01:28:58Z,2018-01-22T06:45:35Z,2018-01-22T01:42:15Z
+,8,added tests cleaned up some deploy lines added todo to owned,DominicRomanowski,closed,2018-01-27T04:58:44Z,2018-01-29T08:23:13Z,2018-01-29T08:11:54Z
+,9,Testing and allied updates.,zyzek,closed,2018-01-28T22:53:27Z,2018-01-29T12:43:41Z,2018-01-29T08:08:51Z
+,10,Module organisation,DominicRomanowski,closed,2018-01-29T03:27:09Z,2018-01-29T03:37:43Z,2018-01-29T03:37:38Z
+,11,Testing sam changes,industrialist,closed,2018-01-29T07:41:40Z,2018-01-29T08:05:19Z,2018-01-29T07:42:37Z
+,12,minor edits to README,industrialist,closed,2018-01-29T07:45:16Z,2018-01-29T08:05:18Z,2018-01-29T08:05:15Z
+,13,Account manager,DominicRomanowski,closed,2018-01-31T02:17:44Z,2018-01-31T02:31:16Z,2018-01-31T02:30:54Z
+,14,Havven contract fixes,DominicRomanowski,closed,2018-01-31T07:56:48Z,2018-01-31T23:49:02Z,2018-01-31T23:48:58Z
+,15,Test erc20token erc20feetoken,mjspain12,closed,2018-01-31T23:34:30Z,2018-02-01T04:23:45Z,2018-02-01T04:23:42Z
+,16,removed votes and court from havven contract,DominicRomanowski,closed,2018-02-01T06:47:00Z,2018-02-01T06:54:12Z,2018-02-01T06:54:07Z
+,17,Havven tests,DominicRomanowski,closed,2018-02-02T01:22:13Z,2018-02-05T00:56:22Z,2018-02-05T00:56:18Z
+,18,Log-inspection utility functions.,zyzek,closed,2018-02-03T05:03:31Z,2018-02-03T05:41:57Z,2018-02-03T05:21:23Z
+,19,Test ethernomin,zyzek,closed,2018-02-03T09:48:36Z,2018-02-03T11:44:39Z,2018-02-03T11:44:36Z
+,20,Irrevocably freeze nomin contract itself.,zyzek,closed,2018-02-03T16:38:42Z,2018-02-04T00:58:14Z,2018-02-04T00:58:09Z
+,21,Test court,mjspain12,closed,2018-02-04T11:22:31Z,2018-02-05T05:29:51Z,2018-02-05T05:29:46Z
+,22,Update events,mjspain12,closed,2018-02-05T05:54:12Z,2018-02-05T06:18:41Z,2018-02-05T06:18:36Z
+,23,Fee withdrawal tests,DominicRomanowski,closed,2018-02-05T06:48:57Z,2018-02-05T07:22:29Z,2018-02-05T07:22:25Z
+,24,rename checkfeeperiodrollover in test_court,mjspain12,closed,2018-02-05T07:51:56Z,2018-02-05T07:52:40Z,2018-02-05T07:52:38Z
+,25,Vesting contract,zyzek,closed,2018-02-05T07:58:44Z,2018-02-07T00:06:27Z,2018-02-07T00:06:23Z
+,26,Ether nomin events,mjspain12,closed,2018-02-05T08:46:45Z,2018-02-05T09:29:41Z,2018-02-05T09:10:13Z
+,27,Comment cleanup,zyzek,closed,2018-02-05T09:44:51Z,2018-02-05T09:56:37Z,2018-02-05T09:56:32Z
+,28,Erc20 tests,mjspain12,closed,2018-02-05T10:37:55Z,2018-02-05T10:40:04Z,2018-02-05T10:39:59Z
+,29,Print deploy addresses,zyzek,closed,2018-02-10T14:19:39Z,2018-02-10T14:20:04Z,2018-02-10T14:20:00Z
+,30,Updated fee rate from 20 basis points to 15.,zyzek,closed,2018-02-10T14:21:10Z,2018-02-10T14:21:25Z,2018-02-10T14:21:20Z
+Synthetix Network Token, , , , , , ,  
+OKB, , , , , , ,  

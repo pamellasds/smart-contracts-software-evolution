@@ -1,0 +1,7 @@
+similarity,combination
+7,['Migrations.sol', 'SeeleCrowdSale.sol', 'TestAddress.sol', 'SeeleCrowdSaleFlat.sol', 'TokenTimelock.sol']
+7,['Migrations.sol', 'SeeleCrowdSale.sol', 'TestAddress.sol', 'SeeleCrowdSaleFlat.sol', 'SeeleToken.sol']
+3,['Migrations.sol', 'SeeleCrowdSale.sol', 'TestAddress.sol', 'TokenTimelock.sol', 'SeeleToken.sol']
+7,['Migrations.sol', 'SeeleCrowdSale.sol', 'SeeleCrowdSaleFlat.sol', 'TokenTimelock.sol', 'SeeleToken.sol']
+8,['Migrations.sol', 'TestAddress.sol', 'SeeleCrowdSaleFlat.sol', 'TokenTimelock.sol', 'SeeleToken.sol']
+6,['SeeleCrowdSale.sol', 'TestAddress.sol', 'SeeleCrowdSaleFlat.sol', 'TokenTimelock.sol', 'SeeleToken.sol']

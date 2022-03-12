@@ -1,0 +1,8 @@
+similarity,combination
+12,['ExampleMigration.sol', 'MultiSigWallet.sol', 'Token.sol', 'ProxyAccount.sol', 'Wallet.sol', 'GNTAllocation.sol']
+11,['ExampleMigration.sol', 'MultiSigWallet.sol', 'Token.sol', 'ProxyAccount.sol', 'Wallet.sol', 'BadWallet.sol']
+12,['ExampleMigration.sol', 'MultiSigWallet.sol', 'Token.sol', 'ProxyAccount.sol', 'GNTAllocation.sol', 'BadWallet.sol']
+17,['ExampleMigration.sol', 'MultiSigWallet.sol', 'Token.sol', 'Wallet.sol', 'GNTAllocation.sol', 'BadWallet.sol']
+4,['ExampleMigration.sol', 'MultiSigWallet.sol', 'ProxyAccount.sol', 'Wallet.sol', 'GNTAllocation.sol', 'BadWallet.sol']
+4,['ExampleMigration.sol', 'Token.sol', 'ProxyAccount.sol', 'Wallet.sol', 'GNTAllocation.sol', 'BadWallet.sol']
+19,['MultiSigWallet.sol', 'Token.sol', 'ProxyAccount.sol', 'Wallet.sol', 'GNTAllocation.sol', 'BadWallet.sol']

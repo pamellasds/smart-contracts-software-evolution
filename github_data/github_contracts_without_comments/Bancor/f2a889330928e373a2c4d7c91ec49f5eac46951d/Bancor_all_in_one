@@ -1,0 +1,4751 @@
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+contract bancornetwork is ibancornetwork, tokenholder, contractregistryclient, featureids {
+    using safemath for uint256;
+
+    uint256 private constant conversion_fee_resolution = 1000000;
+    uint256 private constant affiliate_fee_resolution = 1000000;
+
+    uint256 public maxaffiliatefee = 30000;     
+    address public signeraddress = 0x0;         
+
+    mapping (address => bool) public ethertokens;       
+    mapping (bytes32 => bool) public conversionhashes;  
+
+    
+    constructor(icontractregistry _registry) contractregistryclient(_registry) public {
+    }
+
+    
+    function setmaxaffiliatefee(uint256 _maxaffiliatefee)
+        public
+        owneronly
+    {
+        require(_maxaffiliatefee <= affiliate_fee_resolution);
+        maxaffiliatefee = _maxaffiliatefee;
+    }
+
+    
+    function setsigneraddress(address _signeraddress)
+        public
+        owneronly
+        validaddress(_signeraddress)
+        notthis(_signeraddress)
+    {
+        signeraddress = _signeraddress;
+    }
+
+    
+    function registerethertoken(iethertoken _token, bool _register)
+        public
+        owneronly
+        validaddress(_token)
+        notthis(_token)
+    {
+        ethertokens[_token] = _register;
+    }
+
+    
+    function verifytrustedsender(ierc20token[] _path, address _addr, uint256[] memory _signature) private {
+        uint256 blocknumber = _signature[1];
+
+        
+        require(block.number <= blocknumber);
+
+        
+        bytes32 hash = keccak256(abi.encodepacked(blocknumber, tx.gasprice, _addr, msg.sender, _signature[0], _path));
+
+        
+        require(!conversionhashes[hash]);
+
+        
+        bytes32 prefixedhash = keccak256(abi.encodepacked(, hash));
+        require(ecrecover(prefixedhash, uint8(_signature[2]), bytes32(_signature[3]), bytes32(_signature[4])) == signeraddress);
+
+        
+        conversionhashes[hash] = true;
+    }
+
+    
+    function convertfor2(ierc20token[] _path, uint256 _amount, uint256 _minreturn, address _for, address _affiliateaccount, uint256 _affiliatefee) public payable returns (uint256) {
+        return convertforprioritized4(_path, _amount, _minreturn, _for, getsignature(0x0, 0x0, 0x0, 0x0, 0x0), _affiliateaccount, _affiliatefee);
+    }
+
+    
+    function convertforprioritized4(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for,
+        uint256[] memory _signature,
+        address _affiliateaccount,
+        uint256 _affiliatefee
+    )
+        public
+        payable
+        returns (uint256)
+    {
+        
+        verifyconversionparams(_path, _for, _for, _signature);
+
+        
+        handlevalue(_path[0], _amount, false);
+
+        
+        uint256 amount = convertbypath(_path, _amount, _minreturn, _affiliateaccount, _affiliatefee);
+
+        
+        
+        
+        ierc20token totoken = _path[_path.length  1];
+        if (ethertokens[totoken])
+            iethertoken(totoken).withdrawto(_for, amount);
+        else
+            ensuretransfer(totoken, _for, amount);
+
+        return amount;
+    }
+
+    
+    function xconvert2(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        bytes32 _toblockchain,
+        bytes32 _to,
+        uint256 _conversionid,
+        address _affiliateaccount,
+        uint256 _affiliatefee
+    )
+        public
+        payable
+        returns (uint256)
+    {
+        return xconvertprioritized3(_path, _amount, _minreturn, _toblockchain, _to, _conversionid, getsignature(0x0, 0x0, 0x0, 0x0, 0x0), _affiliateaccount, _affiliatefee);
+    }
+
+    
+    function xconvertprioritized3(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        bytes32 _toblockchain,
+        bytes32 _to,
+        uint256 _conversionid,
+        uint256[] memory _signature,
+        address _affiliateaccount,
+        uint256 _affiliatefee
+    )
+        public
+        payable
+        returns (uint256)
+    {
+        
+        require(_signature.length == 0 || _signature[0] == _amount);
+
+        
+        verifyconversionparams(_path, msg.sender, this, _signature);
+
+        
+        require(_path[_path.length  1] == addressof(bnt_token));
+
+        
+        handlevalue(_path[0], _amount, true);
+
+        
+        uint256 amount = convertbypath(_path, _amount, _minreturn, _affiliateaccount, _affiliatefee);
+
+        
+        ibancorx(addressof(bancor_x)).xtransfer(_toblockchain, _to, amount, _conversionid);
+
+        return amount;
+    }
+
+    
+    function convertbypath(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _affiliateaccount,
+        uint256 _affiliatefee
+    ) private returns (uint256) {
+        uint256 amount = _amount;
+        uint256 lastindex = _path.length  1;
+
+        address bnttoken;
+        if (address(_affiliateaccount) == 0) {
+            require(_affiliatefee == 0);
+            bnttoken = address(0);
+        }
+        else {
+            require(0 < _affiliatefee && _affiliatefee <= maxaffiliatefee);
+            bnttoken = addressof(bnt_token);
+        }
+
+        
+        for (uint256 i = 2; i <= lastindex; i += 2) {
+            ibancorconverter converter = ibancorconverter(ismarttoken(_path[i  1]).owner());
+
+            
+            if (_path[i  1] != _path[i  2])
+                ensureallowance(_path[i  2], converter, amount);
+
+            
+            amount = converter.change(_path[i  2], _path[i], amount, i == lastindex ? _minreturn : 1);
+
+            
+            if (address(_path[i]) == bnttoken) {
+                uint256 affiliateamount = amount.mul(_affiliatefee).div(affiliate_fee_resolution);
+                require(_path[i].transfer(_affiliateaccount, affiliateamount));
+                amount = affiliateamount;
+                bnttoken = address(0);
+            }
+        }
+
+        return amount;
+    }
+
+    bytes4 private constant get_return_func_selector = bytes4(uint256(keccak256() >> (256  4 * 8)));
+
+    function getreturn(address _dest, address _fromtoken, address _totoken, uint256 _amount) internal view returns (uint256, uint256) {
+        uint256[2] memory ret;
+        bytes memory data = abi.encodewithselector(get_return_func_selector, _fromtoken, _totoken, _amount);
+
+        assembly {
+            let success := staticcall(
+                gas,           
+                _dest,         
+                add(data, 32), 
+                mload(data),   
+                ret,           
+                64             
+            )
+            if iszero(success) {
+                revert(0, 0)
+            }
+        }
+
+        return (ret[0], ret[1]);
+    }
+
+    
+    function getreturnbypath(ierc20token[] _path, uint256 _amount) public view returns (uint256, uint256) {
+        uint256 amount;
+        uint256 fee;
+        uint256 supply;
+        uint256 balance;
+        uint32 ratio;
+        ibancorconverter converter;
+        ibancorformula formula = ibancorformula(addressof(bancor_formula));
+
+        amount = _amount;
+
+        
+        require(_path.length > 2 && _path.length % 2 == 1);
+
+        
+        for (uint256 i = 2; i < _path.length; i += 2) {
+            ierc20token fromtoken = _path[i  2];
+            ierc20token smarttoken = _path[i  1];
+            ierc20token totoken = _path[i];
+
+            if (totoken == smarttoken) { 
+                
+                if (i < 3 || smarttoken != _path[i  3]) {
+                    supply = smarttoken.totalsupply();
+                    converter = ibancorconverter(ismarttoken(smarttoken).owner());
+                }
+
+                
+                require(getreservesaleenabled(converter, fromtoken));
+
+                
+                balance = converter.getconnectorbalance(fromtoken);
+                (, ratio, , , ) = converter.connectors(fromtoken);
+                amount = formula.calculatepurchasereturn(supply, balance, ratio, amount);
+                fee = amount.mul(converter.conversionfee()).div(conversion_fee_resolution);
+                amount = fee;
+
+                
+                supply += amount;
+            }
+            else if (fromtoken == smarttoken) { 
+                
+                if (i < 3 || smarttoken != _path[i  3]) {
+                    supply = smarttoken.totalsupply();
+                    converter = ibancorconverter(ismarttoken(smarttoken).owner());
+                }
+
+                
+                balance = converter.getconnectorbalance(totoken);
+                (, ratio, , , ) = converter.connectors(totoken);
+                amount = formula.calculatesalereturn(supply, balance, ratio, amount);
+                fee = amount.mul(converter.conversionfee()).div(conversion_fee_resolution);
+                amount = fee;
+
+                
+                supply = amount;
+            }
+            else { 
+                
+                if (i < 3 || smarttoken != _path[i  3]) {
+                    converter = ibancorconverter(ismarttoken(smarttoken).owner());
+                }
+
+                (amount, fee) = getreturn(converter, fromtoken, totoken, amount);
+            }
+        }
+
+        return (amount, fee);
+    }
+
+    
+    function claimandconvertfor2(ierc20token[] _path, uint256 _amount, uint256 _minreturn, address _for, address _affiliateaccount, uint256 _affiliatefee) public returns (uint256) {
+        
+        
+        
+        ierc20token fromtoken = _path[0];
+        ensuretransferfrom(fromtoken, msg.sender, this, _amount);
+        return convertfor2(_path, _amount, _minreturn, _for, _affiliateaccount, _affiliatefee);
+    }
+
+    
+    function convert2(ierc20token[] _path, uint256 _amount, uint256 _minreturn, address _affiliateaccount, uint256 _affiliatefee) public payable returns (uint256) {
+        return convertfor2(_path, _amount, _minreturn, msg.sender, _affiliateaccount, _affiliatefee);
+    }
+
+    
+    function claimandconvert2(ierc20token[] _path, uint256 _amount, uint256 _minreturn, address _affiliateaccount, uint256 _affiliatefee) public returns (uint256) {
+        return claimandconvertfor2(_path, _amount, _minreturn, msg.sender, _affiliateaccount, _affiliatefee);
+    }
+
+    
+    function ensuretransfer(ierc20token _token, address _to, uint256 _amount) private {
+        iaddresslist addresslist = iaddresslist(addressof(non_standard_token_registry));
+
+        if (addresslist.listedaddresses(_token)) {
+            uint256 prevbalance = _token.balanceof(_to);
+            
+            inonstandarderc20(_token).transfer(_to, _amount);
+            uint256 postbalance = _token.balanceof(_to);
+            assert(postbalance > prevbalance);
+        } else {
+            
+            assert(_token.transfer(_to, _amount));
+        }
+    }
+
+    
+    function ensuretransferfrom(ierc20token _token, address _from, address _to, uint256 _amount) private {
+        iaddresslist addresslist = iaddresslist(addressof(non_standard_token_registry));
+
+        if (addresslist.listedaddresses(_token)) {
+            uint256 prevbalance = _token.balanceof(_to);
+            
+            inonstandarderc20(_token).transferfrom(_from, _to, _amount);
+            uint256 postbalance = _token.balanceof(_to);
+            assert(postbalance > prevbalance);
+        } else {
+            
+            assert(_token.transferfrom(_from, _to, _amount));
+        }
+    }
+
+    
+    function ensureallowance(ierc20token _token, address _spender, uint256 _value) private {
+        
+        if (_token.allowance(this, _spender) >= _value)
+            return;
+
+        
+        if (_token.allowance(this, _spender) != 0)
+            inonstandarderc20(_token).approve(_spender, 0);
+
+        
+        inonstandarderc20(_token).approve(_spender, _value);
+    }
+
+    
+    function getreservesaleenabled(ibancorconverter _converter, ierc20token _reserve)
+        private
+        view
+        returns(bool)
+    {
+        bool issaleenabled;
+        (, , , issaleenabled, ) = _converter.connectors(_reserve);
+        return issaleenabled;
+    }
+
+    function getsignature(
+        uint256 _customval,
+        uint256 _block,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) private pure returns (uint256[] memory) {
+        if (_v == 0x0 && _r == 0x0 && _s == 0x0)
+            return new uint256[](0);
+        uint256[] memory signature = new uint256[](5);
+        signature[0] = _customval;
+        signature[1] = _block;
+        signature[2] = uint256(_v);
+        signature[3] = uint256(_r);
+        signature[4] = uint256(_s);
+        return signature;
+    }
+
+    function verifyconversionparams(
+        ierc20token[] _path,
+        address _sender,
+        address _receiver,
+        uint256[] memory _signature
+    )
+        private
+    {
+        
+        require(_path.length > 2 && _path.length <= (1 + 2 * 10) && _path.length % 2 == 1);
+
+        
+        icontractfeatures features = icontractfeatures(addressof(contract_features));
+        for (uint256 i = 1; i < _path.length; i += 2) {
+            ibancorconverter converter = ibancorconverter(ismarttoken(_path[i]).owner());
+            if (features.issupported(converter, featureids.converter_conversion_whitelist)) {
+                iwhitelist whitelist = converter.conversionwhitelist();
+                require(whitelist == address(0) || whitelist.iswhitelisted(_receiver));
+            }
+        }
+
+        if (_signature.length >= 5) {
+            
+            verifytrustedsender(_path, _sender, _signature);
+        }
+        else {
+            
+            ibancorgaspricelimit gaspricelimit = ibancorgaspricelimit(addressof(bancor_gas_price_limit));
+            gaspricelimit.validategasprice(tx.gasprice);
+        }
+    }
+
+    function handlevalue(ierc20token _token, uint256 _amount, bool _claim) private {
+        
+        if (msg.value > 0) {
+            require(_amount == msg.value && ethertokens[_token]);
+            iethertoken(_token).deposit.value(msg.value)();
+        }
+        
+        else if (_claim) {
+            ensuretransferfrom(_token, msg.sender, this, _amount);
+        }
+    }
+
+    
+    function convert(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn
+    ) public payable returns (uint256)
+    {
+        return convert2(_path, _amount, _minreturn, address(0), 0);
+    }
+
+    
+    function claimandconvert(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn
+    ) public returns (uint256)
+    {
+        return claimandconvert2(_path, _amount, _minreturn, address(0), 0);
+    }
+
+    
+    function convertfor(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for
+    ) public payable returns (uint256)
+    {
+        return convertfor2(_path, _amount, _minreturn, _for, address(0), 0);
+    }
+
+    
+    function claimandconvertfor(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for
+    ) public returns (uint256)
+    {
+        return claimandconvertfor2(_path, _amount, _minreturn, _for, address(0), 0);
+    }
+
+    
+    function xconvert(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        bytes32 _toblockchain,
+        bytes32 _to,
+        uint256 _conversionid
+    )
+        public
+        payable
+        returns (uint256)
+    {
+        return xconvert2(_path, _amount, _minreturn, _toblockchain, _to, _conversionid, address(0), 0);
+    }
+
+    
+    function xconvertprioritized2(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        bytes32 _toblockchain,
+        bytes32 _to,
+        uint256 _conversionid,
+        uint256[] memory _signature
+    )
+        public
+        payable
+        returns (uint256)
+    {
+        return xconvertprioritized3(_path, _amount, _minreturn, _toblockchain, _to, _conversionid, _signature, address(0), 0);
+    }
+
+    
+    function xconvertprioritized(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        bytes32 _toblockchain,
+        bytes32 _to,
+        uint256 _conversionid,
+        uint256 _block,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    )
+        public
+        payable
+        returns (uint256)
+    {
+        
+        uint256[] memory signature = getsignature(_amount, _block, _v, _r, _s);
+        return xconvertprioritized3(_path, _amount, _minreturn, _toblockchain, _to, _conversionid, signature, address(0), 0);
+        
+    }
+
+    
+    function convertforprioritized3(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for,
+        uint256 _customval,
+        uint256 _block,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    )
+        public
+        payable
+        returns (uint256)
+    {
+        return convertforprioritized4(_path, _amount, _minreturn, _for, getsignature(_customval, _block, _v, _r, _s), address(0), 0);
+    }
+
+    
+    function convertforprioritized2(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for,
+        uint256 _block,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    )
+        public
+        payable
+        returns (uint256)
+    {
+        return convertforprioritized4(_path, _amount, _minreturn, _for, getsignature(_amount, _block, _v, _r, _s), address(0), 0);
+    }
+
+    
+    function convertforprioritized(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for,
+        uint256 _block,
+        uint256 _nonce,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s)
+        public payable returns (uint256)
+    {
+        _nonce;
+        return convertforprioritized4(_path, _amount, _minreturn, _for, getsignature(_amount, _block, _v, _r, _s), address(0), 0);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+import ;
+
+
+contract bancornetworkpathfinder is contractregistryclient {
+    address public anchortoken;
+
+    
+    constructor(icontractregistry _registry) contractregistryclient(_registry) public {
+    }
+
+    
+    function setanchortoken(address _anchortoken) public owneronly {
+        anchortoken = _anchortoken;
+    }
+
+    
+    function generatepath(address _sourcetoken, address _targettoken) public view returns (address[] memory) {
+        ibancorconverterregistry converterregistry = ibancorconverterregistry(addressof(bancor_converter_registry));
+        address[] memory sourcepath = getpath(_sourcetoken, converterregistry);
+        address[] memory targetpath = getpath(_targettoken, converterregistry);
+        return getshortestpath(sourcepath, targetpath);
+    }
+
+    
+    function getpath(address _token, ibancorconverterregistry _converterregistry) private view returns (address[] memory) {
+        if (_token == anchortoken)
+            return getinitialarray(_token);
+
+        address[] memory smarttokens;
+        if (_converterregistry.issmarttoken(_token))
+            smarttokens = getinitialarray(_token);
+        else
+            smarttokens = _converterregistry.getconvertibletokensmarttokens(_token);
+
+        for (uint256 n = 0; n < smarttokens.length; n++) {
+            ibancorconverter converter = ibancorconverter(ismarttoken(smarttokens[n]).owner());
+            uint256 connectortokencount = converter.connectortokencount();
+            for (uint256 i = 0; i < connectortokencount; i++) {
+                address connectortoken = converter.connectortokens(i);
+                if (connectortoken != _token) {
+                    address[] memory path = getpath(connectortoken, _converterregistry);
+                    if (path.length > 0)
+                        return getextendedarray(_token, smarttokens[n], path);
+                }
+            }
+        }
+
+        return new address[](0);
+    }
+
+    
+    function getshortestpath(address[] memory _sourcepath, address[] memory _targetpath) private pure returns (address[] memory) {
+        if (_sourcepath.length > 0 && _targetpath.length > 0) {
+            uint256 i = _sourcepath.length;
+            uint256 j = _targetpath.length;
+            while (i > 0 && j > 0 && _sourcepath[i  1] == _targetpath[j  1]) {
+                i;
+                j;
+            }
+
+            address[] memory path = new address[](i + j + 1);
+            for (uint256 m = 0; m <= i; m++)
+                path[m] = _sourcepath[m];
+            for (uint256 n = j; n > 0; n)
+                path[path.length  n] = _targetpath[n  1];
+
+            uint256 length = 0;
+            for (uint256 p = 0; p < path.length; p += 1) {
+                for (uint256 q = p + 2; q < path.length  p % 2; q += 2) {
+                    if (path[p] == path[q])
+                        p = q;
+                }
+                path[length++] = path[p];
+            }
+
+            return getpartialarray(path, length);
+        }
+
+        return new address[](0);
+    }
+
+    
+    function getinitialarray(address _item) private pure returns (address[] memory) {
+        address[] memory array = new address[](1);
+        array[0] = _item;
+        return array;
+    }
+
+    
+    function getextendedarray(address _item0, address _item1, address[] memory _array) private pure returns (address[] memory) {
+        address[] memory array = new address[](2 + _array.length);
+        array[0] = _item0;
+        array[1] = _item1;
+        for (uint256 i = 0; i < _array.length; i++)
+            array[2 + i] = _array[i];
+        return array;
+    }
+
+    
+    function getpartialarray(address[] memory _array, uint256 _length) private pure returns (address[] memory) {
+        address[] memory array = new address[](_length);
+        for (uint256 i = 0; i < _length; i++)
+            array[i] = _array[i];
+        return array;
+    }
+}
+
+pragma solidity 0.4.26;
+
+
+contract featureids {
+    
+    uint256 public constant converter_conversion_whitelist = 1 << 0;
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract ibancornetwork {
+    function convert2(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _affiliateaccount,
+        uint256 _affiliatefee
+    ) public payable returns (uint256);
+
+    function claimandconvert2(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _affiliateaccount,
+        uint256 _affiliatefee
+    ) public returns (uint256);
+
+    function convertfor2(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for,
+        address _affiliateaccount,
+        uint256 _affiliatefee
+    ) public payable returns (uint256);
+
+    function claimandconvertfor2(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for,
+        address _affiliateaccount,
+        uint256 _affiliatefee
+    ) public returns (uint256);
+
+    function convertforprioritized4(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for,
+        uint256[] memory _signature,
+        address _affiliateaccount,
+        uint256 _affiliatefee
+    ) public payable returns (uint256);
+
+    
+    function convert(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn
+    ) public payable returns (uint256);
+
+    
+    function claimandconvert(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn
+    ) public returns (uint256);
+
+    
+    function convertfor(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for
+    ) public payable returns (uint256);
+
+    
+    function claimandconvertfor(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for
+    ) public returns (uint256);
+
+    
+    function convertforprioritized3(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for,
+        uint256 _customval,
+        uint256 _block,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) public payable returns (uint256);
+
+    
+    function convertforprioritized2(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for,
+        uint256 _block,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) public payable returns (uint256);
+
+    
+    function convertforprioritized(
+        ierc20token[] _path,
+        uint256 _amount,
+        uint256 _minreturn,
+        address _for,
+        uint256 _block,
+        uint256 _nonce,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) public payable returns (uint256);
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+contract bancorpricefloor is owned, tokenholder {
+    using safemath for uint256;
+
+
+    uint256 public constant token_price_n = 1;      
+    uint256 public constant token_price_d = 100;    
+
+    string public version = ;
+    ismarttoken public token; 
+
+    
+    constructor(ismarttoken _token)
+        public
+        validaddress(_token)
+    {
+        token = _token;
+    }
+
+    
+    function sell() public returns (uint256 amount) {
+        uint256 allowance = token.allowance(msg.sender, this); 
+        assert(token.transferfrom(msg.sender, this, allowance)); 
+        uint256 ethervalue = allowance.mul(token_price_n).div(token_price_d); 
+        msg.sender.transfer(ethervalue); 
+        return ethervalue;
+    }
+
+    
+    function withdraw(uint256 _amount) public owneronly {
+        msg.sender.transfer(_amount); 
+    }
+
+    
+    function() public payable {
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+
+contract bancorgaspricelimit is ibancorgaspricelimit, owned, utils {
+    uint256 public gasprice = 0 wei;    
+    
+    
+    constructor(uint256 _gasprice)
+        public
+        greaterthanzero(_gasprice)
+    {
+        gasprice = _gasprice;
+    }
+
+    
+    function setgasprice(uint256 _gasprice)
+        public
+        owneronly
+        greaterthanzero(_gasprice)
+    {
+        gasprice = _gasprice;
+    }
+
+    
+    function validategasprice(uint256 _gasprice)
+        public
+        view
+        greaterthanzero(_gasprice)
+    {
+        require(_gasprice <= gasprice);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+contract bancorconverter is ibancorconverter, smarttokencontroller, managed, contractregistryclient, featureids {
+    using safemath for uint256;
+
+    uint32 private constant ratio_resolution = 1000000;
+    uint64 private constant conversion_fee_resolution = 1000000;
+
+    struct reserve {
+        uint256 virtualbalance;         
+        uint32 ratio;                   
+        bool isvirtualbalanceenabled;   
+        bool issaleenabled;             
+        bool isset;                     
+    }
+
+    
+    uint16 public version = 22;
+    string public convertertype = ;
+
+    iwhitelist public conversionwhitelist;              
+    ierc20token[] public reservetokens;                 
+    mapping (address => reserve) public reserves;       
+    uint32 private totalreserveratio = 0;               
+    uint32 public maxconversionfee = 0;                 
+                                                        
+    uint32 public conversionfee = 0;                    
+    bool public conversionsenabled = true;              
+
+    
+    event conversion(
+        address indexed _fromtoken,
+        address indexed _totoken,
+        address indexed _trader,
+        uint256 _amount,
+        uint256 _return,
+        int256 _conversionfee
+    );
+
+    
+    event pricedataupdate(
+        address indexed _connectortoken,
+        uint256 _tokensupply,
+        uint256 _connectorbalance,
+        uint32 _connectorweight
+    );
+
+    
+    event conversionfeeupdate(uint32 _prevfee, uint32 _newfee);
+
+    
+    event conversionsenable(bool _conversionsenabled);
+
+    
+    event virtualbalancesenable(bool _enabled);
+
+    
+    constructor(
+        ismarttoken _token,
+        icontractregistry _registry,
+        uint32 _maxconversionfee,
+        ierc20token _reservetoken,
+        uint32 _reserveratio
+    )   contractregistryclient(_registry)
+        public
+        smarttokencontroller(_token)
+        validconversionfee(_maxconversionfee)
+    {
+        icontractfeatures features = icontractfeatures(addressof(contract_features));
+
+        
+        if (features != address(0))
+            features.enablefeatures(featureids.converter_conversion_whitelist, true);
+
+        maxconversionfee = _maxconversionfee;
+
+        if (_reservetoken != address(0))
+            addreserve(_reservetoken, _reserveratio);
+    }
+
+    
+    modifier validreserve(ierc20token _address) {
+        require(reserves[_address].isset);
+        _;
+    }
+
+    
+    modifier validconversionfee(uint32 _conversionfee) {
+        require(_conversionfee >= 0 && _conversionfee <= conversion_fee_resolution);
+        _;
+    }
+
+    
+    modifier validreserveratio(uint32 _ratio) {
+        require(_ratio > 0 && _ratio <= ratio_resolution);
+        _;
+    }
+
+    
+    modifier conversionsallowed {
+        require(conversionsenabled);
+        _;
+    }
+
+    
+    modifier totalsupplygreaterthanzeroonly {
+        require(token.totalsupply() > 0);
+        _;
+    }
+
+    
+    modifier multiplereservesonly {
+        require(reservetokens.length > 1);
+        _;
+    }
+
+    
+    function reservetokencount() public view returns (uint16) {
+        return uint16(reservetokens.length);
+    }
+
+    
+    function setconversionwhitelist(iwhitelist _whitelist)
+        public
+        owneronly
+        notthis(_whitelist)
+    {
+        conversionwhitelist = _whitelist;
+    }
+
+    
+    function disableconversions(bool _disable) public ownerormanageronly {
+        if (conversionsenabled == _disable) {
+            conversionsenabled = !_disable;
+            emit conversionsenable(conversionsenabled);
+        }
+    }
+
+    
+    function transfertokenownership(address _newowner)
+        public
+        owneronly
+        only(bancor_converter_upgrader)
+    {
+        super.transfertokenownership(_newowner);
+    }
+
+    
+    function accepttokenownership()
+        public
+        owneronly
+        totalsupplygreaterthanzeroonly
+    {
+        super.accepttokenownership();
+    }
+
+    
+    function setconversionfee(uint32 _conversionfee)
+        public
+        ownerormanageronly
+    {
+        require(_conversionfee >= 0 && _conversionfee <= maxconversionfee);
+        emit conversionfeeupdate(conversionfee, _conversionfee);
+        conversionfee = _conversionfee;
+    }
+
+    
+    function getfinalamount(uint256 _amount, uint8 _magnitude) public view returns (uint256) {
+        return _amount.mul((conversion_fee_resolution  conversionfee) ** _magnitude).div(conversion_fee_resolution ** _magnitude);
+    }
+
+    
+    function withdrawtokens(ierc20token _token, address _to, uint256 _amount) public {
+        address converterupgrader = addressof(bancor_converter_upgrader);
+
+        
+        
+        require(!reserves[_token].isset || token.owner() != address(this) || owner == converterupgrader);
+        super.withdrawtokens(_token, _to, _amount);
+    }
+
+    
+    function upgrade() public owneronly {
+        ibancorconverterupgrader converterupgrader = ibancorconverterupgrader(addressof(bancor_converter_upgrader));
+
+        transferownership(converterupgrader);
+        converterupgrader.upgrade(version);
+        acceptownership();
+    }
+
+    
+    function addreserve(ierc20token _token, uint32 _ratio)
+        public
+        owneronly
+        inactive
+        validaddress(_token)
+        notthis(_token)
+        validreserveratio(_ratio)
+    {
+        require(_token != token && !reserves[_token].isset && totalreserveratio + _ratio <= ratio_resolution); 
+
+        reserves[_token].ratio = _ratio;
+        reserves[_token].isvirtualbalanceenabled = false;
+        reserves[_token].virtualbalance = 0;
+        reserves[_token].issaleenabled = true;
+        reserves[_token].isset = true;
+        reservetokens.push(_token);
+        totalreserveratio += _ratio;
+    }
+
+    
+    function updatereservevirtualbalance(ierc20token _reservetoken, uint256 _virtualbalance)
+        public
+        owneronly
+        only(bancor_converter_upgrader)
+        validreserve(_reservetoken)
+    {
+        reserve storage reserve = reserves[_reservetoken];
+        reserve.isvirtualbalanceenabled = _virtualbalance != 0;
+        reserve.virtualbalance = _virtualbalance;
+    }
+
+    
+    function enablevirtualbalances(uint16 _scalefactor)
+        public
+        owneronly
+        active
+    {
+        
+        require(_scalefactor >= 100 && _scalefactor <= 1000);
+        bool enable = _scalefactor != 100;
+
+        
+        
+        ierc20token reservetoken;
+        for (uint16 i = 0; i < reservetokens.length; i++) {
+            reservetoken = reservetokens[i];
+            reserve storage reserve = reserves[reservetoken];
+            reserve.isvirtualbalanceenabled = enable;
+            reserve.virtualbalance = enable ? reservetoken.balanceof(this).mul(_scalefactor).div(100) : 0;
+        }
+
+        emit virtualbalancesenable(enable);
+    }
+
+    
+    function disablereservesale(ierc20token _reservetoken, bool _disable)
+        public
+        owneronly
+        validreserve(_reservetoken)
+    {
+        reserves[_reservetoken].issaleenabled = !_disable;
+    }
+
+    
+    function getreserveratio(ierc20token _reservetoken)
+        public
+        view
+        validreserve(_reservetoken)
+        returns (uint256)
+    {
+        return reserves[_reservetoken].ratio;
+    }
+
+    
+    function getreservebalance(ierc20token _reservetoken)
+        public
+        view
+        validreserve(_reservetoken)
+        returns (uint256)
+    {
+        reserve storage reserve = reserves[_reservetoken];
+        return reserve.isvirtualbalanceenabled ? reserve.virtualbalance : _reservetoken.balanceof(this);
+    }
+
+    
+    function getreturn(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount) public view returns (uint256, uint256) {
+        require(_fromtoken != _totoken); 
+
+        
+        if (_totoken == token)
+            return getpurchasereturn(_fromtoken, _amount);
+        else if (_fromtoken == token)
+            return getsalereturn(_totoken, _amount);
+
+        
+        return getcrossreservereturn(_fromtoken, _totoken, _amount);
+    }
+
+    
+    function getpurchasereturn(ierc20token _reservetoken, uint256 _depositamount)
+        public
+        view
+        active
+        validreserve(_reservetoken)
+        returns (uint256, uint256)
+    {
+        reserve storage reserve = reserves[_reservetoken];
+        require(reserve.issaleenabled); 
+
+        uint256 tokensupply = token.totalsupply();
+        uint256 reservebalance = _reservetoken.balanceof(this);
+        ibancorformula formula = ibancorformula(addressof(bancor_formula));
+        uint256 amount = formula.calculatepurchasereturn(tokensupply, reservebalance, reserve.ratio, _depositamount);
+        uint256 finalamount = getfinalamount(amount, 1);
+
+        
+        return (finalamount, amount  finalamount);
+    }
+
+    
+    function getsalereturn(ierc20token _reservetoken, uint256 _sellamount)
+        public
+        view
+        active
+        validreserve(_reservetoken)
+        returns (uint256, uint256)
+    {
+        reserve storage reserve = reserves[_reservetoken];
+        uint256 tokensupply = token.totalsupply();
+        uint256 reservebalance = _reservetoken.balanceof(this);
+        ibancorformula formula = ibancorformula(addressof(bancor_formula));
+        uint256 amount = formula.calculatesalereturn(tokensupply, reservebalance, reserve.ratio, _sellamount);
+        uint256 finalamount = getfinalamount(amount, 1);
+
+        
+        return (finalamount, amount  finalamount);
+    }
+
+    
+    function getcrossreservereturn(ierc20token _fromreservetoken, ierc20token _toreservetoken, uint256 _amount)
+        public
+        view
+        active
+        validreserve(_fromreservetoken)
+        validreserve(_toreservetoken)
+        returns (uint256, uint256)
+    {
+        reserve storage fromreserve = reserves[_fromreservetoken];
+        reserve storage toreserve = reserves[_toreservetoken];
+        require(fromreserve.issaleenabled); 
+
+        ibancorformula formula = ibancorformula(addressof(bancor_formula));
+        uint256 amount = formula.calculatecrossreservereturn(
+            getreservebalance(_fromreservetoken), 
+            fromreserve.ratio, 
+            getreservebalance(_toreservetoken), 
+            toreserve.ratio, 
+            _amount);
+        uint256 finalamount = getfinalamount(amount, 2);
+
+        
+        
+        return (finalamount, amount  finalamount);
+    }
+
+    
+    function convertinternal(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount, uint256 _minreturn)
+        public
+        only(bancor_network)
+        conversionsallowed
+        greaterthanzero(_minreturn)
+        returns (uint256)
+    {
+        require(_fromtoken != _totoken); 
+
+        
+        if (_totoken == token)
+            return buy(_fromtoken, _amount, _minreturn);
+        else if (_fromtoken == token)
+            return sell(_totoken, _amount, _minreturn);
+
+        uint256 amount;
+        uint256 feeamount;
+
+        
+        (amount, feeamount) = getcrossreservereturn(_fromtoken, _totoken, _amount);
+        
+        require(amount != 0 && amount >= _minreturn);
+
+        
+        reserve storage fromreserve = reserves[_fromtoken];
+        if (fromreserve.isvirtualbalanceenabled)
+            fromreserve.virtualbalance = fromreserve.virtualbalance.add(_amount);
+
+        
+        reserve storage toreserve = reserves[_totoken];
+        if (toreserve.isvirtualbalanceenabled)
+            toreserve.virtualbalance = toreserve.virtualbalance.sub(amount);
+
+        
+        uint256 toreservebalance = getreservebalance(_totoken);
+        assert(amount < toreservebalance);
+
+        
+        ensuretransferfrom(_fromtoken, msg.sender, this, _amount);
+        
+        
+        ensuretransferfrom(_totoken, this, msg.sender, amount);
+
+        
+        
+        dispatchconversionevent(_fromtoken, _totoken, _amount, amount, feeamount);
+
+        
+        emit pricedataupdate(_fromtoken, token.totalsupply(), _fromtoken.balanceof(this), fromreserve.ratio);
+        emit pricedataupdate(_totoken, token.totalsupply(), _totoken.balanceof(this), toreserve.ratio);
+        return amount;
+    }
+
+    
+    function buy(ierc20token _reservetoken, uint256 _depositamount, uint256 _minreturn) internal returns (uint256) {
+        uint256 amount;
+        uint256 feeamount;
+        (amount, feeamount) = getpurchasereturn(_reservetoken, _depositamount);
+        
+        require(amount != 0 && amount >= _minreturn);
+
+        
+        reserve storage reserve = reserves[_reservetoken];
+        if (reserve.isvirtualbalanceenabled)
+            reserve.virtualbalance = reserve.virtualbalance.add(_depositamount);
+
+        
+        ensuretransferfrom(_reservetoken, msg.sender, this, _depositamount);
+        
+        token.issue(msg.sender, amount);
+
+        
+        dispatchconversionevent(_reservetoken, token, _depositamount, amount, feeamount);
+
+        
+        emit pricedataupdate(_reservetoken, token.totalsupply(), _reservetoken.balanceof(this), reserve.ratio);
+        return amount;
+    }
+
+    
+    function sell(ierc20token _reservetoken, uint256 _sellamount, uint256 _minreturn) internal returns (uint256) {
+        require(_sellamount <= token.balanceof(msg.sender)); 
+        uint256 amount;
+        uint256 feeamount;
+        (amount, feeamount) = getsalereturn(_reservetoken, _sellamount);
+        
+        require(amount != 0 && amount >= _minreturn);
+
+        
+        uint256 tokensupply = token.totalsupply();
+        uint256 reservebalance = _reservetoken.balanceof(this);
+        assert(amount < reservebalance || (amount == reservebalance && _sellamount == tokensupply));
+
+        
+        reserve storage reserve = reserves[_reservetoken];
+        if (reserve.isvirtualbalanceenabled)
+            reserve.virtualbalance = reserve.virtualbalance.sub(amount);
+
+        
+        token.destroy(msg.sender, _sellamount);
+        
+        ensuretransferfrom(_reservetoken, this, msg.sender, amount);
+
+        
+        dispatchconversionevent(token, _reservetoken, _sellamount, amount, feeamount);
+
+        
+        emit pricedataupdate(_reservetoken, token.totalsupply(), _reservetoken.balanceof(this), reserve.ratio);
+        return amount;
+    }
+
+    
+    function convert2(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount, uint256 _minreturn, address _affiliateaccount, uint256 _affiliatefee) public returns (uint256) {
+        ierc20token[] memory path = new ierc20token[](3);
+        (path[0], path[1], path[2]) = (_fromtoken, token, _totoken);
+        return quickconvert2(path, _amount, _minreturn, _affiliateaccount, _affiliatefee);
+    }
+
+    
+    function quickconvert2(ierc20token[] _path, uint256 _amount, uint256 _minreturn, address _affiliateaccount, uint256 _affiliatefee)
+        public
+        payable
+        returns (uint256)
+    {
+        return quickconvertprioritized2(_path, _amount, _minreturn, getsignature(0x0, 0x0, 0x0, 0x0, 0x0), _affiliateaccount, _affiliatefee);
+    }
+
+    
+    function quickconvertprioritized2(ierc20token[] _path, uint256 _amount, uint256 _minreturn, uint256[] memory _signature, address _affiliateaccount, uint256 _affiliatefee)
+        public
+        payable
+        returns (uint256)
+    {
+        require(_signature.length == 0 || _signature[0] == _amount);
+
+        ibancornetwork bancornetwork = ibancornetwork(addressof(bancor_network));
+
+        
+        
+        if (msg.value == 0) {
+            
+            
+            
+            if (_path[0] == token) {
+                token.destroy(msg.sender, _amount); 
+                token.issue(bancornetwork, _amount); 
+            } else {
+                
+                ensuretransferfrom(_path[0], msg.sender, bancornetwork, _amount);
+            }
+        }
+
+        
+        return bancornetwork.convertforprioritized4.value(msg.value)(_path, _amount, _minreturn, msg.sender, _signature, _affiliateaccount, _affiliatefee);
+    }
+
+    
+    function completexconversion2(
+        ierc20token[] _path,
+        uint256 _minreturn,
+        uint256 _conversionid,
+        uint256[] memory _signature
+    )
+        public
+        returns (uint256)
+    {
+        
+        require(_signature.length == 0 || _signature[0] == _conversionid);
+
+        ibancorx bancorx = ibancorx(addressof(bancor_x));
+        ibancornetwork bancornetwork = ibancornetwork(addressof(bancor_network));
+
+        
+        require(_path[0] == addressof(bnt_token));
+
+        
+        uint256 amount = bancorx.getxtransferamount(_conversionid, msg.sender);
+
+        
+        token.destroy(msg.sender, amount);
+        token.issue(bancornetwork, amount);
+
+        return bancornetwork.convertforprioritized4(_path, amount, _minreturn, msg.sender, _signature, address(0), 0);
+    }
+
+    
+    function isadmin() internal view returns (bool) {
+        return msg.sender == owner || msg.sender == manager;
+    }
+
+    
+    function ensuretransferfrom(ierc20token _token, address _from, address _to, uint256 _amount) private {
+        iaddresslist addresslist = iaddresslist(addressof(non_standard_token_registry));
+        bool transferfromthis = _from == address(this);
+        if (addresslist.listedaddresses(_token)) {
+            uint256 prevbalance = _token.balanceof(_to);
+            
+            if (transferfromthis)
+                inonstandarderc20(_token).transfer(_to, _amount);
+            else
+                inonstandarderc20(_token).transferfrom(_from, _to, _amount);
+            uint256 postbalance = _token.balanceof(_to);
+            assert(postbalance > prevbalance);
+        } else {
+            
+            if (transferfromthis)
+                assert(_token.transfer(_to, _amount));
+            else
+                assert(_token.transferfrom(_from, _to, _amount));
+        }
+    }
+
+    
+    function fund(uint256 _amount)
+        public
+        conversionsallowed
+        multiplereservesonly
+    {
+        uint256 supply = token.totalsupply();
+        ibancorformula formula = ibancorformula(addressof(bancor_formula));
+
+        
+        
+        ierc20token reservetoken;
+        uint256 reservebalance;
+        uint256 reserveamount;
+        for (uint16 i = 0; i < reservetokens.length; i++) {
+            reservetoken = reservetokens[i];
+            reservebalance = reservetoken.balanceof(this);
+            reserveamount = formula.calculatefundcost(supply, reservebalance, totalreserveratio, _amount);
+
+            
+            reserve storage reserve = reserves[reservetoken];
+            if (reserve.isvirtualbalanceenabled)
+                reserve.virtualbalance = reserve.virtualbalance.add(reserveamount);
+
+            
+            ensuretransferfrom(reservetoken, msg.sender, this, reserveamount);
+
+            
+            emit pricedataupdate(reservetoken, supply + _amount, reservebalance + reserveamount, reserve.ratio);
+        }
+
+        
+        token.issue(msg.sender, _amount);
+    }
+
+    
+    function liquidate(uint256 _amount)
+        public
+        multiplereservesonly
+    {
+        uint256 supply = token.totalsupply();
+        ibancorformula formula = ibancorformula(addressof(bancor_formula));
+
+        
+        token.destroy(msg.sender, _amount);
+
+        
+        
+        ierc20token reservetoken;
+        uint256 reservebalance;
+        uint256 reserveamount;
+        for (uint16 i = 0; i < reservetokens.length; i++) {
+            reservetoken = reservetokens[i];
+            reservebalance = reservetoken.balanceof(this);
+            reserveamount = formula.calculateliquidatereturn(supply, reservebalance, totalreserveratio, _amount);
+
+            
+            reserve storage reserve = reserves[reservetoken];
+            if (reserve.isvirtualbalanceenabled)
+                reserve.virtualbalance = reserve.virtualbalance.sub(reserveamount);
+
+            
+            ensuretransferfrom(reservetoken, this, msg.sender, reserveamount);
+
+            
+            emit pricedataupdate(reservetoken, supply  _amount, reservebalance  reserveamount, reserve.ratio);
+        }
+    }
+
+    
+    function dispatchconversionevent(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount, uint256 _returnamount, uint256 _feeamount) private {
+        
+        
+        
+        
+        assert(_feeamount < 2 ** 255);
+        emit conversion(_fromtoken, _totoken, msg.sender, _amount, _returnamount, int256(_feeamount));
+    }
+
+    function getsignature(
+        uint256 _customval,
+        uint256 _block,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) private pure returns (uint256[] memory) {
+        if (_v == 0x0 && _r == 0x0 && _s == 0x0)
+            return new uint256[](0);
+        uint256[] memory signature = new uint256[](5);
+        signature[0] = _customval;
+        signature[1] = _block;
+        signature[2] = uint256(_v);
+        signature[3] = uint256(_r);
+        signature[4] = uint256(_s);
+        return signature;
+    }
+
+    
+    function change(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount, uint256 _minreturn) public returns (uint256) {
+        return convertinternal(_fromtoken, _totoken, _amount, _minreturn);
+    }
+
+    
+    function convert(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount, uint256 _minreturn) public returns (uint256) {
+        return convert2(_fromtoken, _totoken, _amount, _minreturn, address(0), 0);
+    }
+
+    
+    function quickconvert(ierc20token[] _path, uint256 _amount, uint256 _minreturn) public payable returns (uint256) {
+        return quickconvert2(_path, _amount, _minreturn, address(0), 0);
+    }
+
+    
+    function quickconvertprioritized(ierc20token[] _path, uint256 _amount, uint256 _minreturn, uint256 _block, uint8 _v, bytes32 _r, bytes32 _s) public payable returns (uint256) {
+        return quickconvertprioritized2(_path, _amount, _minreturn, getsignature(_amount, _block, _v, _r, _s), address(0), 0);
+    }
+
+    
+    function completexconversion(ierc20token[] _path, uint256 _minreturn, uint256 _conversionid, uint256 _block, uint8 _v, bytes32 _r, bytes32 _s) public returns (uint256) {
+        return completexconversion2(_path, _minreturn, _conversionid, getsignature(_conversionid, _block, _v, _r, _s));
+    }
+
+    
+    function connectors(address _address) public view returns (uint256, uint32, bool, bool, bool) {
+        reserve storage reserve = reserves[_address];
+        return(reserve.virtualbalance, reserve.ratio, reserve.isvirtualbalanceenabled, reserve.issaleenabled, reserve.isset);
+    }
+
+    
+    function connectortokens(uint256 _index) public view returns (ierc20token) {
+        return bancorconverter.reservetokens[_index];
+    }
+
+    
+    function connectortokencount() public view returns (uint16) {
+        return reservetokencount();
+    }
+
+    
+    function addconnector(ierc20token _token, uint32 _weight, bool ) public {
+        addreserve(_token, _weight);
+    }
+
+    
+    function updateconnector(ierc20token _connectortoken, uint32 , bool , uint256 _virtualbalance) public {
+        updatereservevirtualbalance(_connectortoken, _virtualbalance);
+    }
+
+    
+    function disableconnectorsale(ierc20token _connectortoken, bool _disable) public {
+        disablereservesale(_connectortoken, _disable);
+    }
+
+    
+    function getconnectorbalance(ierc20token _connectortoken) public view returns (uint256) {
+        return getreservebalance(_connectortoken);
+    }
+
+    
+    function getcrossconnectorreturn(ierc20token _fromconnectortoken, ierc20token _toconnectortoken, uint256 _amount) public view returns (uint256, uint256) {
+        return getcrossreservereturn(_fromconnectortoken, _toconnectortoken, _amount);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+contract bancorconverterregistry is ibancorconverterregistry, contractregistryclient {
+    
+    event smarttokenadded(address indexed _smarttoken);
+
+    
+    event smarttokenremoved(address indexed _smarttoken);
+
+    
+    event liquiditypooladded(address indexed _liquiditypool);
+
+    
+    event liquiditypoolremoved(address indexed _liquiditypool);
+
+    
+    event convertibletokenadded(address indexed _convertibletoken, address indexed _smarttoken);
+
+    
+    event convertibletokenremoved(address indexed _convertibletoken, address indexed _smarttoken);
+
+    
+    constructor(icontractregistry _registry) contractregistryclient(_registry) public {
+    }
+
+    
+    function addconverter(ibancorconverter _converter) external {
+        
+        require(isconvertervalid(_converter));
+
+        ibancorconverterregistrydata converterregistrydata = ibancorconverterregistrydata(addressof(bancor_converter_registry_data));
+        ismarttoken token = ismarttokencontroller(_converter).token();
+        uint reservetokencount = _converter.connectortokencount();
+
+        
+        addsmarttoken(converterregistrydata, token);
+        if (reservetokencount > 1)
+            addliquiditypool(converterregistrydata, token);
+        else
+            addconvertibletoken(converterregistrydata, token, token);
+
+        
+        for (uint i = 0; i < reservetokencount; i++)
+            addconvertibletoken(converterregistrydata, _converter.connectortokens(i), token);
+    }
+
+    
+    function removeconverter(ibancorconverter _converter) external {
+      
+        require(msg.sender == owner || !isconvertervalid(_converter));
+
+        ibancorconverterregistrydata converterregistrydata = ibancorconverterregistrydata(addressof(bancor_converter_registry_data));
+        ismarttoken token = ismarttokencontroller(_converter).token();
+        uint reservetokencount = _converter.connectortokencount();
+
+        
+        removesmarttoken(converterregistrydata, token);
+        if (reservetokencount > 1)
+            removeliquiditypool(converterregistrydata, token);
+        else
+            removeconvertibletoken(converterregistrydata, token, token);
+
+        
+        for (uint i = 0; i < reservetokencount; i++)
+            removeconvertibletoken(converterregistrydata, _converter.connectortokens(i), token);
+    }
+
+    
+    function getsmarttokencount() external view returns (uint) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getsmarttokencount();
+    }
+
+    
+    function getsmarttokens() external view returns (address[]) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getsmarttokens();
+    }
+
+    
+    function getsmarttoken(uint _index) external view returns (address) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getsmarttoken(_index);
+    }
+
+    
+    function issmarttoken(address _value) external view returns (bool) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).issmarttoken(_value);
+    }
+
+    
+    function getliquiditypoolcount() external view returns (uint) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getliquiditypoolcount();
+    }
+
+    
+    function getliquiditypools() external view returns (address[]) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getliquiditypools();
+    }
+
+    
+    function getliquiditypool(uint _index) external view returns (address) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getliquiditypool(_index);
+    }
+
+    
+    function isliquiditypool(address _value) external view returns (bool) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).isliquiditypool(_value);
+    }
+
+    
+    function getconvertibletokencount() external view returns (uint) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getconvertibletokencount();
+    }
+
+    
+    function getconvertibletokens() external view returns (address[]) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getconvertibletokens();
+    }
+
+    
+    function getconvertibletoken(uint _index) external view returns (address) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getconvertibletoken(_index);
+    }
+
+    
+    function isconvertibletoken(address _value) external view returns (bool) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).isconvertibletoken(_value);
+    }
+
+    
+    function getconvertibletokensmarttokencount(address _convertibletoken) external view returns (uint) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getconvertibletokensmarttokencount(_convertibletoken);
+    }
+
+    
+    function getconvertibletokensmarttokens(address _convertibletoken) external view returns (address[]) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getconvertibletokensmarttokens(_convertibletoken);
+    }
+
+    
+    function getconvertibletokensmarttoken(address _convertibletoken, uint _index) external view returns (address) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).getconvertibletokensmarttoken(_convertibletoken, _index);
+    }
+
+    
+    function isconvertibletokensmarttoken(address _convertibletoken, address _value) external view returns (bool) {
+        return ibancorconverterregistrydata(addressof(bancor_converter_registry_data)).isconvertibletokensmarttoken(_convertibletoken, _value);
+    }
+
+    
+    function getconvertersbysmarttokens(address[] _smarttokens) external view returns (address[]) {
+        address[] memory converters = new address[](_smarttokens.length);
+
+        for (uint i = 0; i < _smarttokens.length; i++)
+            converters[i] = ismarttoken(_smarttokens[i]).owner();
+
+        return converters;
+    }
+
+    
+    function isconvertervalid(ibancorconverter _converter) public view returns (bool) {
+        ismarttoken token = ismarttokencontroller(_converter).token();
+
+        
+        if (token.totalsupply() == 0 || token.owner() != address(_converter) || !_converter.conversionsenabled())
+            return false;
+
+        uint reservetokencount = _converter.connectortokencount();
+        address[] memory reservetokens = new address[](reservetokencount);
+        uint[] memory reserveratios = new uint[](reservetokencount);
+
+        
+        for (uint i = 0; i < reservetokencount; i++) {
+            ierc20token reservetoken = _converter.connectortokens(i);
+            if (reservetoken.balanceof(_converter) == 0)
+                return false;
+            reservetokens[i] = reservetoken;
+            reserveratios[i] = connectors(_converter, reservetoken);
+        }
+
+        return getliquiditypoolbyreserveconfig(reservetokens, reserveratios) == ibancorconverter(0);
+    }
+
+    
+    function getliquiditypoolbyreserveconfig(address[] memory _reservetokens, uint[] memory _reserveratios) public view returns (ibancorconverter) {
+        
+        if (_reservetokens.length == _reserveratios.length && _reservetokens.length > 1) {
+
+            
+            address[] memory convertibletokensmarttokens = getleastfrequenttokensmarttokens(_reservetokens);
+            for (uint i = 0; i < convertibletokensmarttokens.length; i++) {
+                ismarttoken smarttoken = ismarttoken(convertibletokensmarttokens[i]);
+                ibancorconverter converter = ibancorconverter(smarttoken.owner());
+
+                
+                uint reservetokencount = converter.connectortokencount();
+                if (reservetokencount == _reservetokens.length) {
+                    bool identical = true;
+                    for (uint j = 0; j < reservetokencount; j++) {
+                        ierc20token reservetoken = converter.connectortokens(j);
+                        if (reservetoken != _reservetokens[j]) {
+                            identical = false;
+                            break;
+                        }
+                        uint256 ratio = connectors(converter, reservetoken);
+                        if (ratio != _reserveratios[j]) {
+                            identical = false;
+                            break;
+                        }
+                    }
+                    if (identical)
+                        return converter;
+                }
+            }
+        }
+
+        return ibancorconverter(0);
+    }
+
+    
+    function addsmarttoken(ibancorconverterregistrydata _converterregistrydata, address _smarttoken) internal {
+        _converterregistrydata.addsmarttoken(_smarttoken);
+        emit smarttokenadded(_smarttoken);
+    }
+
+    
+    function removesmarttoken(ibancorconverterregistrydata _converterregistrydata, address _smarttoken) internal {
+        _converterregistrydata.removesmarttoken(_smarttoken);
+        emit smarttokenremoved(_smarttoken);
+    }
+
+    
+    function addliquiditypool(ibancorconverterregistrydata _converterregistrydata, address _liquiditypool) internal {
+        _converterregistrydata.addliquiditypool(_liquiditypool);
+        emit liquiditypooladded(_liquiditypool);
+    }
+
+    
+    function removeliquiditypool(ibancorconverterregistrydata _converterregistrydata, address _liquiditypool) internal {
+        _converterregistrydata.removeliquiditypool(_liquiditypool);
+        emit liquiditypoolremoved(_liquiditypool);
+    }
+
+    
+    function addconvertibletoken(ibancorconverterregistrydata _converterregistrydata, address _convertibletoken, address _smarttoken) internal {
+        _converterregistrydata.addconvertibletoken(_convertibletoken, _smarttoken);
+        emit convertibletokenadded(_convertibletoken, _smarttoken);
+    }
+
+    
+    function removeconvertibletoken(ibancorconverterregistrydata _converterregistrydata, address _convertibletoken, address _smarttoken) internal {
+        _converterregistrydata.removeconvertibletoken(_convertibletoken, _smarttoken);
+        emit convertibletokenremoved(_convertibletoken, _smarttoken);
+    }
+
+    function getleastfrequenttokensmarttokens(address[] memory _tokens) private view returns (address[] memory) {
+        ibancorconverterregistrydata bancorconverterregistrydata = ibancorconverterregistrydata(addressof(bancor_converter_registry_data));
+
+        
+        uint minsmarttokencount = bancorconverterregistrydata.getconvertibletokensmarttokencount(_tokens[0]);
+        address[] memory smarttokens = bancorconverterregistrydata.getconvertibletokensmarttokens(_tokens[0]);
+        for (uint i = 1; i < _tokens.length; i++) {
+            uint convertibletokensmarttokencount = bancorconverterregistrydata.getconvertibletokensmarttokencount(_tokens[i]);
+            if (minsmarttokencount > convertibletokensmarttokencount) {
+                minsmarttokencount = convertibletokensmarttokencount;
+                smarttokens = bancorconverterregistrydata.getconvertibletokensmarttokens(_tokens[i]);
+            }
+        }
+        return smarttokens;
+    }
+
+    bytes4 private constant connectors_func_selector = bytes4(uint256(keccak256() >> (256  4 * 8)));
+
+    function connectors(address _dest, address _address) private view returns (uint256) {
+        uint256[2] memory ret;
+        bytes memory data = abi.encodewithselector(connectors_func_selector, _address);
+
+        assembly {
+            let success := staticcall(
+                gas,           
+                _dest,         
+                add(data, 32), 
+                mload(data),   
+                ret,           
+                64             
+            )
+            if iszero(success) {
+                revert(0, 0)
+            }
+        }
+
+        return ret[1];
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+
+contract bancorconverterfactory is ibancorconverterfactory {
+    
+    event newconverter(address indexed _converter, address indexed _owner);
+
+    
+    constructor() public {
+    }
+
+    
+    function createconverter(
+        ismarttoken _token,
+        icontractregistry _registry,
+        uint32 _maxconversionfee,
+        ierc20token _reservetoken,
+        uint32 _reserveratio
+    ) public returns(address converteraddress) {
+        bancorconverter converter = new bancorconverter(
+            _token,
+            _registry,
+            _maxconversionfee,
+            _reservetoken,
+            _reserveratio
+        );
+
+        converter.transferownership(msg.sender);
+        converter.transfermanagement(msg.sender);
+
+        address _converteraddress = address(converter);
+        emit newconverter(_converteraddress, msg.sender);
+        return _converteraddress;
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+
+
+contract bancorconverterregistrydata is ibancorconverterregistrydata, contractregistryclient {
+    struct item {
+        bool valid;
+        uint index;
+    }
+
+    struct items {
+        address[] array;
+        mapping(address => item) table;
+    }
+
+    struct list {
+        uint index;
+        items items;
+    }
+
+    struct lists {
+        address[] array;
+        mapping(address => list) table;
+    }
+
+    items smarttokens;
+    items liquiditypools;
+    lists convertibletokens;
+
+    
+    constructor(icontractregistry _registry) contractregistryclient(_registry) public {
+    }
+
+    
+    function addsmarttoken(address _smarttoken) external only(bancor_converter_registry) {
+        additem(smarttokens, _smarttoken);
+    }
+
+    
+    function removesmarttoken(address _smarttoken) external only(bancor_converter_registry) {
+        removeitem(smarttokens, _smarttoken);
+    }
+
+    
+    function addliquiditypool(address _liquiditypool) external only(bancor_converter_registry) {
+        additem(liquiditypools, _liquiditypool);
+    }
+
+    
+    function removeliquiditypool(address _liquiditypool) external only(bancor_converter_registry) {
+        removeitem(liquiditypools, _liquiditypool);
+    }
+
+    
+    function addconvertibletoken(address _convertibletoken, address _smarttoken) external only(bancor_converter_registry) {
+        list storage list = convertibletokens.table[_convertibletoken];
+        if (list.items.array.length == 0) {
+            list.index = convertibletokens.array.push(_convertibletoken)  1;
+        }
+        additem(list.items, _smarttoken);
+    }
+
+    
+    function removeconvertibletoken(address _convertibletoken, address _smarttoken) external only(bancor_converter_registry) {
+        list storage list = convertibletokens.table[_convertibletoken];
+        removeitem(list.items, _smarttoken);
+        if (list.items.array.length == 0) {
+            address lastconvertibletoken = convertibletokens.array[convertibletokens.array.length  1];
+            convertibletokens.table[lastconvertibletoken].index = list.index;
+            convertibletokens.array[list.index] = lastconvertibletoken;
+            convertibletokens.array.length;
+            delete convertibletokens.table[_convertibletoken];
+        }
+    }
+
+    
+    function getsmarttokencount() external view returns (uint) {
+        return smarttokens.array.length;
+    }
+
+    
+    function getsmarttokens() external view returns (address[]) {
+        return smarttokens.array;
+    }
+
+    
+    function getsmarttoken(uint _index) external view returns (address) {
+        return smarttokens.array[_index];
+    }
+
+    
+    function issmarttoken(address _value) external view returns (bool) {
+        return smarttokens.table[_value].valid;
+    }
+
+    
+    function getliquiditypoolcount() external view returns (uint) {
+        return liquiditypools.array.length;
+    }
+
+    
+    function getliquiditypools() external view returns (address[]) {
+        return liquiditypools.array;
+    }
+
+    
+    function getliquiditypool(uint _index) external view returns (address) {
+        return liquiditypools.array[_index];
+    }
+
+    
+    function isliquiditypool(address _value) external view returns (bool) {
+        return liquiditypools.table[_value].valid;
+    }
+
+    
+    function getconvertibletokencount() external view returns (uint) {
+        return convertibletokens.array.length;
+    }
+
+    
+    function getconvertibletokens() external view returns (address[]) {
+        return convertibletokens.array;
+    }
+
+    
+    function getconvertibletoken(uint _index) external view returns (address) {
+        return convertibletokens.array[_index];
+    }
+
+    
+    function isconvertibletoken(address _value) external view returns (bool) {
+        return convertibletokens.table[_value].items.array.length > 0;
+    }
+
+    
+    function getconvertibletokensmarttokencount(address _convertibletoken) external view returns (uint) {
+        return convertibletokens.table[_convertibletoken].items.array.length;
+    }
+
+    
+    function getconvertibletokensmarttokens(address _convertibletoken) external view returns (address[]) {
+        return convertibletokens.table[_convertibletoken].items.array;
+    }
+
+    
+    function getconvertibletokensmarttoken(address _convertibletoken, uint _index) external view returns (address) {
+        return convertibletokens.table[_convertibletoken].items.array[_index];
+    }
+
+    
+    function isconvertibletokensmarttoken(address _convertibletoken, address _value) external view returns (bool) {
+        return convertibletokens.table[_convertibletoken].items.table[_value].valid;
+    }
+
+    
+    function additem(items storage _items, address _value) internal {
+        item storage item = _items.table[_value];
+        require(item.valid == false);
+
+        item.index = _items.array.push(_value)  1;
+        item.valid = true;
+    }
+
+    
+    function removeitem(items storage _items, address _value) internal {
+        item storage item = _items.table[_value];
+        require(item.valid == true);
+
+        address lastvalue = _items.array[_items.array.length  1];
+        _items.table[lastvalue].index = item.index;
+        _items.array[item.index] = lastvalue;
+        _items.array.length;
+        delete _items.table[_value];
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+contract bancorformula is ibancorformula, utils {
+    using safemath for uint256;
+
+    uint16 public version = 5;
+
+    uint256 private constant one = 1;
+    uint32 private constant max_ratio = 1000000;
+    uint8 private constant min_precision = 32;
+    uint8 private constant max_precision = 127;
+
+    
+    uint256 private constant fixed_1 = 0x080000000000000000000000000000000;
+    uint256 private constant fixed_2 = 0x100000000000000000000000000000000;
+    uint256 private constant max_num = 0x200000000000000000000000000000000;
+
+    
+    uint256 private constant ln2_numerator   = 0x3f80fe03f80fe03f80fe03f80fe03f8;
+    uint256 private constant ln2_denominator = 0x5b9de1d10bf4103d647b0955897ba80;
+
+    
+    uint256 private constant opt_log_max_val = 0x15bf0a8b1457695355fb8ac404e7a79e3;
+    uint256 private constant opt_exp_max_val = 0x800000000000000000000000000000000;
+
+    
+    uint256[128] private maxexparray;
+    constructor() public {
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+        maxexparray[ 32] = 0x1c35fedd14ffffffffffffffffffffffff;
+        maxexparray[ 33] = 0x1b0ce43b323fffffffffffffffffffffff;
+        maxexparray[ 34] = 0x19f0028ec1ffffffffffffffffffffffff;
+        maxexparray[ 35] = 0x18ded91f0e7fffffffffffffffffffffff;
+        maxexparray[ 36] = 0x17d8ec7f0417ffffffffffffffffffffff;
+        maxexparray[ 37] = 0x16ddc6556cdbffffffffffffffffffffff;
+        maxexparray[ 38] = 0x15ecf52776a1ffffffffffffffffffffff;
+        maxexparray[ 39] = 0x15060c256cb2ffffffffffffffffffffff;
+        maxexparray[ 40] = 0x1428a2f98d72ffffffffffffffffffffff;
+        maxexparray[ 41] = 0x13545598e5c23fffffffffffffffffffff;
+        maxexparray[ 42] = 0x1288c4161ce1dfffffffffffffffffffff;
+        maxexparray[ 43] = 0x11c592761c666fffffffffffffffffffff;
+        maxexparray[ 44] = 0x110a688680a757ffffffffffffffffffff;
+        maxexparray[ 45] = 0x1056f1b5bedf77ffffffffffffffffffff;
+        maxexparray[ 46] = 0x0faadceceeff8bffffffffffffffffffff;
+        maxexparray[ 47] = 0x0f05dc6b27edadffffffffffffffffffff;
+        maxexparray[ 48] = 0x0e67a5a25da4107fffffffffffffffffff;
+        maxexparray[ 49] = 0x0dcff115b14eedffffffffffffffffffff;
+        maxexparray[ 50] = 0x0d3e7a392431239fffffffffffffffffff;
+        maxexparray[ 51] = 0x0cb2ff529eb71e4fffffffffffffffffff;
+        maxexparray[ 52] = 0x0c2d415c3db974afffffffffffffffffff;
+        maxexparray[ 53] = 0x0bad03e7d883f69bffffffffffffffffff;
+        maxexparray[ 54] = 0x0b320d03b2c343d5ffffffffffffffffff;
+        maxexparray[ 55] = 0x0abc25204e02828dffffffffffffffffff;
+        maxexparray[ 56] = 0x0a4b16f74ee4bb207fffffffffffffffff;
+        maxexparray[ 57] = 0x09deaf736ac1f569ffffffffffffffffff;
+        maxexparray[ 58] = 0x0976bd9952c7aa957fffffffffffffffff;
+        maxexparray[ 59] = 0x09131271922eaa606fffffffffffffffff;
+        maxexparray[ 60] = 0x08b380f3558668c46fffffffffffffffff;
+        maxexparray[ 61] = 0x0857ddf0117efa215bffffffffffffffff;
+        maxexparray[ 62] = 0x07ffffffffffffffffffffffffffffffff;
+        maxexparray[ 63] = 0x07abbf6f6abb9d087fffffffffffffffff;
+        maxexparray[ 64] = 0x075af62cbac95f7dfa7fffffffffffffff;
+        maxexparray[ 65] = 0x070d7fb7452e187ac13fffffffffffffff;
+        maxexparray[ 66] = 0x06c3390ecc8af379295fffffffffffffff;
+        maxexparray[ 67] = 0x067c00a3b07ffc01fd6fffffffffffffff;
+        maxexparray[ 68] = 0x0637b647c39cbb9d3d27ffffffffffffff;
+        maxexparray[ 69] = 0x05f63b1fc104dbd39587ffffffffffffff;
+        maxexparray[ 70] = 0x05b771955b36e12f7235ffffffffffffff;
+        maxexparray[ 71] = 0x057b3d49dda84556d6f6ffffffffffffff;
+        maxexparray[ 72] = 0x054183095b2c8ececf30ffffffffffffff;
+        maxexparray[ 73] = 0x050a28be635ca2b888f77fffffffffffff;
+        maxexparray[ 74] = 0x04d5156639708c9db33c3fffffffffffff;
+        maxexparray[ 75] = 0x04a23105873875bd52dfdfffffffffffff;
+        maxexparray[ 76] = 0x0471649d87199aa990756fffffffffffff;
+        maxexparray[ 77] = 0x04429a21a029d4c1457cfbffffffffffff;
+        maxexparray[ 78] = 0x0415bc6d6fb7dd71af2cb3ffffffffffff;
+        maxexparray[ 79] = 0x03eab73b3bbfe282243ce1ffffffffffff;
+        maxexparray[ 80] = 0x03c1771ac9fb6b4c18e229ffffffffffff;
+        maxexparray[ 81] = 0x0399e96897690418f785257fffffffffff;
+        maxexparray[ 82] = 0x0373fc456c53bb779bf0ea9fffffffffff;
+        maxexparray[ 83] = 0x034f9e8e490c48e67e6ab8bfffffffffff;
+        maxexparray[ 84] = 0x032cbfd4a7adc790560b3337ffffffffff;
+        maxexparray[ 85] = 0x030b50570f6e5d2acca94613ffffffffff;
+        maxexparray[ 86] = 0x02eb40f9f620fda6b56c2861ffffffffff;
+        maxexparray[ 87] = 0x02cc8340ecb0d0f520a6af58ffffffffff;
+        maxexparray[ 88] = 0x02af09481380a0a35cf1ba02ffffffffff;
+        maxexparray[ 89] = 0x0292c5bdd3b92ec810287b1b3fffffffff;
+        maxexparray[ 90] = 0x0277abdcdab07d5a77ac6d6b9fffffffff;
+        maxexparray[ 91] = 0x025daf6654b1eaa55fd64df5efffffffff;
+        maxexparray[ 92] = 0x0244c49c648baa98192dce88b7ffffffff;
+        maxexparray[ 93] = 0x022ce03cd5619a311b2471268bffffffff;
+        maxexparray[ 94] = 0x0215f77c045fbe885654a44a0fffffffff;
+        maxexparray[ 95] = 0x01ffffffffffffffffffffffffffffffff;
+        maxexparray[ 96] = 0x01eaefdbdaaee7421fc4d3ede5ffffffff;
+        maxexparray[ 97] = 0x01d6bd8b2eb257df7e8ca57b09bfffffff;
+        maxexparray[ 98] = 0x01c35fedd14b861eb0443f7f133fffffff;
+        maxexparray[ 99] = 0x01b0ce43b322bcde4a56e8ada5afffffff;
+        maxexparray[100] = 0x019f0028ec1fff007f5a195a39dfffffff;
+        maxexparray[101] = 0x018ded91f0e72ee74f49b15ba527ffffff;
+        maxexparray[102] = 0x017d8ec7f04136f4e5615fd41a63ffffff;
+        maxexparray[103] = 0x016ddc6556cdb84bdc8d12d22e6fffffff;
+        maxexparray[104] = 0x015ecf52776a1155b5bd8395814f7fffff;
+        maxexparray[105] = 0x015060c256cb23b3b3cc3754cf40ffffff;
+        maxexparray[106] = 0x01428a2f98d728ae223ddab715be3fffff;
+        maxexparray[107] = 0x013545598e5c23276ccf0ede68034fffff;
+        maxexparray[108] = 0x01288c4161ce1d6f54b7f61081194fffff;
+        maxexparray[109] = 0x011c592761c666aa641d5a01a40f17ffff;
+        maxexparray[110] = 0x0110a688680a7530515f3e6e6cfdcdffff;
+        maxexparray[111] = 0x01056f1b5bedf75c6bcb2ce8aed428ffff;
+        maxexparray[112] = 0x00faadceceeff8a0890f3875f008277fff;
+        maxexparray[113] = 0x00f05dc6b27edad306388a600f6ba0bfff;
+        maxexparray[114] = 0x00e67a5a25da41063de1495d5b18cdbfff;
+        maxexparray[115] = 0x00dcff115b14eedde6fc3aa5353f2e4fff;
+        maxexparray[116] = 0x00d3e7a3924312399f9aae2e0f868f8fff;
+        maxexparray[117] = 0x00cb2ff529eb71e41582cccd5a1ee26fff;
+        maxexparray[118] = 0x00c2d415c3db974ab32a51840c0b67edff;
+        maxexparray[119] = 0x00bad03e7d883f69ad5b0a186184e06bff;
+        maxexparray[120] = 0x00b320d03b2c343d4829abd6075f0cc5ff;
+        maxexparray[121] = 0x00abc25204e02828d73c6e80bcdb1a95bf;
+        maxexparray[122] = 0x00a4b16f74ee4bb2040a1ec6c15fbbf2df;
+        maxexparray[123] = 0x009deaf736ac1f569deb1b5ae3f36c130f;
+        maxexparray[124] = 0x00976bd9952c7aa957f5937d790ef65037;
+        maxexparray[125] = 0x009131271922eaa6064b73a22d0bd4f2bf;
+        maxexparray[126] = 0x008b380f3558668c46c91c49a2f8e967b9;
+        maxexparray[127] = 0x00857ddf0117efa215952912839f6473e6;
+    }
+
+    
+    function calculatepurchasereturn(uint256 _supply, uint256 _reservebalance, uint32 _reserveratio, uint256 _depositamount) public view returns (uint256) {
+        
+        require(_supply > 0 && _reservebalance > 0 && _reserveratio > 0 && _reserveratio <= max_ratio);
+
+        
+        if (_depositamount == 0)
+            return 0;
+
+        
+        if (_reserveratio == max_ratio)
+            return _supply.mul(_depositamount) / _reservebalance;
+
+        uint256 result;
+        uint8 precision;
+        uint256 basen = _depositamount.add(_reservebalance);
+        (result, precision) = power(basen, _reservebalance, _reserveratio, max_ratio);
+        uint256 temp = _supply.mul(result) >> precision;
+        return temp  _supply;
+    }
+
+    
+    function calculatesalereturn(uint256 _supply, uint256 _reservebalance, uint32 _reserveratio, uint256 _sellamount) public view returns (uint256) {
+        
+        require(_supply > 0 && _reservebalance > 0 && _reserveratio > 0 && _reserveratio <= max_ratio && _sellamount <= _supply);
+
+        
+        if (_sellamount == 0)
+            return 0;
+
+        
+        if (_sellamount == _supply)
+            return _reservebalance;
+
+        
+        if (_reserveratio == max_ratio)
+            return _reservebalance.mul(_sellamount) / _supply;
+
+        uint256 result;
+        uint8 precision;
+        uint256 based = _supply  _sellamount;
+        (result, precision) = power(_supply, based, max_ratio, _reserveratio);
+        uint256 temp1 = _reservebalance.mul(result);
+        uint256 temp2 = _reservebalance << precision;
+        return (temp1  temp2) / result;
+    }
+
+    
+    function calculatecrossreservereturn(uint256 _fromreservebalance, uint32 _fromreserveratio, uint256 _toreservebalance, uint32 _toreserveratio, uint256 _amount) public view returns (uint256) {
+        
+        require(_fromreservebalance > 0 && _fromreserveratio > 0 && _fromreserveratio <= max_ratio && _toreservebalance > 0 && _toreserveratio > 0 && _toreserveratio <= max_ratio);
+
+        
+        if (_fromreserveratio == _toreserveratio)
+            return _toreservebalance.mul(_amount) / _fromreservebalance.add(_amount);
+
+        uint256 result;
+        uint8 precision;
+        uint256 basen = _fromreservebalance.add(_amount);
+        (result, precision) = power(basen, _fromreservebalance, _fromreserveratio, _toreserveratio);
+        uint256 temp1 = _toreservebalance.mul(result);
+        uint256 temp2 = _toreservebalance << precision;
+        return (temp1  temp2) / result;
+    }
+
+    
+    function calculatefundcost(uint256 _supply, uint256 _reservebalance, uint32 _totalratio, uint256 _amount) public view returns (uint256) {
+        
+        require(_supply > 0 && _reservebalance > 0 && _totalratio > 1 && _totalratio <= max_ratio * 2);
+
+        
+        if (_amount == 0)
+            return 0;
+
+        
+        if (_totalratio == max_ratio)
+            return (_amount.mul(_reservebalance)  1) / _supply + 1;
+
+        uint256 result;
+        uint8 precision;
+        uint256 basen = _supply.add(_amount);
+        (result, precision) = power(basen, _supply, max_ratio, _totalratio);
+        uint256 temp = ((_reservebalance.mul(result)  1) >> precision) + 1;
+        return temp  _reservebalance;
+    }
+
+    
+    function calculateliquidatereturn(uint256 _supply, uint256 _reservebalance, uint32 _totalratio, uint256 _amount) public view returns (uint256) {
+        
+        require(_supply > 0 && _reservebalance > 0 && _totalratio > 1 && _totalratio <= max_ratio * 2 && _amount <= _supply);
+
+        
+        if (_amount == 0)
+            return 0;
+
+        
+        if (_totalratio == max_ratio)
+            return _amount.mul(_reservebalance) / _supply;
+
+        uint256 result;
+        uint8 precision;
+        uint256 based = _supply  _amount;
+        (result, precision) = power(_supply, based, max_ratio, _totalratio);
+        uint256 temp = _reservebalance.mul(result) >> precision;
+        return temp  _reservebalance;
+    }
+
+    
+    function power(uint256 _basen, uint256 _based, uint32 _expn, uint32 _expd) internal view returns (uint256, uint8) {
+        require(_basen < max_num);
+
+        uint256 baselog;
+        uint256 base = _basen * fixed_1 / _based;
+        if (base < opt_log_max_val) {
+            baselog = optimallog(base);
+        }
+        else {
+            baselog = generallog(base);
+        }
+
+        uint256 baselogtimesexp = baselog * _expn / _expd;
+        if (baselogtimesexp < opt_exp_max_val) {
+            return (optimalexp(baselogtimesexp), max_precision);
+        }
+        else {
+            uint8 precision = findpositioninmaxexparray(baselogtimesexp);
+            return (generalexp(baselogtimesexp >> (max_precision  precision), precision), precision);
+        }
+    }
+
+    
+    function generallog(uint256 x) internal pure returns (uint256) {
+        uint256 res = 0;
+
+        
+        if (x >= fixed_2) {
+            uint8 count = floorlog2(x / fixed_1);
+            x >>= count; 
+            res = count * fixed_1;
+        }
+
+        
+        if (x > fixed_1) {
+            for (uint8 i = max_precision; i > 0; i) {
+                x = (x * x) / fixed_1; 
+                if (x >= fixed_2) {
+                    x >>= 1; 
+                    res += one << (i  1);
+                }
+            }
+        }
+
+        return res * ln2_numerator / ln2_denominator;
+    }
+
+    
+    function floorlog2(uint256 _n) internal pure returns (uint8) {
+        uint8 res = 0;
+
+        if (_n < 256) {
+            
+            while (_n > 1) {
+                _n >>= 1;
+                res += 1;
+            }
+        }
+        else {
+            
+            for (uint8 s = 128; s > 0; s >>= 1) {
+                if (_n >= (one << s)) {
+                    _n >>= s;
+                    res |= s;
+                }
+            }
+        }
+
+        return res;
+    }
+
+    
+    function findpositioninmaxexparray(uint256 _x) internal view returns (uint8) {
+        uint8 lo = min_precision;
+        uint8 hi = max_precision;
+
+        while (lo + 1 < hi) {
+            uint8 mid = (lo + hi) / 2;
+            if (maxexparray[mid] >= _x)
+                lo = mid;
+            else
+                hi = mid;
+        }
+
+        if (maxexparray[hi] >= _x)
+            return hi;
+        if (maxexparray[lo] >= _x)
+            return lo;
+
+        require(false);
+        return 0;
+    }
+
+    
+    function generalexp(uint256 _x, uint8 _precision) internal pure returns (uint256) {
+        uint256 xi = _x;
+        uint256 res = 0;
+
+        xi = (xi * _x) >> _precision; res += xi * 0x3442c4e6074a82f1797f72ac0000000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x116b96f757c380fb287fd0e40000000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x045ae5bdd5f0e03eca1ff4390000000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x00defabf91302cd95b9ffda50000000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x002529ca9832b22439efff9b8000000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x00054f1cf12bd04e516b6da88000000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000a9e39e257a09ca2d6db51000000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x000012e066e7b839fa050c309000000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x000001e33d7d926c329a1ad1a800000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000002bee513bdb4a6b19b5f800000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x00000003a9316fa79b88eccf2a00000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000000048177ebe1fa812375200000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000000005263fe90242dcbacf00000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x000000000057e22099c030d94100000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000000000057e22099c030d9410000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x00000000000052b6b54569976310000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x00000000000004985f67696bf748000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x000000000000003dea12ea99e498000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x00000000000000031880f2214b6e000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x000000000000000025bcff56eb36000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x000000000000000001b722e10ab1000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000000000000000001317c70077000; 
+        xi = (xi * _x) >> _precision; res += xi * 0x00000000000000000000cba84aafa00; 
+        xi = (xi * _x) >> _precision; res += xi * 0x00000000000000000000082573a0a00; 
+        xi = (xi * _x) >> _precision; res += xi * 0x00000000000000000000005035ad900; 
+        xi = (xi * _x) >> _precision; res += xi * 0x000000000000000000000002f881b00; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000000000000000000000001b29340; 
+        xi = (xi * _x) >> _precision; res += xi * 0x00000000000000000000000000efc40; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000000000000000000000000007fe0; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000000000000000000000000000420; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000000000000000000000000000021; 
+        xi = (xi * _x) >> _precision; res += xi * 0x0000000000000000000000000000001; 
+
+        return res / 0x688589cc0e9505e2f2fee5580000000 + _x + (one << _precision); 
+    }
+
+    
+    function optimallog(uint256 x) internal pure returns (uint256) {
+        uint256 res = 0;
+
+        uint256 y;
+        uint256 z;
+        uint256 w;
+
+        if (x >= 0xd3094c70f034de4b96ff7d5b6f99fcd8) {res += 0x40000000000000000000000000000000; x = x * fixed_1 / 0xd3094c70f034de4b96ff7d5b6f99fcd8;} 
+        if (x >= 0xa45af1e1f40c333b3de1db4dd55f29a7) {res += 0x20000000000000000000000000000000; x = x * fixed_1 / 0xa45af1e1f40c333b3de1db4dd55f29a7;} 
+        if (x >= 0x910b022db7ae67ce76b441c27035c6a1) {res += 0x10000000000000000000000000000000; x = x * fixed_1 / 0x910b022db7ae67ce76b441c27035c6a1;} 
+        if (x >= 0x88415abbe9a76bead8d00cf112e4d4a8) {res += 0x08000000000000000000000000000000; x = x * fixed_1 / 0x88415abbe9a76bead8d00cf112e4d4a8;} 
+        if (x >= 0x84102b00893f64c705e841d5d4064bd3) {res += 0x04000000000000000000000000000000; x = x * fixed_1 / 0x84102b00893f64c705e841d5d4064bd3;} 
+        if (x >= 0x8204055aaef1c8bd5c3259f4822735a2) {res += 0x02000000000000000000000000000000; x = x * fixed_1 / 0x8204055aaef1c8bd5c3259f4822735a2;} 
+        if (x >= 0x810100ab00222d861931c15e39b44e99) {res += 0x01000000000000000000000000000000; x = x * fixed_1 / 0x810100ab00222d861931c15e39b44e99;} 
+        if (x >= 0x808040155aabbbe9451521693554f733) {res += 0x00800000000000000000000000000000; x = x * fixed_1 / 0x808040155aabbbe9451521693554f733;} 
+
+        z = y = x  fixed_1;
+        w = y * y / fixed_1;
+        res += z * (0x100000000000000000000000000000000  y) / 0x100000000000000000000000000000000; z = z * w / fixed_1; 
+        res += z * (0x0aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  y) / 0x200000000000000000000000000000000; z = z * w / fixed_1; 
+        res += z * (0x099999999999999999999999999999999  y) / 0x300000000000000000000000000000000; z = z * w / fixed_1; 
+        res += z * (0x092492492492492492492492492492492  y) / 0x400000000000000000000000000000000; z = z * w / fixed_1; 
+        res += z * (0x08e38e38e38e38e38e38e38e38e38e38e  y) / 0x500000000000000000000000000000000; z = z * w / fixed_1; 
+        res += z * (0x08ba2e8ba2e8ba2e8ba2e8ba2e8ba2e8b  y) / 0x600000000000000000000000000000000; z = z * w / fixed_1; 
+        res += z * (0x089d89d89d89d89d89d89d89d89d89d89  y) / 0x700000000000000000000000000000000; z = z * w / fixed_1; 
+        res += z * (0x088888888888888888888888888888888  y) / 0x800000000000000000000000000000000;                      
+
+        return res;
+    }
+
+    
+    function optimalexp(uint256 x) internal pure returns (uint256) {
+        uint256 res = 0;
+
+        uint256 y;
+        uint256 z;
+
+        z = y = x % 0x10000000000000000000000000000000; 
+        z = z * y / fixed_1; res += z * 0x10e1b3be415a0000; 
+        z = z * y / fixed_1; res += z * 0x05a0913f6b1e0000; 
+        z = z * y / fixed_1; res += z * 0x0168244fdac78000; 
+        z = z * y / fixed_1; res += z * 0x004807432bc18000; 
+        z = z * y / fixed_1; res += z * 0x000c0135dca04000; 
+        z = z * y / fixed_1; res += z * 0x0001b707b1cdc000; 
+        z = z * y / fixed_1; res += z * 0x000036e0f639b800; 
+        z = z * y / fixed_1; res += z * 0x00000618fee9f800; 
+        z = z * y / fixed_1; res += z * 0x0000009c197dcc00; 
+        z = z * y / fixed_1; res += z * 0x0000000e30dce400; 
+        z = z * y / fixed_1; res += z * 0x000000012ebd1300; 
+        z = z * y / fixed_1; res += z * 0x0000000017499f00; 
+        z = z * y / fixed_1; res += z * 0x0000000001a9d480; 
+        z = z * y / fixed_1; res += z * 0x00000000001c6380; 
+        z = z * y / fixed_1; res += z * 0x000000000001c638; 
+        z = z * y / fixed_1; res += z * 0x0000000000001ab8; 
+        z = z * y / fixed_1; res += z * 0x000000000000017c; 
+        z = z * y / fixed_1; res += z * 0x0000000000000014; 
+        z = z * y / fixed_1; res += z * 0x0000000000000001; 
+        res = res / 0x21c3677c82b40000 + y + fixed_1; 
+
+        if ((x & 0x010000000000000000000000000000000) != 0) res = res * 0x1c3d6a24ed82218787d624d3e5eba95f9 / 0x18ebef9eac820ae8682b9793ac6d1e776; 
+        if ((x & 0x020000000000000000000000000000000) != 0) res = res * 0x18ebef9eac820ae8682b9793ac6d1e778 / 0x1368b2fc6f9609fe7aceb46aa619baed4; 
+        if ((x & 0x040000000000000000000000000000000) != 0) res = res * 0x1368b2fc6f9609fe7aceb46aa619baed5 / 0x0bc5ab1b16779be3575bd8f0520a9f21f; 
+        if ((x & 0x080000000000000000000000000000000) != 0) res = res * 0x0bc5ab1b16779be3575bd8f0520a9f21e / 0x0454aaa8efe072e7f6ddbab84b40a55c9; 
+        if ((x & 0x100000000000000000000000000000000) != 0) res = res * 0x0454aaa8efe072e7f6ddbab84b40a55c5 / 0x00960aadc109e7a3bf4578099615711ea; 
+        if ((x & 0x200000000000000000000000000000000) != 0) res = res * 0x00960aadc109e7a3bf4578099615711d7 / 0x0002bf84208204f5977f9a8cf01fdce3d; 
+        if ((x & 0x400000000000000000000000000000000) != 0) res = res * 0x0002bf84208204f5977f9a8cf01fdc307 / 0x0000003c6ab775dd0b95b4cbee7e65d11; 
+
+        return res;
+    }
+
+    
+    function calculatecrossconnectorreturn(uint256 _fromconnectorbalance, uint32 _fromconnectorweight, uint256 _toconnectorbalance, uint32 _toconnectorweight, uint256 _amount) public view returns (uint256) {
+        return calculatecrossreservereturn(_fromconnectorbalance, _fromconnectorweight, _toconnectorbalance, _toconnectorweight, _amount);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+contract ibancorconverterextended is ibancorconverter, iowned {
+    function token() public view returns (ismarttoken) {this;}
+    function maxconversionfee() public view returns (uint32) {this;}
+    function conversionfee() public view returns (uint32) {this;}
+    function connectortokencount() public view returns (uint16);
+    function reservetokencount() public view returns (uint16);
+    function connectortokens(uint256 _index) public view returns (ierc20token) {_index; this;}
+    function reservetokens(uint256 _index) public view returns (ierc20token) {_index; this;}
+    function setconversionwhitelist(iwhitelist _whitelist) public;
+    function transfertokenownership(address _newowner) public;
+    function withdrawtokens(ierc20token _token, address _to, uint256 _amount) public;
+    function accepttokenownership() public;
+    function transfermanagement(address _newmanager) public;
+    function acceptmanagement() public;
+    function setconversionfee(uint32 _conversionfee) public;
+    function addconnector(ierc20token _token, uint32 _weight, bool _enablevirtualbalance) public;
+    function updateconnector(ierc20token _connectortoken, uint32 _weight, bool _enablevirtualbalance, uint256 _virtualbalance) public;
+}
+
+
+contract bancorconverterupgrader is ibancorconverterupgrader, contractregistryclient, featureids {
+    string public version = ;
+
+    
+    event converterowned(address indexed _converter, address indexed _owner);
+
+    
+    event converterupgrade(address indexed _oldconverter, address indexed _newconverter);
+
+    
+    constructor(icontractregistry _registry) contractregistryclient(_registry) public {
+    }
+
+    
+    function upgrade(bytes32 _version) public {
+        upgradeold(ibancorconverter(msg.sender), _version);
+    }
+
+    
+    function upgrade(uint16 _version) public {
+        upgradeold(ibancorconverter(msg.sender), bytes32(_version));
+    }
+
+    
+    function upgradeold(ibancorconverter _converter, bytes32 _version) public {
+        bool formerversions = false;
+        if (_version == )
+            formerversions = true;
+        ibancorconverterextended converter = ibancorconverterextended(_converter);
+        address prevowner = converter.owner();
+        acceptconverterownership(converter);
+        ibancorconverterextended newconverter = createconverter(converter);
+        copyconnectors(converter, newconverter, formerversions);
+        copyconversionfee(converter, newconverter);
+        transferconnectorsbalances(converter, newconverter, formerversions);                
+        ismarttoken token = converter.token();
+
+        if (token.owner() == address(converter)) {
+            converter.transfertokenownership(newconverter);
+            newconverter.accepttokenownership();
+        }
+
+        converter.transferownership(prevowner);
+        newconverter.transferownership(prevowner);
+        newconverter.transfermanagement(prevowner);
+
+        emit converterupgrade(address(converter), address(newconverter));
+    }
+
+    
+    function acceptconverterownership(ibancorconverterextended _oldconverter) private {
+        _oldconverter.acceptownership();
+        emit converterowned(_oldconverter, this);
+    }
+
+    
+    function createconverter(ibancorconverterextended _oldconverter) private returns(ibancorconverterextended) {
+        iwhitelist whitelist;
+        ismarttoken token = _oldconverter.token();
+        uint32 maxconversionfee = _oldconverter.maxconversionfee();
+
+        ibancorconverterfactory converterfactory = ibancorconverterfactory(addressof(bancor_converter_factory));
+        address converteraddress = converterfactory.createconverter(
+            token,
+            registry,
+            maxconversionfee,
+            ierc20token(address(0)),
+            0
+        );
+
+        ibancorconverterextended converter = ibancorconverterextended(converteraddress);
+        converter.acceptownership();
+        converter.acceptmanagement();
+
+        
+        icontractfeatures features = icontractfeatures(addressof(contract_features));
+
+        if (features.issupported(_oldconverter, featureids.converter_conversion_whitelist)) {
+            whitelist = _oldconverter.conversionwhitelist();
+            if (whitelist != address(0))
+                converter.setconversionwhitelist(whitelist);
+        }
+
+        return converter;
+    }
+
+    
+    function copyconnectors(ibancorconverterextended _oldconverter, ibancorconverterextended _newconverter, bool _islegacyversion)
+        private
+    {
+        uint256 virtualbalance;
+        uint32 weight;
+        bool isvirtualbalanceenabled;
+        bool issaleenabled;
+        bool isset;
+        uint16 connectortokencount = _islegacyversion ? _oldconverter.reservetokencount() : _oldconverter.connectortokencount();
+
+        for (uint16 i = 0; i < connectortokencount; i++) {
+            address connectoraddress = _islegacyversion ? _oldconverter.reservetokens(i) : _oldconverter.connectortokens(i);
+            (virtualbalance, weight, isvirtualbalanceenabled, issaleenabled, isset) = readconnector(
+                _oldconverter,
+                connectoraddress,
+                _islegacyversion
+            );
+
+            ierc20token connectortoken = ierc20token(connectoraddress);
+            _newconverter.addconnector(connectortoken, weight, isvirtualbalanceenabled);
+
+            if (isvirtualbalanceenabled)
+                _newconverter.updateconnector(connectortoken, weight, isvirtualbalanceenabled, virtualbalance);
+        }
+    }
+
+    
+    function copyconversionfee(ibancorconverterextended _oldconverter, ibancorconverterextended _newconverter) private {
+        uint32 conversionfee = _oldconverter.conversionfee();
+        _newconverter.setconversionfee(conversionfee);
+    }
+
+    
+    function transferconnectorsbalances(ibancorconverterextended _oldconverter, ibancorconverterextended _newconverter, bool _islegacyversion)
+        private
+    {
+        uint256 connectorbalance;
+        uint16 connectortokencount = _islegacyversion ? _oldconverter.reservetokencount() : _oldconverter.connectortokencount();
+
+        for (uint16 i = 0; i < connectortokencount; i++) {
+            address connectoraddress = _islegacyversion ? _oldconverter.reservetokens(i) : _oldconverter.connectortokens(i);
+            ierc20token connector = ierc20token(connectoraddress);
+            connectorbalance = connector.balanceof(_oldconverter);
+            _oldconverter.withdrawtokens(connector, address(_newconverter), connectorbalance);
+        }
+    }
+
+    
+    function readconnector(ibancorconverterextended _converter, address _address, bool _islegacyversion) 
+        private
+        view
+        returns(uint256 virtualbalance, uint32 weight, bool isvirtualbalanceenabled, bool issaleenabled, bool isset)
+    {
+        return _islegacyversion ? _converter.reserves(_address) : _converter.connectors(_address);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+
+contract ibancorconverterfactory {
+    function createconverter(
+        ismarttoken _token,
+        icontractregistry _registry,
+        uint32 _maxconversionfee,
+        ierc20token _reservetoken,
+        uint32 _reserveratio
+    )
+    public returns (address);
+}
+
+pragma solidity 0.4.26;
+import ;
+
+interface ibancorconverterregistry {
+    function addconverter(ibancorconverter _converter) external;
+    function removeconverter(ibancorconverter _converter) external;
+    function getsmarttokencount() external view returns (uint);
+    function getsmarttokens() external view returns (address[]);
+    function getsmarttoken(uint _index) external view returns (address);
+    function issmarttoken(address _value) external view returns (bool);
+    function getliquiditypoolcount() external view returns (uint);
+    function getliquiditypools() external view returns (address[]);
+    function getliquiditypool(uint _index) external view returns (address);
+    function isliquiditypool(address _value) external view returns (bool);
+    function getconvertibletokencount() external view returns (uint);
+    function getconvertibletokens() external view returns (address[]);
+    function getconvertibletoken(uint _index) external view returns (address);
+    function isconvertibletoken(address _value) external view returns (bool);
+    function getconvertibletokensmarttokencount(address _convertibletoken) external view returns (uint);
+    function getconvertibletokensmarttokens(address _convertibletoken) external view returns (address[]);
+    function getconvertibletokensmarttoken(address _convertibletoken, uint _index) external view returns (address);
+    function isconvertibletokensmarttoken(address _convertibletoken, address _value) external view returns (bool);
+}
+
+pragma solidity 0.4.26;
+
+interface ibancorconverterregistrydata {
+    function addsmarttoken(address _smarttoken) external;
+    function removesmarttoken(address _smarttoken) external;
+    function addliquiditypool(address _liquiditypool) external;
+    function removeliquiditypool(address _liquiditypool) external;
+    function addconvertibletoken(address _convertibletoken, address _smarttoken) external;
+    function removeconvertibletoken(address _convertibletoken, address _smarttoken) external;
+    function getsmarttokencount() external view returns (uint);
+    function getsmarttokens() external view returns (address[]);
+    function getsmarttoken(uint _index) external view returns (address);
+    function issmarttoken(address _value) external view returns (bool);
+    function getliquiditypoolcount() external view returns (uint);
+    function getliquiditypools() external view returns (address[]);
+    function getliquiditypool(uint _index) external view returns (address);
+    function isliquiditypool(address _value) external view returns (bool);
+    function getconvertibletokencount() external view returns (uint);
+    function getconvertibletokens() external view returns (address[]);
+    function getconvertibletoken(uint _index) external view returns (address);
+    function isconvertibletoken(address _value) external view returns (bool);
+    function getconvertibletokensmarttokencount(address _convertibletoken) external view returns (uint);
+    function getconvertibletokensmarttokens(address _convertibletoken) external view returns (address[]);
+    function getconvertibletokensmarttoken(address _convertibletoken, uint _index) external view returns (address);
+    function isconvertibletokensmarttoken(address _convertibletoken, address _value) external view returns (bool);
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract ibancorconverterupgrader {
+    function upgrade(bytes32 _version) public;
+    function upgrade(uint16 _version) public;
+}
+
+pragma solidity 0.4.26;
+
+
+contract ibancorformula {
+    function calculatepurchasereturn(uint256 _supply, uint256 _reservebalance, uint32 _reserveratio, uint256 _depositamount) public view returns (uint256);
+    function calculatesalereturn(uint256 _supply, uint256 _reservebalance, uint32 _reserveratio, uint256 _sellamount) public view returns (uint256);
+    function calculatecrossreservereturn(uint256 _fromreservebalance, uint32 _fromreserveratio, uint256 _toreservebalance, uint32 _toreserveratio, uint256 _amount) public view returns (uint256);
+    function calculatefundcost(uint256 _supply, uint256 _reservebalance, uint32 _totalratio, uint256 _amount) public view returns (uint256);
+    function calculateliquidatereturn(uint256 _supply, uint256 _reservebalance, uint32 _totalratio, uint256 _amount) public view returns (uint256);
+    
+    function calculatecrossconnectorreturn(uint256 _fromconnectorbalance, uint32 _fromconnectorweight, uint256 _toconnectorbalance, uint32 _toconnectorweight, uint256 _amount) public view returns (uint256);
+}
+
+pragma solidity 0.4.26;
+
+
+contract ibancorgaspricelimit {
+    function gasprice() public view returns (uint256) {this;}
+    function validategasprice(uint256) public view;
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+
+
+contract ibancorconverter {
+    function getreturn(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount) public view returns (uint256, uint256);
+    function convert2(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount, uint256 _minreturn, address _affiliateaccount, uint256 _affiliatefee) public returns (uint256);
+    function quickconvert2(ierc20token[] _path, uint256 _amount, uint256 _minreturn, address _affiliateaccount, uint256 _affiliatefee) public payable returns (uint256);
+    function conversionsenabled() public view returns (bool) {this;}
+    function conversionwhitelist() public view returns (iwhitelist) {this;}
+    function conversionfee() public view returns (uint32) {this;}
+    function reserves(address _address) public view returns (uint256, uint32, bool, bool, bool) {_address; this;}
+    function getreservebalance(ierc20token _reservetoken) public view returns (uint256);
+    function reservetokens(uint256 _index) public view returns (ierc20token) {_index; this;}
+    
+    function change(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount, uint256 _minreturn) public returns (uint256);
+    function convert(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount, uint256 _minreturn) public returns (uint256);
+    function quickconvert(ierc20token[] _path, uint256 _amount, uint256 _minreturn) public payable returns (uint256);
+    function connectors(address _address) public view returns (uint256, uint32, bool, bool, bool);
+    function getconnectorbalance(ierc20token _connectortoken) public view returns (uint256);
+    function connectortokens(uint256 _index) public view returns (ierc20token);
+    function connectortokencount() public view returns (uint16);
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+
+
+contract nonstandardtokenregistry is iaddresslist, owned {
+
+    mapping (address => bool) public listedaddresses;
+
+    
+    constructor() public {
+    }
+
+    
+    function setaddress(address token, bool register) public owneronly {
+        listedaddresses[token] = register;
+    }
+}
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+
+contract contractregistryclient is owned, utils {
+    bytes32 internal constant contract_features = ;
+    bytes32 internal constant contract_registry = ;
+    bytes32 internal constant non_standard_token_registry = ;
+    bytes32 internal constant bancor_network = ;
+    bytes32 internal constant bancor_formula = ;
+    bytes32 internal constant bancor_gas_price_limit = ;
+    bytes32 internal constant bancor_converter_factory = ;
+    bytes32 internal constant bancor_converter_upgrader = ;
+    bytes32 internal constant bancor_converter_registry = ;
+    bytes32 internal constant bancor_converter_registry_data = ;
+    bytes32 internal constant bnt_token = ;
+    bytes32 internal constant bancor_x = ;
+    bytes32 internal constant bancor_x_upgrader = ;
+
+    icontractregistry public registry;      
+    icontractregistry public prevregistry;  
+    bool public adminonly;                  
+
+    
+    modifier only(bytes32 _contractname) {
+        require(msg.sender == addressof(_contractname));
+        _;
+    }
+
+    
+    constructor(icontractregistry _registry) internal validaddress(_registry) {
+        registry = icontractregistry(_registry);
+        prevregistry = icontractregistry(_registry);
+    }
+
+    
+    function updateregistry() public {
+        
+        require(!adminonly || isadmin());
+
+        
+        address newregistry = addressof(contract_registry);
+
+        
+        require(newregistry != address(registry) && newregistry != address(0));
+
+        
+        require(icontractregistry(newregistry).addressof(contract_registry) != address(0));
+
+        
+        prevregistry = registry;
+
+        
+        registry = icontractregistry(newregistry);
+    }
+
+    
+    function restoreregistry() public {
+        
+        require(isadmin());
+
+        
+        registry = prevregistry;
+    }
+
+    
+    function restrictregistryupdate(bool _adminonly) public {
+        
+        require(adminonly != _adminonly && isadmin());
+
+        
+        adminonly = _adminonly;
+    }
+
+    
+    function isadmin() internal view returns (bool) {
+        return msg.sender == owner;
+    }
+
+    
+    function addressof(bytes32 _contractname) internal view returns (address) {
+        return registry.addressof(_contractname);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract owned is iowned {
+    address public owner;
+    address public newowner;
+
+    
+    event ownerupdate(address indexed _prevowner, address indexed _newowner);
+
+    
+    constructor() public {
+        owner = msg.sender;
+    }
+
+    
+    modifier owneronly {
+        require(msg.sender == owner);
+        _;
+    }
+
+    
+    function transferownership(address _newowner) public owneronly {
+        require(_newowner != owner);
+        newowner = _newowner;
+    }
+
+    
+    function acceptownership() public {
+        require(msg.sender == newowner);
+        emit ownerupdate(owner, newowner);
+        owner = newowner;
+        newowner = address(0);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+
+contract contractregistry is icontractregistry, owned, utils {
+    struct registryitem {
+        address contractaddress;    
+        uint256 nameindex;          
+    }
+
+    mapping (bytes32 => registryitem) private items;    
+    string[] public contractnames;                      
+
+    
+    event addressupdate(bytes32 indexed _contractname, address _contractaddress);
+
+    
+    function itemcount() public view returns (uint256) {
+        return contractnames.length;
+    }
+
+    
+    function addressof(bytes32 _contractname) public view returns (address) {
+        return items[_contractname].contractaddress;
+    }
+
+    
+    function registeraddress(bytes32 _contractname, address _contractaddress)
+        public
+        owneronly
+        validaddress(_contractaddress)
+    {
+        require(_contractname.length > 0); 
+
+        if (items[_contractname].contractaddress == address(0)) {
+            
+            uint256 i = contractnames.push(bytes32tostring(_contractname));
+            
+            items[_contractname].nameindex = i  1;
+        }
+
+        
+        items[_contractname].contractaddress = _contractaddress;
+
+        
+        emit addressupdate(_contractname, _contractaddress);
+    }
+
+    
+    function unregisteraddress(bytes32 _contractname) public owneronly {
+        require(_contractname.length > 0); 
+        require(items[_contractname].contractaddress != address(0));
+
+        
+        items[_contractname].contractaddress = address(0);
+
+        
+        
+        if (contractnames.length > 1) {
+            string memory lastcontractnamestring = contractnames[contractnames.length  1];
+            uint256 unregisterindex = items[_contractname].nameindex;
+
+            contractnames[unregisterindex] = lastcontractnamestring;
+            bytes32 lastcontractname = stringtobytes32(lastcontractnamestring);
+            registryitem storage registryitem = items[lastcontractname];
+            registryitem.nameindex = unregisterindex;
+        }
+
+        
+        contractnames.length;
+        
+        items[_contractname].nameindex = 0;
+
+        
+        emit addressupdate(_contractname, address(0));
+    }
+
+    
+    function bytes32tostring(bytes32 _bytes) private pure returns (string) {
+        bytes memory bytearray = new bytes(32);
+        for (uint256 i; i < 32; i++) {
+            bytearray[i] = _bytes[i];
+        }
+
+        return string(bytearray);
+    }
+
+    
+    function stringtobytes32(string memory _string) private pure returns (bytes32) {
+        bytes32 result;
+        assembly {
+            result := mload(add(_string,32))
+        }
+        return result;
+    }
+
+    
+    function getaddress(bytes32 _contractname) public view returns (address) {
+        return addressof(_contractname);
+    }
+}
+
+pragma solidity 0.4.26;
+
+
+contract utils {
+    
+    constructor() public {
+    }
+
+    
+    modifier greaterthanzero(uint256 _amount) {
+        require(_amount > 0);
+        _;
+    }
+
+    
+    modifier validaddress(address _address) {
+        require(_address != address(0));
+        _;
+    }
+
+    
+    modifier notthis(address _address) {
+        require(_address != address(this));
+        _;
+    }
+
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract managed is owned {
+    address public manager;
+    address public newmanager;
+
+    
+    event managerupdate(address indexed _prevmanager, address indexed _newmanager);
+
+    
+    constructor() public {
+        manager = msg.sender;
+    }
+
+    
+    modifier manageronly {
+        assert(msg.sender == manager);
+        _;
+    }
+
+    
+    modifier ownerormanageronly {
+        require(msg.sender == owner || msg.sender == manager);
+        _;
+    }
+
+    
+    function transfermanagement(address _newmanager) public ownerormanageronly {
+        require(_newmanager != manager);
+        newmanager = _newmanager;
+    }
+
+    
+    function acceptmanagement() public {
+        require(msg.sender == newmanager);
+        emit managerupdate(manager, newmanager);
+        manager = newmanager;
+        newmanager = address(0);
+    }
+}
+
+pragma solidity 0.4.26;
+
+
+library safemath {
+    
+    function add(uint256 _x, uint256 _y) internal pure returns (uint256) {
+        uint256 z = _x + _y;
+        require(z >= _x);
+        return z;
+    }
+
+    
+    function sub(uint256 _x, uint256 _y) internal pure returns (uint256) {
+        require(_x >= _y);
+        return _x  _y;
+    }
+
+    
+    function mul(uint256 _x, uint256 _y) internal pure returns (uint256) {
+        
+        if (_x == 0)
+            return 0;
+
+        uint256 z = _x * _y;
+        require(z / _x == _y);
+        return z;
+    }
+
+      
+    function div(uint256 _x, uint256 _y) internal pure returns (uint256) {
+        require(_y > 0);
+        uint256 c = _x / _y;
+
+        return c;
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+
+contract whitelist is iwhitelist, owned, utils {
+    mapping (address => bool) private whitelist;
+
+    
+    event addressaddition(address _address);
+
+    
+    event addressremoval(address _address);
+
+    
+    constructor() public {
+    }
+
+    
+    function iswhitelisted(address _address) public view returns (bool) {
+        return whitelist[_address];
+    }
+
+    
+    function addaddress(address _address)
+        owneronly
+        validaddress(_address)
+        public 
+    {
+        if (whitelist[_address]) 
+            return;
+
+        whitelist[_address] = true;
+        emit addressaddition(_address);
+    }
+
+    
+    function addaddresses(address[] _addresses) public {
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            addaddress(_addresses[i]);
+        }
+    }
+
+    
+    function removeaddress(address _address) owneronly public {
+        if (!whitelist[_address]) 
+            return;
+
+        whitelist[_address] = false;
+        emit addressremoval(_address);
+    }
+
+    
+    function removeaddresses(address[] _addresses) public {
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            removeaddress(_addresses[i]);
+        }
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+contract tokenholder is itokenholder, owned, utils {
+    
+    constructor() public {
+    }
+
+    
+    function withdrawtokens(ierc20token _token, address _to, uint256 _amount)
+        public
+        owneronly
+        validaddress(_token)
+        validaddress(_to)
+        notthis(_to)
+    {
+        inonstandarderc20(_token).transfer(_to, _amount);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract contractfeatures is icontractfeatures {
+    mapping (address => uint256) private featureflags;
+
+    
+    event featuresaddition(address indexed _address, uint256 _features);
+
+    
+    event featuresremoval(address indexed _address, uint256 _features);
+
+    
+    constructor() public {
+    }
+
+    
+    function issupported(address _contract, uint256 _features) public view returns (bool) {
+        return (featureflags[_contract] & _features) == _features;
+    }
+
+    
+    function enablefeatures(uint256 _features, bool _enable) public {
+        if (_enable) {
+            if (issupported(msg.sender, _features))
+                return;
+
+            featureflags[msg.sender] |= _features;
+
+            emit featuresaddition(msg.sender, _features);
+        } else {
+            if (!issupported(msg.sender, _features))
+                return;
+
+            featureflags[msg.sender] &= ~_features;
+
+            emit featuresremoval(msg.sender, _features);
+        }
+    }
+}
+
+pragma solidity 0.4.26;
+
+
+contract icontractregistry {
+    function addressof(bytes32 _contractname) public view returns (address);
+
+    
+    function getaddress(bytes32 _contractname) public view returns (address);
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+
+
+contract itokenholder is iowned {
+    function withdrawtokens(ierc20token _token, address _to, uint256 _amount) public;
+}
+
+pragma solidity 0.4.26;
+
+
+contract iowned {
+    
+    function owner() public view returns (address) {this;}
+
+    function transferownership(address _newowner) public;
+    function acceptownership() public;
+}
+
+pragma solidity 0.4.26;
+
+
+contract icontractfeatures {
+    function issupported(address _contract, uint256 _features) public view returns (bool);
+    function enablefeatures(uint256 _features, bool _enable) public;
+}
+
+pragma solidity 0.4.26;
+
+
+contract iwhitelist {
+    function iswhitelisted(address _address) public view returns (bool);
+}
+
+pragma solidity 0.4.26;
+
+
+contract iaddresslist {
+    mapping (address => bool) public listedaddresses;
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+
+contract crowdsalecontroller is smarttokencontroller {
+    using safemath for uint256;
+
+
+    uint256 public constant duration = 14 days;                 
+    uint256 public constant token_price_n = 1;                  
+    uint256 public constant token_price_d = 100;                
+    uint256 public constant btcs_ether_cap = 50000 ether;       
+    uint256 public constant max_gas_price = 50000000000 wei;    
+
+    string public version = ;
+
+    uint256 public starttime = 0;                   
+    uint256 public endtime = 0;                     
+    uint256 public totalethercap = 1000000 ether;   
+    uint256 public totalethercontributed = 0;       
+    bytes32 public realethercaphash;                
+    address public beneficiary = address(0);        
+    address public btcs = address(0);               
+
+    
+    event contribution(address indexed _contributor, uint256 _amount, uint256 _return);
+
+    
+    constructor(ismarttoken _token, uint256 _starttime, address _beneficiary, address _btcs, bytes32 _realethercaphash)
+        public
+        smarttokencontroller(_token)
+        validaddress(_beneficiary)
+        validaddress(_btcs)
+        earlierthan(_starttime)
+        greaterthanzero(uint256(_realethercaphash))
+    {
+        starttime = _starttime;
+        endtime = starttime + duration;
+        beneficiary = _beneficiary;
+        btcs = _btcs;
+        realethercaphash = _realethercaphash;
+    }
+
+    
+    modifier validgasprice() {
+        assert(tx.gasprice <= max_gas_price);
+        _;
+    }
+
+    
+    modifier validethercap(uint256 _cap, uint256 _key) {
+        require(computerealcap(_cap, _key) == realethercaphash);
+        _;
+    }
+
+    
+    modifier earlierthan(uint256 _time) {
+        assert(now < _time);
+        _;
+    }
+
+    
+    modifier between(uint256 _starttime, uint256 _endtime) {
+        assert(now >= _starttime && now < _endtime);
+        _;
+    }
+
+    
+    modifier btcsonly() {
+        assert(msg.sender == btcs);
+        _;
+    }
+
+    
+    modifier ethercapnotreached(uint256 _contribution) {
+        assert(totalethercontributed.add(_contribution) <= totalethercap);
+        _;
+    }
+
+    
+    modifier btcsethercapnotreached(uint256 _ethcontribution) {
+        assert(totalethercontributed.add(_ethcontribution) <= btcs_ether_cap);
+        _;
+    }
+
+    
+    function computerealcap(uint256 _cap, uint256 _key) public pure returns (bytes32) {
+        return keccak256(abi.encodepacked(_cap, _key));
+    }
+
+    
+    function enablerealcap(uint256 _cap, uint256 _key)
+        public
+        owneronly
+        active
+        between(starttime, endtime)
+        validethercap(_cap, _key)
+    {
+        require(_cap < totalethercap); 
+        totalethercap = _cap;
+    }
+
+    
+    function computereturn(uint256 _contribution) public pure returns (uint256) {
+        return _contribution.mul(token_price_d).div(token_price_n);
+    }
+
+    
+    function contributeeth()
+        public
+        payable
+        between(starttime, endtime)
+        returns (uint256 amount)
+    {
+        return processcontribution();
+    }
+
+    
+    function contributebtcs()
+        public
+        payable
+        btcsonly
+        btcsethercapnotreached(msg.value)
+        earlierthan(starttime)
+        returns (uint256 amount)
+    {
+        return processcontribution();
+    }
+
+    
+    function processcontribution() private
+        active
+        ethercapnotreached(msg.value)
+        validgasprice
+        returns (uint256 amount)
+    {
+        uint256 tokenamount = computereturn(msg.value);
+        beneficiary.transfer(msg.value); 
+        totalethercontributed = totalethercontributed.add(msg.value); 
+        token.issue(msg.sender, tokenamount); 
+        token.issue(beneficiary, tokenamount); 
+
+        emit contribution(msg.sender, msg.value, tokenamount);
+        return tokenamount;
+    }
+
+    
+    function() payable public {
+        contributeeth();
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+import ;
+
+
+contract smarttoken is ismarttoken, owned, erc20token, tokenholder {
+    using safemath for uint256;
+
+
+    string public version = ;
+
+    bool public transfersenabled = true;    
+
+    
+    event newsmarttoken(address _token);
+
+    
+    event issuance(uint256 _amount);
+
+    
+    event destruction(uint256 _amount);
+
+    
+    constructor(string _name, string _symbol, uint8 _decimals)
+        public
+        erc20token(_name, _symbol, _decimals, 0)
+    {
+        emit newsmarttoken(address(this));
+    }
+
+    
+    modifier transfersallowed {
+        assert(transfersenabled);
+        _;
+    }
+
+    
+    function disabletransfers(bool _disable) public owneronly {
+        transfersenabled = !_disable;
+    }
+
+    
+    function issue(address _to, uint256 _amount)
+        public
+        owneronly
+        validaddress(_to)
+        notthis(_to)
+    {
+        totalsupply = totalsupply.add(_amount);
+        balanceof[_to] = balanceof[_to].add(_amount);
+
+        emit issuance(_amount);
+        emit transfer(this, _to, _amount);
+    }
+
+    
+    function destroy(address _from, uint256 _amount) public {
+        require(msg.sender == _from || msg.sender == owner); 
+
+        balanceof[_from] = balanceof[_from].sub(_amount);
+        totalsupply = totalsupply.sub(_amount);
+
+        emit transfer(_from, this, _amount);
+        emit destruction(_amount);
+    }
+
+    
+
+    
+    function transfer(address _to, uint256 _value) public transfersallowed returns (bool success) {
+        assert(super.transfer(_to, _value));
+        return true;
+    }
+
+    
+    function transferfrom(address _from, address _to, uint256 _value) public transfersallowed returns (bool success) {
+        assert(super.transferfrom(_from, _to, _value));
+        return true;
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+
+contract erc20token is ierc20token, utils {
+    using safemath for uint256;
+
+
+    string public name;
+    string public symbol;
+    uint8 public decimals;
+    uint256 public totalsupply;
+    mapping (address => uint256) public balanceof;
+    mapping (address => mapping (address => uint256)) public allowance;
+
+    
+    event transfer(address indexed _from, address indexed _to, uint256 _value);
+
+    
+    event approval(address indexed _owner, address indexed _spender, uint256 _value);
+
+    
+    constructor(string _name, string _symbol, uint8 _decimals, uint256 _totalsupply) public {
+        require(bytes(_name).length > 0 && bytes(_symbol).length > 0); 
+
+        name = _name;
+        symbol = _symbol;
+        decimals = _decimals;
+        totalsupply = _totalsupply;
+        balanceof[msg.sender] = _totalsupply;
+    }
+
+    
+    function transfer(address _to, uint256 _value)
+        public
+        validaddress(_to)
+        returns (bool success)
+    {
+        balanceof[msg.sender] = balanceof[msg.sender].sub(_value);
+        balanceof[_to] = balanceof[_to].add(_value);
+        emit transfer(msg.sender, _to, _value);
+        return true;
+    }
+
+    
+    function transferfrom(address _from, address _to, uint256 _value)
+        public
+        validaddress(_from)
+        validaddress(_to)
+        returns (bool success)
+    {
+        allowance[_from][msg.sender] = allowance[_from][msg.sender].sub(_value);
+        balanceof[_from] = balanceof[_from].sub(_value);
+        balanceof[_to] = balanceof[_to].add(_value);
+        emit transfer(_from, _to, _value);
+        return true;
+    }
+
+    
+    function approve(address _spender, uint256 _value)
+        public
+        validaddress(_spender)
+        returns (bool success)
+    {
+        
+        require(_value == 0 || allowance[msg.sender][_spender] == 0);
+
+        allowance[msg.sender][_spender] = _value;
+        emit approval(msg.sender, _spender, _value);
+        return true;
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+
+contract smarttokencontroller is ismarttokencontroller, tokenholder {
+    ismarttoken public token;   
+    address public bancorx;     
+
+    
+    constructor(ismarttoken _token)
+        public
+        validaddress(_token)
+    {
+        token = _token;
+    }
+
+    
+    modifier active() {
+        require(token.owner() == address(this));
+        _;
+    }
+
+    
+    modifier inactive() {
+        require(token.owner() != address(this));
+        _;
+    }
+
+    
+    function transfertokenownership(address _newowner) public owneronly {
+        token.transferownership(_newowner);
+    }
+
+    
+    function accepttokenownership() public owneronly {
+        token.acceptownership();
+    }
+
+    
+    function withdrawfromtoken(ierc20token _token, address _to, uint256 _amount) public owneronly {
+        itokenholder(token).withdrawtokens(_token, _to, _amount);
+    }
+
+    
+    function claimtokens(address _from, uint256 _amount) public {
+        
+        require(msg.sender == bancorx);
+
+        
+        token.destroy(_from, _amount);
+        token.issue(msg.sender, _amount);
+    }
+
+    
+    function setbancorx(address _bancorx) public owneronly {
+        bancorx = _bancorx;
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+contract ethertoken is iethertoken, owned, erc20token, tokenholder {
+    using safemath for uint256;
+
+    
+    event issuance(uint256 _amount);
+
+    
+    event destruction(uint256 _amount);
+
+    
+    constructor()
+        public
+        erc20token(, , 18, 0) {
+    }
+
+    
+    function deposit() public payable {
+        balanceof[msg.sender] = balanceof[msg.sender].add(msg.value); 
+        totalsupply = totalsupply.add(msg.value); 
+
+        emit issuance(msg.value);
+        emit transfer(this, msg.sender, msg.value);
+    }
+
+    
+    function withdraw(uint256 _amount) public {
+        withdrawto(msg.sender, _amount);
+    }
+
+    
+    function withdrawto(address _to, uint256 _amount)
+        public
+        notthis(_to)
+    {
+        balanceof[msg.sender] = balanceof[msg.sender].sub(_amount); 
+        totalsupply = totalsupply.sub(_amount); 
+        _to.transfer(_amount); 
+
+        emit transfer(msg.sender, this, _amount);
+        emit destruction(_amount);
+    }
+
+    
+
+    
+    function transfer(address _to, uint256 _value)
+        public
+        notthis(_to)
+        returns (bool success)
+    {
+        assert(super.transfer(_to, _value));
+        return true;
+    }
+
+    
+    function transferfrom(address _from, address _to, uint256 _value)
+        public
+        notthis(_to)
+        returns (bool success)
+    {
+        assert(super.transferfrom(_from, _to, _value));
+        return true;
+    }
+
+    
+    function() public payable {
+        deposit();
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract ismarttokencontroller {
+    function claimtokens(address _from, uint256 _amount) public;
+    function token() public view returns (ismarttoken) {this;}
+}
+
+pragma solidity 0.4.26;
+
+
+contract inonstandarderc20 {
+    
+    function name() public view returns (string) {this;}
+    function symbol() public view returns (string) {this;}
+    function decimals() public view returns (uint8) {this;}
+    function totalsupply() public view returns (uint256) {this;}
+    function balanceof(address _owner) public view returns (uint256) {_owner; this;}
+    function allowance(address _owner, address _spender) public view returns (uint256) {_owner; _spender; this;}
+
+    function transfer(address _to, uint256 _value) public;
+    function transferfrom(address _from, address _to, uint256 _value) public;
+    function approve(address _spender, uint256 _value) public;
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+
+
+contract ismarttoken is iowned, ierc20token {
+    function disabletransfers(bool _disable) public;
+    function issue(address _to, uint256 _amount) public;
+    function destroy(address _from, uint256 _amount) public;
+}
+
+pragma solidity 0.4.26;
+
+
+contract ierc20token {
+    
+    function name() public view returns (string) {this;}
+    function symbol() public view returns (string) {this;}
+    function decimals() public view returns (uint8) {this;}
+    function totalsupply() public view returns (uint256) {this;}
+    function balanceof(address _owner) public view returns (uint256) {_owner; this;}
+    function allowance(address _owner, address _spender) public view returns (uint256) {_owner; _spender; this;}
+
+    function transfer(address _to, uint256 _value) public returns (bool success);
+    function transferfrom(address _from, address _to, uint256 _value) public returns (bool success);
+    function approve(address _spender, uint256 _value) public returns (bool success);
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+
+
+contract iethertoken is itokenholder, ierc20token {
+    function deposit() public payable;
+    function withdraw(uint256 _amount) public;
+    function withdrawto(address _to, uint256 _amount) public;
+}
+
+pragma solidity 0.4.26;
+
+import ;
+
+contract xtransferrerouter is owned {
+    bool public reroutingenabled;
+
+    
+    event txreroute(
+        uint256 indexed _txid,
+        bytes32 _toblockchain,
+        bytes32 _to
+    );
+
+    
+    constructor(bool _reroutingenabled) public {
+        reroutingenabled = _reroutingenabled;
+    }
+    
+    function enablererouting(bool _enable) public owneronly {
+        reroutingenabled = _enable;
+    }
+
+    
+    modifier whenreroutingenabled {
+        require(reroutingenabled);
+        _;
+    }
+
+    
+    function reroutetx(
+        uint256 _txid,
+        bytes32 _blockchain,
+        bytes32 _to
+    )
+        public
+        whenreroutingenabled 
+    {
+        emit txreroute(_txid, _blockchain, _to);
+    }
+
+}
+pragma solidity 0.4.26;
+
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+import ;
+
+
+contract bancorx is ibancorx, tokenholder, contractregistryclient {
+    using safemath for uint256;
+
+    
+    struct transaction {
+        uint256 amount;
+        bytes32 fromblockchain;
+        address to;
+        uint8 numofreports;
+        bool completed;
+    }
+
+    uint16 public version = 3;
+
+    uint256 public maxlocklimit;            
+    uint256 public maxreleaselimit;         
+    uint256 public minlimit;                
+    uint256 public prevlocklimit;           
+    uint256 public prevreleaselimit;        
+    uint256 public limitincperblock;        
+    uint256 public prevlockblocknumber;     
+    uint256 public prevreleaseblocknumber;  
+    uint256 public minrequiredreports;      
+    
+    ierc20token public token;               
+    bool public issmarttoken;               
+
+    bool public xtransfersenabled = true;   
+    bool public reportingenabled = true;    
+
+    
+    mapping (uint256 => transaction) public transactions;
+
+    
+    mapping (uint256 => uint256) public transactionids;
+
+    
+    mapping (uint256 => mapping (address => bool)) public reportedtxs;
+
+    
+    mapping (address => bool) public reporters;
+
+    
+    event tokenslock(
+        address indexed _from,
+        uint256 _amount
+    );
+
+    
+    event tokensrelease(
+        address indexed _to,
+        uint256 _amount
+    );
+
+    
+    event xtransfer(
+        address indexed _from,
+        bytes32 _toblockchain,
+        bytes32 indexed _to,
+        uint256 _amount,
+        uint256 _id
+    );
+
+    
+    event txreport(
+        address indexed _reporter,
+        bytes32 _fromblockchain,
+        uint256 _txid,
+        address _to,
+        uint256 _amount,
+        uint256 _xtransferid
+    );
+
+    
+    event xtransfercomplete(
+        address _to,
+        uint256 _id
+    );
+
+    
+    constructor(
+        uint256 _maxlocklimit,
+        uint256 _maxreleaselimit,
+        uint256 _minlimit,
+        uint256 _limitincperblock,
+        uint256 _minrequiredreports,
+        icontractregistry _registry,
+        ierc20token _token,
+        bool _issmarttoken
+    )   contractregistryclient(_registry)
+        public
+    {
+        
+        maxlocklimit = _maxlocklimit;
+        maxreleaselimit = _maxreleaselimit;
+        minlimit = _minlimit;
+        limitincperblock = _limitincperblock;
+        minrequiredreports = _minrequiredreports;
+
+        
+        prevlocklimit = _maxlocklimit;
+        prevreleaselimit = _maxreleaselimit;
+        prevlockblocknumber = block.number;
+        prevreleaseblocknumber = block.number;
+
+        token = _token;
+        issmarttoken = _issmarttoken;
+    }
+
+    
+    modifier isreporter {
+        require(reporters[msg.sender]);
+        _;
+    }
+
+    
+    modifier whenxtransfersenabled {
+        require(xtransfersenabled);
+        _;
+    }
+
+    
+    modifier whenreportingenabled {
+        require(reportingenabled);
+        _;
+    }
+
+    
+    function setmaxlocklimit(uint256 _maxlocklimit) public owneronly {
+        maxlocklimit = _maxlocklimit;
+    }
+    
+    
+    function setmaxreleaselimit(uint256 _maxreleaselimit) public owneronly {
+        maxreleaselimit = _maxreleaselimit;
+    }
+    
+    
+    function setminlimit(uint256 _minlimit) public owneronly {
+        minlimit = _minlimit;
+    }
+
+    
+    function setlimitincperblock(uint256 _limitincperblock) public owneronly {
+        limitincperblock = _limitincperblock;
+    }
+
+    
+    function setminrequiredreports(uint256 _minrequiredreports) public owneronly {
+        minrequiredreports = _minrequiredreports;
+    }
+
+    
+    function setreporter(address _reporter, bool _active) public owneronly {
+        reporters[_reporter] = _active;
+    }
+
+    
+    function enablextransfers(bool _enable) public owneronly {
+        xtransfersenabled = _enable;
+    }
+
+    
+    function enablereporting(bool _enable) public owneronly {
+        reportingenabled = _enable;
+    }
+
+    
+    function upgrade(address[] _reporters) public owneronly {
+        ibancorxupgrader bancorxupgrader = ibancorxupgrader(addressof(bancor_x_upgrader));
+
+        transferownership(bancorxupgrader);
+        bancorxupgrader.upgrade(version, _reporters);
+        acceptownership();
+    }
+
+    
+    function xtransfer(bytes32 _toblockchain, bytes32 _to, uint256 _amount) public whenxtransfersenabled {
+        
+        uint256 currentlocklimit = getcurrentlocklimit();
+
+        
+        require(_amount >= minlimit && _amount <= currentlocklimit);
+        
+        locktokens(_amount);
+
+        
+        prevlocklimit = currentlocklimit.sub(_amount);
+        prevlockblocknumber = block.number;
+
+        
+        emit xtransfer(msg.sender, _toblockchain, _to, _amount, 0);
+    }
+
+    
+    function xtransfer(bytes32 _toblockchain, bytes32 _to, uint256 _amount, uint256 _id) public whenxtransfersenabled {
+        
+        uint256 currentlocklimit = getcurrentlocklimit();
+
+        
+        require(_amount >= minlimit && _amount <= currentlocklimit);
+        
+        locktokens(_amount);
+
+        
+        prevlocklimit = currentlocklimit.sub(_amount);
+        prevlockblocknumber = block.number;
+
+        
+        emit xtransfer(msg.sender, _toblockchain, _to, _amount, _id);
+    }
+
+    
+    function reporttx(
+        bytes32 _fromblockchain,
+        uint256 _txid,
+        address _to,
+        uint256 _amount,
+        uint256 _xtransferid 
+    )
+        public
+        isreporter
+        whenreportingenabled
+    {
+        
+        require(!reportedtxs[_txid][msg.sender]);
+
+        
+        reportedtxs[_txid][msg.sender] = true;
+
+        transaction storage txn = transactions[_txid];
+
+        
+        if (txn.numofreports == 0) {
+            txn.to = _to;
+            txn.amount = _amount;
+            txn.fromblockchain = _fromblockchain;
+
+            if (_xtransferid != 0) {
+                
+                require(transactionids[_xtransferid] == 0);
+                transactionids[_xtransferid] = _txid;
+            }
+        } else {
+            
+            require(txn.to == _to && txn.amount == _amount && txn.fromblockchain == _fromblockchain);
+            
+            if (_xtransferid != 0) {
+                require(transactionids[_xtransferid] == _txid);
+            }
+        }
+        
+        
+        txn.numofreports++;
+
+        emit txreport(msg.sender, _fromblockchain, _txid, _to, _amount, _xtransferid);
+
+        
+        if (txn.numofreports >= minrequiredreports) {
+            require(!transactions[_txid].completed);
+
+            
+            transactions[_txid].completed = true;
+
+            emit xtransfercomplete(_to, _xtransferid);
+
+            releasetokens(_to, _amount);
+        }
+    }
+
+    
+    function getxtransferamount(uint256 _xtransferid, address _for) public view returns (uint256) {
+        
+        transaction storage transaction = transactions[transactionids[_xtransferid]];
+
+        
+        require(transaction.to == _for);
+
+        return transaction.amount;
+    }
+
+    
+    function getcurrentlocklimit() public view returns (uint256) {
+        
+        uint256 currentlocklimit = prevlocklimit.add(((block.number).sub(prevlockblocknumber)).mul(limitincperblock));
+        if (currentlocklimit > maxlocklimit)
+            return maxlocklimit;
+        return currentlocklimit;
+    }
+ 
+    
+    function getcurrentreleaselimit() public view returns (uint256) {
+        
+        uint256 currentreleaselimit = prevreleaselimit.add(((block.number).sub(prevreleaseblocknumber)).mul(limitincperblock));
+        if (currentreleaselimit > maxreleaselimit)
+            return maxreleaselimit;
+        return currentreleaselimit;
+    }
+
+    
+    function locktokens(uint256 _amount) private {
+        if (issmarttoken)
+            ismarttokencontroller(ismarttoken(token).owner()).claimtokens(msg.sender, _amount);
+        else
+            token.transferfrom(msg.sender, address(this), _amount);
+        emit tokenslock(msg.sender, _amount);
+    }
+
+    
+    function releasetokens(address _to, uint256 _amount) private {
+        
+        uint256 currentreleaselimit = getcurrentreleaselimit();
+
+        require(_amount >= minlimit && _amount <= currentreleaselimit);
+        
+        
+        prevreleaselimit = currentreleaselimit.sub(_amount);
+        prevreleaseblocknumber = block.number;
+
+        
+        token.transfer(_to, _amount);
+
+        emit tokensrelease(_to, _amount);
+    }
+}
+pragma solidity 0.4.26;
+
+contract ibancorx {
+    function xtransfer(bytes32 _toblockchain, bytes32 _to, uint256 _amount, uint256 _id) public;
+    function getxtransferamount(uint256 _xtransferid, address _for) public view returns (uint256);
+}
+
+pragma solidity 0.4.26;
+
+
+contract ibancorxupgrader {
+    function upgrade(uint16 _version, address[] _reporters) public;
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract testcrowdsalecontroller is crowdsalecontroller {
+    using safemath for uint256;
+
+    
+    uint256 public constant btcs_ether_cap_small = 2 ether; 
+
+    constructor(
+        ismarttoken _token,
+        uint256 _starttime,
+        address _beneficiary,
+        address _btcs,
+        bytes32 _realethercaphash,
+        uint256 _starttimeoverride)
+        public
+        crowdsalecontroller(_token, _starttime, _beneficiary, _btcs, _realethercaphash)
+    {
+        starttime = _starttimeoverride;
+        endtime = starttime + duration;
+    }
+
+    modifier btcsethercapnotreached(uint256 _ethcontribution) {
+        assert(totalethercontributed.add(_ethcontribution) <= btcs_ether_cap_small);
+        _;
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract testsafemath {
+    using safemath for uint256;
+
+
+    constructor() public {
+    }
+
+    function testsafeadd(uint256 _x, uint256 _y) public pure returns (uint256) {
+        return _x.add(_y);
+    }
+
+    function testsafesub(uint256 _x, uint256 _y) public pure returns (uint256) {
+        return _x.sub(_y);
+    }
+
+    function testsafemul(uint256 _x, uint256 _y) public pure returns (uint256) {
+        return _x.mul(_y);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract testbancorformula is bancorformula {
+    constructor() public {
+    }
+
+    function powertest(uint256 _basen, uint256 _based, uint32 _expn, uint32 _expd) external view returns (uint256, uint8) {
+        return super.power(_basen, _based, _expn, _expd);
+    }
+
+    function generallogtest(uint256 x) external pure returns (uint256) {
+        return super.generallog(x);
+    }
+
+    function floorlog2test(uint256 _n) external pure returns (uint8) {
+        return super.floorlog2(_n);
+    }
+
+    function findpositioninmaxexparraytest(uint256 _x) external view returns (uint8) {
+        return super.findpositioninmaxexparray(_x);
+    }
+
+    function generalexptest(uint256 _x, uint8 _precision) external pure returns (uint256) {
+        return super.generalexp(_x, _precision);
+    }
+
+    function optimallogtest(uint256 x) external pure returns (uint256) {
+        return super.optimallog(x);
+    }
+
+    function optimalexptest(uint256 x) external pure returns (uint256) {
+        return super.optimalexp(x);
+    }
+}
+
+pragma solidity 0.4.26;
+
+contract migrations {
+    address public owner;
+    uint public last_completed_migration;
+
+    modifier restricted() {
+        if (msg.sender == owner) _;
+    }
+
+    constructor() public {
+        owner = msg.sender;
+    }
+
+    function setcompleted(uint completed) public restricted {
+        last_completed_migration = completed;
+    }
+
+    function upgrade(address new_address) public restricted {
+        migrations upgraded = migrations(new_address);
+        upgraded.setcompleted(last_completed_migration);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract testnonstandarderc20token is nonstandarderc20token {
+    constructor(string _name, string _symbol, uint256 _supply)
+        public
+        nonstandarderc20token(_name, _symbol, 0)
+    {
+        totalsupply = _supply;
+        balanceof[msg.sender] = _supply;
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+
+
+contract nonstandardsmarttoken is owned, nonstandarderc20token {
+    using safemath for uint256;
+
+
+    string public version = ;
+
+    bool public transfersenabled = true;    
+
+    
+    event newsmarttoken(address _token);
+    
+    event issuance(uint256 _amount);
+    
+    event destruction(uint256 _amount);
+
+    
+    constructor(string _name, string _symbol, uint8 _decimals)
+        public
+        nonstandarderc20token(_name, _symbol, _decimals)
+    {
+        emit newsmarttoken(address(this));
+    }
+
+    
+    modifier transfersallowed {
+        assert(transfersenabled);
+        _;
+    }
+
+    
+    function disabletransfers(bool _disable) public owneronly {
+        transfersenabled = !_disable;
+    }
+
+    
+    function issue(address _to, uint256 _amount)
+        public
+        owneronly
+        validaddress(_to)
+        notthis(_to)
+    {
+        totalsupply = totalsupply.add(_amount);
+        balanceof[_to] = balanceof[_to].add(_amount);
+
+        emit issuance(_amount);
+        emit transfer(this, _to, _amount);
+    }
+
+    
+    function destroy(address _from, uint256 _amount) public {
+        require(msg.sender == _from || msg.sender == owner); 
+
+        balanceof[_from] = balanceof[_from].sub(_amount);
+        totalsupply = totalsupply.sub(_amount);
+
+        emit transfer(_from, this, _amount);
+        emit destruction(_amount);
+    }
+
+    
+
+    
+    function transfer(address _to, uint256 _value) public transfersallowed {
+        super.transfer(_to, _value);
+    }
+
+    
+    function transferfrom(address _from, address _to, uint256 _value) public transfersallowed {
+        super.transferfrom(_from, _to, _value);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+
+
+contract testfeatures {
+    icontractfeatures public features;
+
+    constructor(icontractfeatures _features) public {
+        features = _features;
+    }
+
+    function enablefeatures(uint256 _features, bool _enable) public {
+        features.enablefeatures(_features, _enable);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+import ;
+import ;
+
+
+contract nonstandarderc20token is inonstandarderc20, utils {
+    using safemath for uint256;
+
+
+    string public standard = ;
+    string public name = ;
+    string public symbol = ;
+    uint8 public decimals = 0;
+    uint256 public totalsupply = 0;
+    mapping (address => uint256) public balanceof;
+    mapping (address => mapping (address => uint256)) public allowance;
+
+    event transfer(address indexed _from, address indexed _to, uint256 _value);
+    event approval(address indexed _owner, address indexed _spender, uint256 _value);
+
+    
+    constructor(string _name, string _symbol, uint8 _decimals) public {
+        require(bytes(_name).length > 0 && bytes(_symbol).length > 0); 
+
+        name = _name;
+        symbol = _symbol;
+        decimals = _decimals;
+    }
+
+    
+    function transfer(address _to, uint256 _value)
+        public
+        validaddress(_to)
+    {
+        balanceof[msg.sender] = balanceof[msg.sender].sub(_value);
+        balanceof[_to] = balanceof[_to].add(_value);
+        emit transfer(msg.sender, _to, _value);
+    }
+
+    
+    function transferfrom(address _from, address _to, uint256 _value)
+        public
+        validaddress(_from)
+        validaddress(_to)
+    {
+        allowance[_from][msg.sender] = allowance[_from][msg.sender].sub(_value);
+        balanceof[_from] = balanceof[_from].sub(_value);
+        balanceof[_to] = balanceof[_to].add(_value);
+        emit transfer(_from, _to, _value);
+    }
+
+    
+    function approve(address _spender, uint256 _value)
+        public
+        validaddress(_spender)
+    {
+        
+        require(_value == 0 || allowance[msg.sender][_spender] == 0);
+
+        allowance[msg.sender][_spender] = _value;
+        emit approval(msg.sender, _spender, _value);
+    }
+}
+
+pragma solidity 0.4.26;
+import ;
+
+contract oldbancorconverter {
+    uint256 private amount;
+
+    constructor(uint256 _amount) public {
+        amount = _amount;
+    }
+
+    function getreturn(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount) external view returns (uint256) {
+        _fromtoken;
+        _totoken;
+        _amount;
+        return (amount);
+    }
+}
+
+contract newbancorconverter {
+    uint256 private amount;
+    uint256 private fee;
+
+    constructor(uint256 _amount, uint256 _fee) public {
+        amount = _amount;
+        fee = _fee;
+    }
+
+    function getreturn(ierc20token _fromtoken, ierc20token _totoken, uint256 _amount) external view returns (uint256, uint256) {
+        _fromtoken;
+        _totoken;
+        _amount;
+        return (amount, fee);
+    }
+}
+
+contract testbancornetwork is bancornetwork {
+    oldbancorconverter private oldbancorconverter;
+    newbancorconverter private newbancorconverter;
+
+    constructor(uint256 _amount, uint256 _fee) public bancornetwork(icontractregistry(address(1))) {
+        oldbancorconverter = new oldbancorconverter(_amount);
+        newbancorconverter = new newbancorconverter(_amount, _fee);
+    }
+
+    function getreturnold() external view returns (uint256, uint256) {
+        return getreturn(address(oldbancorconverter), ierc20token(0), ierc20token(0), uint256(0));
+    }
+
+    function getreturnnew() external view returns (uint256, uint256) {
+        return getreturn(address(newbancorconverter), ierc20token(0), ierc20token(0), uint256(0));
+    }
+}
+

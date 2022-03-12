@@ -1,0 +1,2 @@
+similarity,combination
+50,['Controller.sol', 'SafeMath.sol', 'IToken.sol', 'Token.sol', 'Owned.sol', 'TokenMock.sol', 'ControllerMock.sol', 'DummyMock.sol', 'Savings.sol', 'Migrations.sol', 'TokenReceivable.sol', 'Receiver.sol', 'Ledger.sol', 'Sale.sol', 'LedgerMock.sol', 'SavingsMock.sol', 'EventDefinitions.sol', 'Finalizable.sol', 'Pausable.sol', 'ControllerEventDefinitions.sol', 'DummyToken.sol']

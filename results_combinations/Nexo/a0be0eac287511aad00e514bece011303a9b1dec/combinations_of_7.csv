@@ -1,0 +1,9 @@
+similarity,combination
+44,['NexoToken.sol', 'StandardToken.sol', 'Owned.sol', 'Token.sol', 'Migrations.sol', 'SafeMath.sol', 'TokenMock.sol']
+75,['NexoToken.sol', 'StandardToken.sol', 'Owned.sol', 'Token.sol', 'Migrations.sol', 'SafeMath.sol', 'AbstractToken.sol']
+44,['NexoToken.sol', 'StandardToken.sol', 'Owned.sol', 'Token.sol', 'Migrations.sol', 'TokenMock.sol', 'AbstractToken.sol']
+75,['NexoToken.sol', 'StandardToken.sol', 'Owned.sol', 'Token.sol', 'SafeMath.sol', 'TokenMock.sol', 'AbstractToken.sol']
+27,['NexoToken.sol', 'StandardToken.sol', 'Owned.sol', 'Migrations.sol', 'SafeMath.sol', 'TokenMock.sol', 'AbstractToken.sol']
+59,['NexoToken.sol', 'StandardToken.sol', 'Token.sol', 'Migrations.sol', 'SafeMath.sol', 'TokenMock.sol', 'AbstractToken.sol']
+34,['NexoToken.sol', 'Owned.sol', 'Token.sol', 'Migrations.sol', 'SafeMath.sol', 'TokenMock.sol', 'AbstractToken.sol']
+8,['StandardToken.sol', 'Owned.sol', 'Token.sol', 'Migrations.sol', 'SafeMath.sol', 'TokenMock.sol', 'AbstractToken.sol']

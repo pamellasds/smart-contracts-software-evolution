@@ -1,0 +1,11 @@
+similarity,combination
+1,['SafeMath.sol']
+4,['SmartOracle.sol']
+4,['ERC20Basic.sol']
+7,['BasicTokenMock.sol']
+0,['StandardTokenMock.sol']
+3,['StandardToken.sol']
+2,['LinkToken.sol']
+2,['BasicToken.sol']
+1,['TokenSale.sol']
+2,['ERC20.sol']

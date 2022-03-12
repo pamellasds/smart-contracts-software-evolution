@@ -1,0 +1,11 @@
+similarity,combination
+1,['EnjinReceivingContract.sol', 'ERC20Basic.sol']
+8,['EnjinReceivingContract.sol', 'CustomTokens.sol']
+1,['EnjinReceivingContract.sol', 'SafeMath.sol']
+1,['EnjinReceivingContract.sol', 'ERC20.sol']
+9,['ERC20Basic.sol', 'CustomTokens.sol']
+1,['ERC20Basic.sol', 'SafeMath.sol']
+1,['ERC20Basic.sol', 'ERC20.sol']
+1,['CustomTokens.sol', 'SafeMath.sol']
+8,['CustomTokens.sol', 'ERC20.sol']
+1,['SafeMath.sol', 'ERC20.sol']

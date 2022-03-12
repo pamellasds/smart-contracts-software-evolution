@@ -1,0 +1,12 @@
+similarity,combination
+15,['Ownable.sol', 'SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol']
+4,['Ownable.sol', 'SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'ERC20.sol']
+15,['Ownable.sol', 'SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'TokenSale.sol', 'ERC20.sol']
+11,['Ownable.sol', 'SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+16,['Ownable.sol', 'SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+19,['Ownable.sol', 'SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+19,['Ownable.sol', 'SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+16,['Ownable.sol', 'SafeMath.sol', 'SmartOracle.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+19,['Ownable.sol', 'SafeMath.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+16,['Ownable.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+23,['SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']

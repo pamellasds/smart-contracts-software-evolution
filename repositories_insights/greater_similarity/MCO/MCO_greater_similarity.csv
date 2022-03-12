@@ -1,0 +1,9 @@
+commit,[similarity,combination]
+6dfe33e30634f0fd79006d3b3e26bede0d757d6d,
+e7e86a5152e239b7420caca0887d80781402b7f7,['4', "['MCOPCrowdSaleAll.sol'", " 'Migrations.sol'", " 'TestAddress.sol'", " 'TokenTimelock.sol'", " 'TestMCOPCrowdSale.sol']"]
+c8b54f94d8c7229067b0391f2c50fb7f70215955,['4', "['MCOPCrowdSaleAll.sol'", " 'Migrations.sol'", " 'TestAddress.sol'", " 'TokenTimelock.sol'", " 'TestMCOPCrowdSale.sol']"]
+cb513f992ac86bfa4efde3606f464541f1c4f825,['6', "['MCOPCrowdSaleFlat.sol'", " 'Migrations.sol'", " 'TestAddress.sol'", " 'TokenTimelock.sol'", " 'TestMCOPCrowdSale.sol'", " 'MCOPToken.sol']"]
+02233179f35a107858f458a1dbd8abddfbef95c8,['6', "['MCOPCrowdSaleFlat.sol'", " 'Migrations.sol'", " 'TestAddress.sol'", " 'TokenTimelock.sol'", " 'TestMCOPCrowdSale.sol'", " 'MCOPToken.sol']"]
+db6a323a2a67877fa8d840372a484e619920f4f5,['6', "['MCOPCrowdSaleFlat.sol'", " 'Migrations.sol'", " 'TestAddress.sol'", " 'TokenTimelock.sol'", " 'TestMCOPCrowdSale.sol'", " 'MCOPToken.sol']"]
+d000cf8646d9569bacf3a012336b361a76b69804,['6', "['MCOPCrowdSaleFlat.sol'", " 'Migrations.sol'", " 'TestAddress.sol'", " 'TokenTimelock.sol'", " 'TestMCOPCrowdSale.sol'", " 'MCOPToken.sol']"]
+8227e686a76cec3e64c57b9d4e76b9445b5808bc,['6', "['MCOPCrowdSaleFlat.sol'", " 'Migrations.sol'", " 'TestAddress.sol'", " 'TokenTimelock.sol'", " 'TestMCOPCrowdSale.sol'", " 'MCOPToken.sol']"]

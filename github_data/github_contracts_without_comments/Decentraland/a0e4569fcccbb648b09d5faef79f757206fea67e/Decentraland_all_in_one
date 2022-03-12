@@ -1,0 +1,2091 @@
+pragma solidity ^0.4.18;
+
+import ;
+
+import ;
+
+import ;
+
+import ;
+
+
+contract storage is proxystorage, ownablestorage, assetregistrystorage, landstorage {
+}
+
+pragma solidity ^0.4.18;
+
+
+contract migrations {
+  address public owner;
+  uint public last_completed_migration;
+
+  modifier restricted() {
+    if (msg.sender == owner) _;
+  }
+
+  constructor() public {
+    owner = msg.sender;
+  }
+
+  function setcompleted(uint completed) public restricted {
+    last_completed_migration = completed;
+  }
+
+  function upgrade(address new_address) public restricted {
+    migrations upgraded = migrations(new_address);
+    upgraded.setcompleted(last_completed_migration);
+  }
+}
+
+pragma solidity ^0.4.22;
+
+import ;
+
+
+contract imetadataholder is erc165 {
+  function getmetadata(uint256 ) external view returns (string);
+}
+
+pragma solidity ^0.4.22;
+
+
+contract metadataholderbase {
+  bytes4 constant public get_metadata = bytes4(keccak256());
+  bytes4 constant public erc165_support = bytes4(keccak256());
+
+  function supportsinterface(bytes4 _interfaceid) external pure returns (bool) {
+    return ((_interfaceid == erc165_support) ||
+      (_interfaceid == get_metadata));
+  }
+}
+
+pragma solidity ^0.4.18;
+
+
+contract proxystorage {
+
+  
+  address public currentcontract;
+  address public proxyowner;
+}
+
+pragma solidity ^0.4.18;
+
+import ;
+
+
+contract ownable is storage {
+
+  event ownerupdate(address _prevowner, address _newowner);
+
+  modifier onlyowner {
+    assert(msg.sender == owner);
+    _;
+  }
+
+  function transferownership(address _newowner) public onlyowner {
+    require(_newowner != owner, );
+    owner = _newowner;
+  }
+}
+
+pragma solidity ^0.4.18;
+
+
+contract iapplication {
+  function initialize(bytes data) public;
+}
+
+pragma solidity ^0.4.18;
+
+import ;
+import ;
+
+
+contract landproxy is storage, proxy {
+}
+
+pragma solidity ^0.4.18;
+
+
+contract delegateproxy {
+  
+  function delegatedfwd(address _dst, bytes _calldata) internal {
+    require(iscontract(_dst), );
+
+    
+    assembly {
+      let result := delegatecall(sub(gas, 10000), _dst, add(_calldata, 0x20), mload(_calldata), 0, 0)
+      let size := returndatasize
+
+      let ptr := mload(0x40)
+      returndatacopy(ptr, 0, size)
+
+      
+      
+      switch result case 0 { revert(ptr, size) }
+      default { return(ptr, size) }
+    }
+  }
+
+  function iscontract(address _target) internal view returns (bool) {
+    uint256 size;
+    
+    assembly { size := extcodesize(_target) }
+    return size > 0;
+  }
+}
+
+pragma solidity ^0.4.23;
+
+
+contract ownablestorage {
+
+  address public owner;
+
+  constructor() internal {
+    owner = msg.sender;
+  }
+
+}
+
+pragma solidity ^0.4.18;
+
+import ;
+import ;
+import ;
+import ;
+
+
+contract proxy is storage, delegateproxy, ownable {
+
+  event upgrade(address indexed newcontract, bytes initializedwith);
+  event ownerupdate(address _prevowner, address _newowner);
+
+  constructor() public {
+    proxyowner = msg.sender;
+    owner = msg.sender;
+  }
+
+  
+  
+  function () public payable {
+    require(currentcontract != 0, );
+    delegatedfwd(currentcontract, msg.data);
+  }
+
+  
+  
+  modifier onlyproxyowner() {
+    require(msg.sender == proxyowner, );
+    _;
+  }
+
+  function transferownership(address _newowner) public onlyproxyowner {
+    require(_newowner != address(0), );
+    require(_newowner != proxyowner, );
+    proxyowner = _newowner;
+  }
+
+  
+  
+  function upgrade(iapplication newcontract, bytes data) public onlyproxyowner {
+    currentcontract = newcontract;
+    iapplication(this).initialize(data);
+
+    emit upgrade(newcontract, data);
+  }
+}
+
+pragma solidity ^0.4.23;
+
+import ;
+
+
+contract landstorage {
+  mapping (address => uint) public latestping;
+
+  uint256 constant clearlow = 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000;
+  uint256 constant clearhigh = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
+  uint256 constant factor = 0x100000000000000000000000000000000;
+
+  mapping (address => bool) public authorizeddeploy;
+
+  mapping (uint256 => address) public updateoperator;
+
+  iestateregistry public estateregistry;
+}
+
+pragma solidity ^0.4.23;
+
+import ;
+
+import ;
+
+import ;
+
+import ;
+
+import ;
+
+import ;
+
+import ;
+
+
+
+contract landregistry is storage, ownable, fullassetregistry, ilandregistry {
+  bytes4 constant public get_metadata = bytes4(keccak256());
+
+  function initialize(bytes) external {
+    _name = ;
+    _symbol = ;
+    _description = ;
+  }
+
+  modifier onlyproxyowner() {
+    require(msg.sender == proxyowner, );
+    _;
+  }
+
+  
+  
+  modifier onlyownerof(uint256 assetid) {
+    require(
+      msg.sender == _ownerof(assetid),
+      
+    );
+    _;
+  }
+
+  modifier onlyupdateauthorized(uint256 tokenid) {
+    require(
+      msg.sender == _ownerof(tokenid) || _isupdateauthorized(msg.sender, tokenid),
+      
+    );
+    _;
+  }
+
+  function isupdateauthorized(address operator, uint256 assetid) external view returns (bool) {
+    return _isupdateauthorized(operator, assetid);
+  }
+
+  function _isupdateauthorized(address operator, uint256 assetid) internal view returns (bool) {
+    return operator == _ownerof(assetid) || updateoperator[assetid] == operator;
+  }
+
+  function authorizedeploy(address beneficiary) external onlyproxyowner {
+    authorizeddeploy[beneficiary] = true;
+  }
+
+  function forbiddeploy(address beneficiary) external onlyproxyowner {
+    authorizeddeploy[beneficiary] = false;
+  }
+
+  function assignnewparcel(int x, int y, address beneficiary) external onlyproxyowner {
+    _generate(_encodetokenid(x, y), beneficiary);
+  }
+
+  function assignmultipleparcels(int[] x, int[] y, address beneficiary) external onlyproxyowner {
+    for (uint i = 0; i < x.length; i++) {
+      _generate(_encodetokenid(x[i], y[i]), beneficiary);
+    }
+  }
+
+  
+  
+  function ping() external {
+    
+    latestping[msg.sender] = block.timestamp;
+  }
+
+  function setlatesttonow(address user) external {
+    require(msg.sender == proxyowner || _isapprovedforall(msg.sender, user), );
+    
+    latestping[user] = block.timestamp;
+  }
+
+  
+  
+  function encodetokenid(int x, int y) external pure returns (uint) {
+    return _encodetokenid(x, y);
+  }
+
+  function _encodetokenid(int x, int y) internal pure returns (uint result) {
+    require(
+      1000000 < x && x < 1000000 && 1000000 < y && y < 1000000,
+      
+    );
+    return _unsafeencodetokenid(x, y);
+  }
+
+  function _unsafeencodetokenid(int x, int y) internal pure returns (uint) {
+    return ((uint(x) * factor) & clearlow) | (uint(y) & clearhigh);
+  }
+
+  function decodetokenid(uint value) external pure returns (int, int) {
+    return _decodetokenid(value);
+  }
+
+  function _unsafedecodetokenid(uint value) internal pure returns (int x, int y) {
+    x = expandnegative128bitcast((value & clearlow) >> 128);
+    y = expandnegative128bitcast(value & clearhigh);
+  }
+
+  function _decodetokenid(uint value) internal pure returns (int x, int y) {
+    (x, y) = _unsafedecodetokenid(value);
+    require(
+      1000000 < x && x < 1000000 && 1000000 < y && y < 1000000,
+      
+    );
+  }
+
+  function expandnegative128bitcast(uint value) internal pure returns (int) {
+    if (value & (1<<127) != 0) {
+      return int(value | clearlow);
+    }
+    return int(value);
+  }
+
+  function exists(int x, int y) external view returns (bool) {
+    return _exists(x, y);
+  }
+
+  function _exists(int x, int y) internal view returns (bool) {
+    return _exists(_encodetokenid(x, y));
+  }
+
+  function ownerofland(int x, int y) external view returns (address) {
+    return _ownerofland(x, y);
+  }
+
+  function _ownerofland(int x, int y) internal view returns (address) {
+    return _ownerof(_encodetokenid(x, y));
+  }
+
+  function owneroflandmany(int[] x, int[] y) external view returns (address[]) {
+    require(x.length > 0, );
+    require(x.length == y.length, );
+
+    address[] memory addrs = new address[](x.length);
+    for (uint i = 0; i < x.length; i++) {
+      addrs[i] = _ownerofland(x[i], y[i]);
+    }
+
+    return addrs;
+  }
+
+  function landof(address owner) external view returns (int[], int[]) {
+    uint256 len = _assetsof[owner].length;
+    int[] memory x = new int[](len);
+    int[] memory y = new int[](len);
+
+    int assetx;
+    int assety;
+    for (uint i = 0; i < len; i++) {
+      (assetx, assety) = _decodetokenid(_assetsof[owner][i]);
+      x[i] = assetx;
+      y[i] = assety;
+    }
+
+    return (x, y);
+  }
+
+  function tokenmetadata(uint256 assetid) external view returns (string) {
+    return _tokenmetadata(assetid);
+  }
+
+  function _tokenmetadata(uint256 assetid) internal view returns (string) {
+    address _owner = _ownerof(assetid);
+    if (_iscontract(_owner)) {
+      if ((erc165(_owner)).supportsinterface(get_metadata)) {
+        return imetadataholder(_owner).getmetadata(assetid);
+      }
+    }
+    return _assetdata[assetid];
+  }
+
+  function landdata(int x, int y) external view returns (string) {
+    return _tokenmetadata(_encodetokenid(x, y));
+  }
+
+  
+  
+  function transferfrom(address from, address to, uint256 assetid) external {
+    require(to != address(estateregistry), );
+    return _dotransferfrom(
+      from,
+      to,
+      assetid,
+      ,
+      msg.sender,
+      false
+    );
+  }
+
+
+  function transferland(int x, int y, address to) external {
+    uint256 tokenid = _encodetokenid(x, y);
+    _dotransferfrom(
+      _ownerof(tokenid),
+      to,
+      tokenid,
+      ,
+      msg.sender,
+      true
+    );
+  }
+
+  function transfermanyland(int[] x, int[] y, address to) external {
+    require(x.length > 0, );
+    require(x.length == y.length, );
+
+    for (uint i = 0; i < x.length; i++) {
+      uint256 tokenid = _encodetokenid(x[i], y[i]);
+      _dotransferfrom(
+        _ownerof(tokenid),
+        to,
+        tokenid,
+        ,
+        msg.sender,
+        true
+      );
+    }
+  }
+
+  function transferlandtoestate(int x, int y, uint256 estateid) external {
+    uint256 tokenid = _encodetokenid(x, y);
+    _dotransferfrom(
+      _ownerof(tokenid),
+      address(estateregistry),
+      tokenid,
+      tobytes(estateid),
+      msg.sender,
+      true
+    );
+  }
+
+  function transfermanylandtoestate(int[] x, int[] y, uint256 estateid) external {
+    require(x.length > 0, );
+    require(x.length == y.length, );
+
+    for (uint i = 0; i < x.length; i++) {
+      uint256 tokenid = _encodetokenid(x[i], y[i]);
+      _dotransferfrom(
+        _ownerof(tokenid),
+        address(estateregistry),
+        tokenid,
+        tobytes(estateid),
+        msg.sender,
+        true
+      );
+    }
+  }
+
+  function setupdateoperator(uint256 assetid, address operator) external onlyownerof(assetid) {
+    updateoperator[assetid] = operator;
+    emit updateoperator(assetid, operator);
+  }
+
+  
+  
+  event estateregistryset(address indexed registry);
+
+  function setestateregistry(address registry) external onlyproxyowner {
+    estateregistry = iestateregistry(registry);
+    emit estateregistryset(registry);
+  }
+
+  function createestate(int[] x, int[] y, address beneficiary) external returns (uint256) {
+    
+    return _createestate(x, y, beneficiary, );
+  }
+
+  function createestatewithmetadata(
+    int[] x,
+    int[] y,
+    address beneficiary,
+    string metadata
+  )
+    external
+    returns (uint256)
+  {
+    
+    return _createestate(x, y, beneficiary, metadata);
+  }
+
+  function _createestate(
+    int[] x,
+    int[] y,
+    address beneficiary,
+    string metadata
+  )
+    internal
+    returns (uint256)
+  {
+    require(x.length > 0, );
+    require(x.length == y.length, );
+    require(address(estateregistry) != 0, );
+
+    uint256 estatetokenid = estateregistry.mint(beneficiary, metadata);
+    bytes memory estatetokenidbytes = tobytes(estatetokenid);
+
+    for (uint i = 0; i < x.length; i++) {
+      uint256 tokenid = _encodetokenid(x[i], y[i]);
+      _movetoken(
+        _ownerof(tokenid),
+        address(estateregistry),
+        tokenid,
+        estatetokenidbytes,
+        this,
+        true
+      );
+    }
+
+    return estatetokenid;
+  }
+
+  function tobytes(uint256 x) internal pure returns (bytes b) {
+    b = new bytes(32);
+    
+    assembly { mstore(add(b, 32), x) }
+  }
+
+  
+  
+  function updatelanddata(
+    int x,
+    int y,
+    string data
+  )
+    external
+    onlyupdateauthorized(_encodetokenid(x, y))
+  {
+    return _updatelanddata(x, y, data);
+  }
+
+  function _updatelanddata(
+    int x,
+    int y,
+    string data
+  )
+    internal
+    onlyupdateauthorized(_encodetokenid(x, y))
+  {
+    uint256 assetid = _encodetokenid(x, y);
+    address owner = _holderof[assetid];
+
+    _update(assetid, data);
+
+    emit update(
+      assetid,
+      owner,
+      msg.sender,
+      data
+    );
+  }
+
+  function updatemanylanddata(int[] x, int[] y, string data) external {
+    require(x.length > 0, );
+    require(x.length == y.length, );
+    for (uint i = 0; i < x.length; i++) {
+      _updatelanddata(x[i], y[i], data);
+    }
+  }
+
+  function _dotransferfrom(
+    address from,
+    address to,
+    uint256 assetid,
+    bytes userdata,
+    address operator,
+    bool docheck
+  )
+    internal
+  {
+    updateoperator[assetid] = address(0);
+
+    super._dotransferfrom(
+      from,
+      to,
+      assetid,
+      userdata,
+      operator,
+      docheck
+    );
+  }
+
+  function _iscontract(address addr) internal view returns (bool) {
+    uint size;
+    
+    assembly { size := extcodesize(addr) }
+    return size > 0;
+  }
+}
+
+pragma solidity ^0.4.18;
+
+interface ilandregistry {
+
+  
+  function assignnewparcel(int x, int y, address beneficiary) external;
+  function assignmultipleparcels(int[] x, int[] y, address beneficiary) external;
+
+  
+  function ping() external;
+
+  
+  function encodetokenid(int x, int y) external pure returns (uint256);
+  function decodetokenid(uint value) external pure returns (int, int);
+  function exists(int x, int y) external view returns (bool);
+  function ownerofland(int x, int y) external view returns (address);
+  function owneroflandmany(int[] x, int[] y) external view returns (address[]);
+  function landof(address owner) external view returns (int[], int[]);
+  function landdata(int x, int y) external view returns (string);
+
+  
+  function transferland(int x, int y, address to) external;
+  function transfermanyland(int[] x, int[] y, address to) external;
+
+  
+  function updatelanddata(int x, int y, string data) external;
+  function updatemanylanddata(int[] x, int[] y, string data) external;
+
+  
+
+  event update(
+    uint256 indexed assetid,
+    address indexed holder,
+    address indexed operator,
+    string data
+  );
+
+  event updateoperator(
+    uint256 indexed assetid,
+    address indexed operator
+  );
+}
+
+pragma solidity ^0.4.22;
+
+
+contract iestateregistry {
+  function mint(address to, string metadata) external returns (uint256);
+
+  
+
+  event createestate(
+    address indexed owner,
+    uint256 indexed estateid,
+    string data
+  );
+
+  event addland(
+    uint256 indexed estateid,
+    uint256 indexed landid
+  );
+
+  event removeland(
+    uint256 indexed estateid,
+    uint256 indexed landid,
+    address indexed destinatary
+  );
+
+  event update(
+    uint256 indexed assetid,
+    address indexed holder,
+    address indexed operator,
+    string data
+  );
+
+  event updateoperator(
+    uint256 indexed estateid,
+    address indexed operator
+  );
+
+  event setlandregistry(
+    address indexed registry
+  );
+}
+
+pragma solidity ^0.4.23;
+
+import ;
+import ;
+
+import ;
+import ;
+import ;
+
+
+
+
+contract estateregistry is erc721token, ownable, metadataholderbase, iestateregistry, estatestorage {
+  
+    
+    
+
+  constructor(
+    string _name,
+    string _symbol,
+    address _registry
+  )
+    erc721token(_name, _symbol)
+    ownable()
+    public
+  {
+    require(_registry != 0, );
+    registry = landregistry(_registry);
+  }
+
+  modifier onlyregistry() {
+    require(msg.sender == address(registry), );
+    _;
+  }
+
+  modifier onlyupdateauthorized(uint256 estateid) {
+    require(_isupdateauthorized(msg.sender, estateid), );
+    _;
+  }
+
+  
+  function mint(address to) external onlyregistry returns (uint256) {
+    return _mintestate(to, );
+  }
+
+  
+  function mint(address to, string metadata) external onlyregistry returns (uint256) {
+    return _mintestate(to, metadata);
+  }
+
+  
+  function onerc721received(
+    address ,
+    uint256 tokenid,
+    bytes estatetokenidbytes
+  )
+    external
+    onlyregistry
+    returns (bytes4)
+  {
+    uint256 estateid = _bytestouint(estatetokenidbytes);
+    require(exists(estateid), );
+    _pushlandid(estateid, tokenid);
+    return bytes4(0xf0b9e5ba);
+  }
+
+  
+  function transferland(
+    uint256 estateid,
+    uint256 landid,
+    address destinatary
+  )
+    external
+    cantransfer(estateid)
+  {
+    return _transferland(estateid, landid, destinatary);
+  }
+
+  
+  function transfermanylands(
+    uint256 estateid,
+    uint256[] landids,
+    address destinatary
+  )
+    external
+    cantransfer(estateid)
+  {
+    uint length = landids.length;
+    for (uint i = 0; i < length; i++) {
+      _transferland(estateid, landids[i], destinatary);
+    }
+  }
+
+  
+  function getlandestateid(uint256 landid) external view returns (uint256) {
+    return landidestate[landid];
+  }
+
+  function setlandregistry(address _registry) external onlyowner {
+    require(_registry.iscontract(), );
+    require(_registry != 0, );
+    registry = landregistry(_registry);
+    emit setlandregistry(registry);
+  }
+
+  function ping() external onlyowner {
+    registry.ping();
+  }
+
+  
+  function getestatesize(uint256 estateid) external view returns (uint256) {
+    return estatelandids[estateid].length;
+  }
+
+  
+  function updatemetadata(
+    uint256 estateid,
+    string metadata
+  )
+    external
+    onlyupdateauthorized(estateid)
+  {
+    _updatemetadata(estateid, metadata);
+
+    emit update(
+      estateid,
+      ownerof(estateid),
+      msg.sender,
+      metadata
+    );
+  }
+
+  function getmetadata(uint256 estateid) external view returns (string) {
+    return estatedata[estateid];
+  }
+
+  function setupdateoperator(uint256 estateid, address operator) external cantransfer(estateid) {
+    updateoperator[estateid] = operator;
+    emit updateoperator(estateid, operator);
+  }
+
+  function isupdateauthorized(address operator, uint256 estateid) external view returns (bool) {
+    return _isupdateauthorized(operator, estateid);
+  }
+
+  
+  function safetransfermanyfrom(address from, address to, uint256[] estateids) public {
+    safetransfermanyfrom(
+      from,
+      to,
+      estateids,
+      
+    );
+  }
+
+  
+  function safetransfermanyfrom(
+    address from,
+    address to,
+    uint256[] estateids,
+    bytes data
+  )
+    public
+  {
+    for (uint i = 0; i < estateids.length; i++) {
+      safetransferfrom(
+        from,
+        to,
+        estateids[i],
+        data
+      );
+    }
+  }
+
+  
+  function _mintestate(address to, string metadata) internal returns (uint256) {
+    require(to != address(0), );
+    uint256 estateid = _getnewestateid();
+    _mint(to, estateid);
+    _updatemetadata(estateid, metadata);
+    emit createestate(to, estateid, metadata);
+    return estateid;
+  }
+
+  
+  function _updatemetadata(uint256 estateid, string metadata) internal {
+    estatedata[estateid] = metadata;
+  }
+
+  
+  function _getnewestateid() internal view returns (uint256) {
+    return totalsupply().add(1);
+  }
+
+  
+  function _pushlandid(uint256 estateid, uint256 landid) internal {
+    require(exists(estateid), );
+    require(landidestate[landid] == 0, );
+    require(registry.ownerof(landid) == address(this), );
+
+    estatelandids[estateid].push(landid);
+
+    landidestate[landid] = estateid;
+
+    estatelandindex[estateid][landid] = estatelandids[estateid].length;
+
+    emit addland(estateid, landid);
+  }
+
+  
+  function _transferland(
+    uint256 estateid,
+    uint256 landid,
+    address destinatary
+  )
+    internal
+  {
+    require(destinatary != address(0), );
+
+    uint256[] storage landids = estatelandids[estateid];
+    mapping(uint256 => uint256) landindex = estatelandindex[estateid];
+
+    
+    require(landindex[landid] != 0, );
+
+    uint lastindexinarray = landids.length  1;
+
+    
+    uint indexinarray = landindex[landid]  1;
+
+    
+    uint temptokenid = landids[lastindexinarray];
+
+    
+    landindex[temptokenid] = indexinarray + 1;
+    landids[indexinarray] = temptokenid;
+
+    
+    delete landids[lastindexinarray];
+    landids.length = lastindexinarray;
+
+    
+    landindex[landid] = 0;
+
+    
+    landidestate[landid] = 0;
+
+    registry.safetransferfrom(this, destinatary, landid);
+
+    emit removeland(estateid, landid, destinatary);
+  }
+
+  function _isupdateauthorized(address operator, uint256 estateid) internal view returns (bool) {
+    return isapprovedorowner(operator, estateid) || updateoperator[estateid] == operator;
+  }
+
+  function _bytestouint(bytes b) internal pure returns (uint256) {
+    bytes32 out;
+
+    for (uint i = 0; i < b.length; i++) {
+      out |= bytes32(b[i] & 0xff) >> (i * 8);
+    }
+
+    return uint256(out);
+  }
+}
+
+pragma solidity ^0.4.23;
+
+
+contract landregistry {
+  function ping() public;
+  function ownerof(uint256 tokenid) public returns (address);
+  function safetransferfrom(address, address, uint256) public;
+}
+
+
+contract estatestorage {
+  landregistry public registry;
+
+  
+  mapping(uint256 => uint256[]) public estatelandids;
+
+  
+  mapping(uint256 => uint256) public landidestate;
+
+  
+  mapping(uint256 => mapping(uint256 => uint256)) public estatelandindex;
+
+  
+  mapping(uint256 => string) internal estatedata;
+
+  
+  mapping (uint256 => address) internal updateoperator;
+}
+
+pragma solidity ^0.4.22;
+
+import ;
+
+contract estateregistrytest is estateregistry {
+  constructor(
+    string _name,
+    string _symbol,
+    address _registry
+  )
+    estateregistry(_name, _symbol, _registry)
+    public
+  {}
+
+  function mintestate(address to, string metadata) public returns (uint256) {
+    return _mintestate(to, metadata);
+  }
+}
+
+pragma solidity ^0.4.18;
+
+import ;
+
+contract landregistrytest is landregistry {
+  function safetransferfromtoestate(address from, address to, uint256 assetid, uint256 estateid) external {
+    _dotransferfrom(from, to, assetid, tobytes(estateid), msg.sender, true);
+  }
+
+  function existsproxy(int x, int y) view public returns (bool) {
+    return _exists(_encodetokenid(x, y));
+  }
+
+  function isdeploymentauthorized(address beneficiary) view public returns (bool) {
+    return authorizeddeploy[beneficiary];
+  }
+}
+
+pragma solidity ^0.4.23;
+
+
+
+contract landstorage {
+
+  mapping (address => uint) public latestping;
+
+  uint256 constant clearlow = 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000;
+  uint256 constant clearhigh = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
+  uint256 constant factor = 0x100000000000000000000000000000000;
+
+  mapping (address => bool) public authorizeddeploy;
+
+  mapping (uint256 => address) public updateoperator;
+}
+
+
+
+contract ownablestorage {
+
+  address public owner;
+
+  function ownablestorage() internal {
+    owner = msg.sender;
+  }
+
+}
+
+
+
+contract proxystorage {
+
+  
+  address public currentcontract;
+  address public proxyowner;
+}
+
+
+
+contract assetregistrystorage {
+
+  string internal _name;
+  string internal _symbol;
+  string internal _description;
+
+  
+  uint256 internal _count;
+
+  
+  mapping(address => uint256[]) internal _assetsof;
+
+  
+  mapping(uint256 => address) internal _holderof;
+
+  
+  mapping(uint256 => uint256) internal _indexofasset;
+
+  
+  mapping(uint256 => string) internal _assetdata;
+
+  
+  mapping(address => mapping(address => bool)) internal _operators;
+
+  
+  mapping(uint256 => address) internal _approval;
+}
+
+
+
+contract storage is proxystorage, ownablestorage, assetregistrystorage, landstorage {
+}
+
+
+
+contract iapplication {
+  function initialize(bytes data) public;
+}
+
+
+
+contract ownable is storage {
+
+  event ownerupdate(address _prevowner, address _newowner);
+
+  function bytestoaddress (bytes b) pure public returns (address) {
+    uint result = 0;
+    for (uint i = b.length1; i+1 > 0; i) {
+      uint c = uint(b[i]);
+      uint to_inc = c * ( 16 ** ((b.length  i1) * 2));
+      result += to_inc;
+    }
+    return address(result);
+  }
+
+  modifier onlyowner {
+    assert(msg.sender == owner);
+    _;
+  }
+
+  function transferownership(address _newowner) public onlyowner {
+    require(_newowner != owner);
+    owner = _newowner;
+  }
+}
+
+
+
+interface ilandregistry {
+
+  
+  function assignnewparcel(int x, int y, address beneficiary) external;
+  function assignmultipleparcels(int[] x, int[] y, address beneficiary) external;
+
+  
+  function ping() external;
+
+  
+  function encodetokenid(int x, int y) pure external returns (uint256);
+  function decodetokenid(uint value) pure external returns (int, int);
+  function exists(int x, int y) view external returns (bool);
+  function ownerofland(int x, int y) view external returns (address);
+  function owneroflandmany(int[] x, int[] y) view external returns (address[]);
+  function landof(address owner) view external returns (int[], int[]);
+  function landdata(int x, int y) view external returns (string);
+
+  
+  function transferland(int x, int y, address to) external;
+  function transfermanyland(int[] x, int[] y, address to) external;
+
+  
+  function updatelanddata(int x, int y, string data) external;
+  function updatemanylanddata(int[] x, int[] y, string data) external;
+
+  
+
+  event update(  
+    uint256 indexed assetid, 
+    address indexed holder,  
+    address indexed operator,  
+    string data  
+  );
+
+  event updateoperator(
+    uint256 indexed assetid, 
+    address indexed operator
+  );
+}
+
+
+
+interface erc165 {
+  function supportsinterface(bytes4 interfaceid) external view returns (bool);
+}
+
+
+
+contract imetadataholder is erc165 {
+  function getmetadata(uint256 ) external view returns (string);
+}
+
+
+
+interface ierc721base {
+  function totalsupply() external view returns (uint256);
+
+  
+  function ownerof(uint256 assetid) external view returns (address);
+
+  function balanceof(address holder) external view returns (uint256);
+
+  function safetransferfrom(address from, address to, uint256 assetid) external;
+  function safetransferfrom(address from, address to, uint256 assetid, bytes userdata) external;
+
+  function transferfrom(address from, address to, uint256 assetid) external;
+
+  function approve(address operator, uint256 assetid) external;
+  function setapprovalforall(address operator, bool authorized) external;
+
+  function getapprovedaddress(uint256 assetid) external view returns (address);
+  function isapprovedforall(address operator, address assetowner) external view returns (bool);
+
+  function isauthorized(address operator, uint256 assetid) external view returns (bool);
+
+  event transfer(
+    address indexed from,
+    address indexed to,
+    uint256 indexed assetid,
+    address operator,
+    bytes userdata
+  );
+  event approvalforall(
+    address indexed operator,
+    address indexed holder,
+    bool authorized
+  );
+  event approval(
+    address indexed owner,
+    address indexed operator,
+    uint256 indexed assetid
+  );
+}
+
+
+
+interface ierc721receiver {
+  function onerc721received(
+    address _oldowner,
+    uint256 _tokenid,
+    bytes   _userdata
+  ) external returns (bytes4);
+}
+
+
+
+
+library safemath {
+
+  
+  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+    if (a == 0) {
+      return 0;
+    }
+    uint256 c = a * b;
+    assert(c / a == b);
+    return c;
+  }
+
+  
+  function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    
+    uint256 c = a / b;
+    
+    return c;
+  }
+
+  
+  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    assert(b <= a);
+    return a  b;
+  }
+
+  
+  function add(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}
+
+
+
+contract erc721base is assetregistrystorage, ierc721base, erc165 {
+  using safemath for uint256;
+
+  
+  
+  
+  function totalsupply() external view returns (uint256) {
+    return _totalsupply();
+  }
+  function _totalsupply() internal view returns (uint256) {
+    return _count;
+  }
+
+  
+  
+  
+  function ownerof(uint256 assetid) external view returns (address) {
+    return _ownerof(assetid);
+  }
+  function _ownerof(uint256 assetid) internal view returns (address) {
+    return _holderof[assetid];
+  }
+
+  
+  
+   * @dev gets the balance of the specified address
+   * @param owner address to query the balance of
+   * @return uint256 representing the amount owned by the passed address
+   */
+  function balanceof(address owner) external view returns (uint256) {
+    return _balanceof(owner);
+  }
+  function _balanceof(address owner) internal view returns (uint256) {
+    return _assetsof[owner].length;
+  }
+
+  
+  
+  
+  function isapprovedforall(address assetholder, address operator)
+    external view returns (bool)
+  {
+    return _isapprovedforall(assetholder, operator);
+  }
+  function _isapprovedforall(address assetholder, address operator)
+    internal view returns (bool)
+  {
+    return _operators[assetholder][operator];
+  }
+
+  
+  function getapproved(uint256 assetid) external view returns (address) {
+    return _getapprovedaddress(assetid);
+  }
+  function getapprovedaddress(uint256 assetid) external view returns (address) {
+    return _getapprovedaddress(assetid);
+  }
+  function _getapprovedaddress(uint256 assetid) internal view returns (address) {
+    return _approval[assetid];
+  }
+
+  
+  function isauthorized(address operator, uint256 assetid) external view returns (bool) {
+    return _isauthorized(operator, assetid);
+  }
+  function _isauthorized(address operator, uint256 assetid) internal view returns (bool)
+  {
+    require(operator != 0);
+    address owner = _ownerof(assetid);
+    if (operator == owner) {
+      return true;
+    }
+    return _isapprovedforall(owner, operator) || _getapprovedaddress(assetid) == operator;
+  }
+
+  
+  
+  
+  function setapprovalforall(address operator, bool authorized) external {
+    return _setapprovalforall(operator, authorized);
+  }
+  function _setapprovalforall(address operator, bool authorized) internal {
+    if (authorized) {
+      require(!_isapprovedforall(msg.sender, operator));
+      _addauthorization(operator, msg.sender);
+    } else {
+      require(_isapprovedforall(msg.sender, operator));
+      _clearauthorization(operator, msg.sender);
+    }
+    emit approvalforall(msg.sender, operator, authorized);
+  }
+
+  
+  function approve(address operator, uint256 assetid) external {
+    address holder = _ownerof(assetid);
+    require(msg.sender == holder || _isapprovedforall(msg.sender, holder));
+    require(operator != holder);
+
+    if (_getapprovedaddress(assetid) != operator) {
+      _approval[assetid] = operator;
+      emit approval(holder, operator, assetid);
+    }
+  }
+
+  function _addauthorization(address operator, address holder) private {
+    _operators[holder][operator] = true;
+  }
+
+  function _clearauthorization(address operator, address holder) private {
+    _operators[holder][operator] = false;
+  }
+
+  
+  
+  function _addassetto(address to, uint256 assetid) internal {
+    _holderof[assetid] = to;
+
+    uint256 length = _balanceof(to);
+
+    _assetsof[to].push(assetid);
+
+    _indexofasset[assetid] = length;
+
+    _count = _count.add(1);
+  }
+
+  function _removeassetfrom(address from, uint256 assetid) internal {
+    uint256 assetindex = _indexofasset[assetid];
+    uint256 lastassetindex = _balanceof(from).sub(1);
+    uint256 lastassetid = _assetsof[from][lastassetindex];
+
+    _holderof[assetid] = 0;
+
+    
+    _assetsof[from][assetindex] = lastassetid;
+
+    
+    _assetsof[from][lastassetindex] = 0;
+    _assetsof[from].length;
+
+    
+    if (_assetsof[from].length == 0) {
+      delete _assetsof[from];
+    }
+
+    
+    _indexofasset[assetid] = 0;
+    _indexofasset[lastassetid] = assetindex;
+
+    _count = _count.sub(1);
+  }
+
+  function _clearapproval(address holder, uint256 assetid) internal {
+    if (_ownerof(assetid) == holder && _approval[assetid] != 0) {
+      _approval[assetid] = 0;
+      emit approval(holder, 0, assetid);
+    }
+  }
+
+  
+  
+  function _generate(uint256 assetid, address beneficiary) internal {
+    require(_holderof[assetid] == 0);
+
+    _addassetto(beneficiary, assetid);
+
+    emit transfer(0, beneficiary, assetid, msg.sender, );
+  }
+
+  function _destroy(uint256 assetid) internal {
+    address holder = _holderof[assetid];
+    require(holder != 0);
+
+    _removeassetfrom(holder, assetid);
+
+    emit transfer(holder, 0, assetid, msg.sender, );
+  }
+
+  
+  
+  modifier onlyholder(uint256 assetid) {
+    require(_ownerof(assetid) == msg.sender);
+    _;
+  }
+
+  modifier onlyauthorized(uint256 assetid) {
+    require(_isauthorized(msg.sender, assetid));
+    _;
+  }
+
+  modifier iscurrentowner(address from, uint256 assetid) {
+    require(_ownerof(assetid) == from);
+    _;
+  }
+
+  modifier isdestinatarydefined(address destinatary) {
+    require(destinatary != 0);
+    _;
+  }
+
+  modifier destinataryisnotholder(uint256 assetid, address to) {
+    require(_ownerof(assetid) != to);
+    _;
+  }
+
+  
+  function safetransferfrom(address from, address to, uint256 assetid) external {
+    return _dotransferfrom(from, to, assetid, , msg.sender, true);
+  }
+
+  
+  function safetransferfrom(address from, address to, uint256 assetid, bytes userdata) external {
+    return _dotransferfrom(from, to, assetid, userdata, msg.sender, true);
+  }
+
+  
+  function transferfrom(address from, address to, uint256 assetid) external {
+    return _dotransferfrom(from, to, assetid, , msg.sender, false);
+  }
+
+  function _dotransferfrom(
+    address from,
+    address to,
+    uint256 assetid,
+    bytes userdata,
+    address operator,
+    bool docheck
+  )
+    onlyauthorized(assetid)
+    internal
+  {
+    _movetoken(from, to, assetid, userdata, operator, docheck);
+  }
+
+  function _movetoken(
+    address from,
+    address to,
+    uint256 assetid,
+    bytes userdata,
+    address operator,
+    bool docheck
+  )
+    isdestinatarydefined(to)
+    destinataryisnotholder(assetid, to)
+    iscurrentowner(from, assetid)
+    internal
+  {
+    address holder = _holderof[assetid];
+    _removeassetfrom(holder, assetid);
+    _clearapproval(holder, assetid);
+    _addassetto(to, assetid);
+
+    if (docheck && _iscontract(to)) {
+      
+      bytes4 erc721_received = bytes4(0xf0b9e5ba);
+      require(
+        ierc721receiver(to).onerc721received(
+          holder, assetid, userdata
+        ) == erc721_received
+      );
+    }
+
+    emit transfer(holder, to, assetid, operator, userdata);
+  }
+
+  
+
+  
+  function supportsinterface(bytes4 _interfaceid) external view returns (bool) {
+
+    if (_interfaceid == 0xffffffff) {
+      return false;
+    }
+    return (_interfaceid == 0x01ffc9a7) || (_interfaceid == 0x7c0633c6);
+  }
+
+  
+  
+  function _iscontract(address addr) internal view returns (bool) {
+    uint size;
+    assembly { size := extcodesize(addr) }
+    return size > 0;
+  }
+}
+
+
+
+contract ierc721enumerable {
+
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  
+
+  
+  function tokensof(address owner) external view returns (uint256[]);
+
+  
+  function tokenofownerbyindex(
+    address owner, uint256 index
+  ) external view returns (uint256 tokenid);
+}
+
+
+
+contract erc721enumerable is assetregistrystorage, ierc721enumerable {
+
+  
+  function tokensof(address owner) external view returns (uint256[]) {
+    return _assetsof[owner];
+  }
+
+  
+  function tokenofownerbyindex(
+    address owner, uint256 index
+  )
+    external
+    view
+    returns (uint256 assetid)
+  {
+    require(index < _assetsof[owner].length);
+    require(index < (1<<127));
+    return _assetsof[owner][index];
+  }
+
+}
+
+
+
+contract ierc721metadata {
+
+  
+  function name() external view returns (string);
+
+  
+  function symbol() external view returns (string);
+
+  
+  function description() external view returns (string);
+
+  
+  function tokenmetadata(uint256 assetid) external view returns (string);
+}
+
+
+
+contract erc721metadata is assetregistrystorage, ierc721metadata {
+  function name() external view returns (string) {
+    return _name;
+  }
+  function symbol() external view returns (string) {
+    return _symbol;
+  }
+  function description() external view returns (string) {
+    return _description;
+  }
+  function tokenmetadata(uint256 assetid) external view returns (string) {
+    return _assetdata[assetid];
+  }
+  function _update(uint256 assetid, string data) internal {
+    _assetdata[assetid] = data;
+  }
+}
+
+
+
+contract fullassetregistry is erc721base, erc721enumerable, erc721metadata {
+  constructor() public {
+  }
+
+  
+  function exists(uint256 assetid) external view returns (bool) {
+    return _exists(assetid);
+  }
+  function _exists(uint256 assetid) internal view returns (bool) {
+    return _holderof[assetid] != 0;
+  }
+
+  function decimals() external pure returns (uint256) {
+    return 0;
+  }
+}
+
+
+
+contract landregistry is storage,
+  ownable, fullassetregistry,
+  ilandregistry
+{
+
+  bytes4 public get_metadata = bytes4(keccak256());
+
+  function initialize(bytes) external {
+    _name = ;
+    _symbol = ;
+    _description = ;
+  }
+
+  modifier onlyproxyowner() {
+    require(msg.sender == proxyowner, );
+    _;
+  }
+
+  
+  
+  modifier onlyownerof(uint256 assetid) {
+    require(msg.sender == _ownerof(assetid), );
+    _;
+  }
+
+  modifier onlyupdateauthorized(uint256 tokenid) {
+    require(msg.sender == _ownerof(tokenid) || _isupdateauthorized(msg.sender, tokenid), );
+    _;
+  }
+
+  function isupdateauthorized(address operator, uint256 assetid) external view returns (bool) {
+    return _isupdateauthorized(operator, assetid);
+  }
+  function _isupdateauthorized(address operator, uint256 assetid) internal view returns (bool) {
+    return operator == _ownerof(assetid) || updateoperator[assetid] == operator;
+  }
+
+  function authorizedeploy(address beneficiary) external onlyproxyowner {
+    authorizeddeploy[beneficiary] = true;
+  }
+  function forbiddeploy(address beneficiary) external onlyproxyowner {
+    authorizeddeploy[beneficiary] = false;
+  }
+
+  function assignnewparcel(int x, int y, address beneficiary) external onlyproxyowner {
+    _generate(_encodetokenid(x, y), beneficiary);
+  }
+
+  function assignmultipleparcels(int[] x, int[] y, address beneficiary) external onlyproxyowner {
+    for (uint i = 0; i < x.length; i++) {
+      _generate(_encodetokenid(x[i], y[i]), beneficiary);
+    }
+  }
+
+  
+  
+  function ping() external {
+    latestping[msg.sender] = now;
+  }
+
+  function setlatesttonow(address user) external {
+    require(msg.sender == proxyowner || _isapprovedforall(msg.sender, user));
+    latestping[user] = now;
+  }
+
+  
+  
+  function encodetokenid(int x, int y) pure external returns (uint) {
+    return _encodetokenid(x, y);
+  }
+  function _encodetokenid(int x, int y) pure internal returns (uint result) {
+    require(1000000 < x && x < 1000000 && 1000000 < y && y < 1000000);
+    return _unsafeencodetokenid(x, y);
+  }
+  function _unsafeencodetokenid(int x, int y) pure internal returns (uint) {
+    return ((uint(x) * factor) & clearlow) | (uint(y) & clearhigh);
+  }
+
+  function decodetokenid(uint value) pure external returns (int, int) {
+    return _decodetokenid(value);
+  }
+  function _unsafedecodetokenid(uint value) pure internal returns (int x, int y) {
+    x = expandnegative128bitcast((value & clearlow) >> 128);
+    y = expandnegative128bitcast(value & clearhigh);
+  }
+  function _decodetokenid(uint value) pure internal returns (int x, int y) {
+    (x, y) = _unsafedecodetokenid(value);
+    require(1000000 < x && x < 1000000 && 1000000 < y && y < 1000000);
+  }
+
+  function expandnegative128bitcast(uint value) pure internal returns (int) {
+    if (value & (1<<127) != 0) {
+      return int(value | clearlow);
+    }
+    return int(value);
+  }
+
+  function exists(int x, int y) view external returns (bool) {
+    return _exists(x, y);
+  }
+  function _exists(int x, int y) view internal returns (bool) {
+    return _exists(_encodetokenid(x, y));
+  }
+
+  function ownerofland(int x, int y) view external returns (address) {
+    return _ownerofland(x, y);
+  }
+  function _ownerofland(int x, int y) view internal returns (address) {
+    return _ownerof(_encodetokenid(x, y));
+  }
+
+  function owneroflandmany(int[] x, int[] y) view external returns (address[]) {
+    require(x.length > 0);
+    require(x.length == y.length);
+
+    address[] memory addrs = new address[](x.length);
+    for (uint i = 0; i < x.length; i++) {
+      addrs[i] = _ownerofland(x[i], y[i]);
+    }
+
+    return addrs;
+  }
+
+  function landof(address owner) external view returns (int[], int[]) {
+    uint256 len = _assetsof[owner].length;
+    int[] memory x = new int[](len);
+    int[] memory y = new int[](len);
+
+    int assetx;
+    int assety;
+    for (uint i = 0; i < len; i++) {
+      (assetx, assety) = _decodetokenid(_assetsof[owner][i]);
+      x[i] = assetx;
+      y[i] = assety;
+    }
+
+    return (x, y);
+  }
+
+  function tokenmetadata(uint256 assetid) external view returns (string) {
+    return _tokenmetadata(assetid);
+  }
+
+  function _tokenmetadata(uint256 assetid) internal view returns (string) {
+    address _owner = _ownerof(assetid);
+    if (_iscontract(_owner)) {
+      if (erc165(_owner).supportsinterface(get_metadata)) {
+        return imetadataholder(_owner).getmetadata(assetid);
+      }
+    }
+    return _assetdata[assetid];
+  }
+
+  function landdata(int x, int y) external view returns (string) {
+    return _tokenmetadata(_encodetokenid(x, y));
+  }
+
+  
+  
+  function transferland(int x, int y, address to) external {
+    uint256 tokenid = _encodetokenid(x, y);
+    _dotransferfrom(_ownerof(tokenid), to, tokenid, , msg.sender, true);
+  }
+
+  function transfermanyland(int[] x, int[] y, address to) external {
+    require(x.length > 0);
+    require(x.length == y.length);
+
+    for (uint i = 0; i < x.length; i++) {
+      uint256 tokenid = _encodetokenid(x[i], y[i]);
+      _dotransferfrom(_ownerof(tokenid), to, tokenid, , msg.sender, true);
+    }
+  }
+
+  function setupdateoperator(uint256 assetid, address operator) external onlyownerof(assetid) {
+    updateoperator[assetid] = operator;
+    emit updateoperator(assetid, operator);
+  }
+
+  
+  
+  function updatelanddata(int x, int y, string data) external onlyupdateauthorized (_encodetokenid(x, y)) {
+    return _updatelanddata(x, y, data);
+  }
+  function _updatelanddata(int x, int y, string data) internal onlyupdateauthorized (_encodetokenid(x, y)) {
+    uint256 assetid = _encodetokenid(x, y);
+    _update(assetid, data);
+
+    emit update(assetid, _holderof[assetid], msg.sender, data);
+  }
+
+  function updatemanylanddata(int[] x, int[] y, string data) external {
+    require(x.length > 0);
+    require(x.length == y.length);
+    for (uint i = 0; i < x.length; i++) {
+      _updatelanddata(x[i], y[i], data);
+    }
+  }
+
+  function _dotransferfrom(
+    address from,
+    address to,
+    uint256 assetid,
+    bytes userdata,
+    address operator,
+    bool docheck
+  ) internal {
+    updateoperator[assetid] = address(0);
+    super._dotransferfrom(from, to, assetid, userdata, operator, docheck);
+  }
+
+  function _iscontract(address addr) internal view returns (bool) {
+    uint size;
+    assembly { size := extcodesize(addr) }
+    return size > 0;
+  }
+}
+
+pragma solidity ^0.4.18;
+
+
+
+contract landstorage {
+
+  mapping (address => uint) public latestping;
+
+  uint256 constant clearlow = 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000;
+  uint256 constant clearhigh = 0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff;
+  uint256 constant factor = 0x100000000000000000000000000000000;
+
+  mapping (address => bool) public authorizeddeploy;
+
+  mapping (uint256 => address) public updateoperator;
+}
+
+
+
+contract ownablestorage {
+
+  address public owner;
+
+  function ownablestorage() internal {
+    owner = msg.sender;
+  }
+
+}
+
+
+
+contract proxystorage {
+
+  
+  address public currentcontract;
+  address public proxyowner;
+}
+
+
+
+contract assetregistrystorage {
+
+  string internal _name;
+  string internal _symbol;
+  string internal _description;
+
+  
+  uint256 internal _count;
+
+  
+  mapping(address => uint256[]) internal _assetsof;
+
+  
+  mapping(uint256 => address) internal _holderof;
+
+  
+  mapping(uint256 => uint256) internal _indexofasset;
+
+  
+  mapping(uint256 => string) internal _assetdata;
+
+  
+  mapping(address => mapping(address => bool)) internal _operators;
+
+  
+  bool internal _reentrancy;
+
+  
+  uint256 internal _reentrancycount;
+
+  
+  mapping(uint256 => address) internal _approval;
+}
+
+
+
+contract storage is proxystorage, ownablestorage, assetregistrystorage, landstorage {
+}
+
+
+
+contract delegateproxy {
+  
+  function delegatedfwd(address _dst, bytes _calldata) internal {
+    require(iscontract(_dst));
+    assembly {
+      let result := delegatecall(sub(gas, 10000), _dst, add(_calldata, 0x20), mload(_calldata), 0, 0)
+      let size := returndatasize
+
+      let ptr := mload(0x40)
+      returndatacopy(ptr, 0, size)
+
+      
+      
+      switch result case 0 { revert(ptr, size) }
+      default { return(ptr, size) }
+    }
+  }
+
+  function iscontract(address _target) constant internal returns (bool) {
+    uint256 size;
+    assembly { size := extcodesize(_target) }
+    return size > 0;
+  }
+}
+
+
+
+contract iapplication {
+  function initialize(bytes data) public;
+}
+
+
+
+contract ownable is storage {
+
+  event ownerupdate(address _prevowner, address _newowner);
+
+  function bytestoaddress (bytes b) pure public returns (address) {
+    uint result = 0;
+    for (uint i = b.length1; i+1 > 0; i) {
+      uint c = uint(b[i]);
+      uint to_inc = c * ( 16 ** ((b.length  i1) * 2));
+      result += to_inc;
+    }
+    return address(result);
+  }
+
+  modifier onlyowner {
+    assert(msg.sender == owner);
+    _;
+  }
+
+  function transferownership(address _newowner) public onlyowner {
+    require(_newowner != owner);
+    owner = _newowner;
+  }
+}
+
+
+
+contract proxy is storage, delegateproxy, ownable {
+
+  event upgrade(address indexed newcontract, bytes initializedwith);
+  event ownerupdate(address _prevowner, address _newowner);
+
+  function proxy() public {
+    proxyowner = msg.sender;
+    owner = msg.sender;
+  }
+
+  
+  
+  modifier onlyproxyowner() {
+    require(msg.sender == proxyowner);
+    _;
+  }
+
+  function transferownership(address _newowner) public onlyproxyowner {
+    require(_newowner != address(0));
+    require(_newowner != proxyowner);
+    proxyowner = _newowner;
+  }
+
+  
+  
+  function upgrade(iapplication newcontract, bytes data) public onlyproxyowner {
+    currentcontract = newcontract;
+    iapplication(this).initialize(data);
+
+    upgrade(newcontract, data);
+  }
+
+  
+  
+  function () payable public {
+    require(currentcontract != 0); 
+    delegatedfwd(currentcontract, msg.data);
+  }
+}
+
+
+
+contract landproxy is storage, proxy {
+}
+

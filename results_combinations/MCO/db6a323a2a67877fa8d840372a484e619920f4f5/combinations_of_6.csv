@@ -1,0 +1,8 @@
+similarity,combination
+5,['MCOPCrowdSale.sol', 'MCOPCrowdSaleFlat.sol', 'Migrations.sol', 'TestAddress.sol', 'TokenTimelock.sol', 'TestMCOPCrowdSale.sol']
+5,['MCOPCrowdSale.sol', 'MCOPCrowdSaleFlat.sol', 'Migrations.sol', 'TestAddress.sol', 'TokenTimelock.sol', 'MCOPToken.sol']
+5,['MCOPCrowdSale.sol', 'MCOPCrowdSaleFlat.sol', 'Migrations.sol', 'TestAddress.sol', 'TestMCOPCrowdSale.sol', 'MCOPToken.sol']
+5,['MCOPCrowdSale.sol', 'MCOPCrowdSaleFlat.sol', 'Migrations.sol', 'TokenTimelock.sol', 'TestMCOPCrowdSale.sol', 'MCOPToken.sol']
+5,['MCOPCrowdSale.sol', 'MCOPCrowdSaleFlat.sol', 'TestAddress.sol', 'TokenTimelock.sol', 'TestMCOPCrowdSale.sol', 'MCOPToken.sol']
+2,['MCOPCrowdSale.sol', 'Migrations.sol', 'TestAddress.sol', 'TokenTimelock.sol', 'TestMCOPCrowdSale.sol', 'MCOPToken.sol']
+6,['MCOPCrowdSaleFlat.sol', 'Migrations.sol', 'TestAddress.sol', 'TokenTimelock.sol', 'TestMCOPCrowdSale.sol', 'MCOPToken.sol']

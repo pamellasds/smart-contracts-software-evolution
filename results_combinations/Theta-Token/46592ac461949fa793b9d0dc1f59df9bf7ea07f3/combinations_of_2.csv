@@ -1,0 +1,11 @@
+similarity,combination
+5,['StandardToken.sol', 'Migrations.sol']
+4,['StandardToken.sol', 'SafeMath.sol']
+5,['StandardToken.sol', 'ThetaTokenSale.sol']
+47,['StandardToken.sol', 'ThetaToken.sol']
+2,['Migrations.sol', 'SafeMath.sol']
+2,['Migrations.sol', 'ThetaTokenSale.sol']
+3,['Migrations.sol', 'ThetaToken.sol']
+1,['SafeMath.sol', 'ThetaTokenSale.sol']
+3,['SafeMath.sol', 'ThetaToken.sol']
+2,['ThetaTokenSale.sol', 'ThetaToken.sol']

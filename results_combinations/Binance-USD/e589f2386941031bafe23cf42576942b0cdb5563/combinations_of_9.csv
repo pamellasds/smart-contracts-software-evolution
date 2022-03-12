@@ -1,0 +1,11 @@
+similarity,combination
+2,['BUSDWithBalance.sol', 'BUSDImplementation.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'TSDImplementation.sol', 'Proxy.sol', 'SafeMathMock.sol', 'AddressUtils.sol']
+4,['BUSDWithBalance.sol', 'BUSDImplementation.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'TSDImplementation.sol', 'Proxy.sol', 'SafeMathMock.sol', 'AdminUpgradeabilityProxy.sol']
+7,['BUSDWithBalance.sol', 'BUSDImplementation.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'TSDImplementation.sol', 'Proxy.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+3,['BUSDWithBalance.sol', 'BUSDImplementation.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'TSDImplementation.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+11,['BUSDWithBalance.sol', 'BUSDImplementation.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+7,['BUSDWithBalance.sol', 'BUSDImplementation.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'TSDImplementation.sol', 'Proxy.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+3,['BUSDWithBalance.sol', 'BUSDImplementation.sol', 'Migrations.sol', 'SafeMath.sol', 'TSDImplementation.sol', 'Proxy.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+7,['BUSDWithBalance.sol', 'BUSDImplementation.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'TSDImplementation.sol', 'Proxy.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+11,['BUSDWithBalance.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'TSDImplementation.sol', 'Proxy.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+7,['BUSDImplementation.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'TSDImplementation.sol', 'Proxy.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']

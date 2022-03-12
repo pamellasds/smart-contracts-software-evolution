@@ -1,0 +1,11 @@
+similarity,combination
+2,['BUSDWithBalance.sol']
+2,['BUSDImplementation.sol']
+3,['Migrations.sol']
+10,['UpgradeabilityProxy.sol']
+3,['SafeMath.sol']
+2,['TSDImplementation.sol']
+5,['Proxy.sol']
+1,['SafeMathMock.sol']
+11,['AddressUtils.sol']
+20,['AdminUpgradeabilityProxy.sol']

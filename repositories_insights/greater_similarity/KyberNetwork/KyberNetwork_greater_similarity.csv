@@ -1,0 +1,3 @@
+commit,[similarity,combination]
+4976f3f6848f4bbe974b0bcb0226234fc059bd9d,['1', "['Migrations.sol']"]
+e71c90b087a4c590ee11ca2356c4baa6c86eadd7,['6', "['ERC20Interface.sol'", " 'Migrations.sol'", " 'Swap.sol']"]

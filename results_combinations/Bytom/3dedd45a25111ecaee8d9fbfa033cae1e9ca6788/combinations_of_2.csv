@@ -1,0 +1,4 @@
+similarity,combination
+43,['HumanStandardToken.sol', 'StandardToken.sol']
+25,['HumanStandardToken.sol', 'Token.sol']
+12,['StandardToken.sol', 'Token.sol']

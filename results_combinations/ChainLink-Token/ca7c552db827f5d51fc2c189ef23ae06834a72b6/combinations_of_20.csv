@@ -1,0 +1,2 @@
+similarity,combination
+12,['Ownable.sol', 'SafeMath.sol', 'Standard223TokenExample.sol', 'Standard223TokenReceiverExample.sol', 'Standard223Token.sol', 'LinkReceiver.sol', 'Standard223TokenReceiverTest.sol', 'Standard223Receiver.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'ERC223.sol', 'LinkToken.sol', 'ERC223Receiver.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol', 'Standard223TokenReceiverMock.sol']

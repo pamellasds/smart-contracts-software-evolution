@@ -1,0 +1,4 @@
+commit,[similarity,combination]
+a0be0eac287511aad00e514bece011303a9b1dec,['83', "['NexoToken.sol'", " 'StandardToken.sol'", " 'Owned.sol'", " 'Token.sol'", " 'SafeMath.sol'", " 'AbstractToken.sol']"]
+1bea4217cbbc0d48f51f57a9af85fca065906eb0,['97', "['NexoToken.sol'", " 'StandardToken.sol'", " 'Owned.sol'", " 'Token.sol'", " 'SafeMath.sol'", " 'AbstractToken.sol']"]
+3571169b3365adfc92c5bd743cc75b5184a2172a,['98', "['NexoToken.sol'", " 'StandardToken.sol'", " 'Owned.sol'", " 'Token.sol'", " 'SafeMath.sol'", " 'AbstractToken.sol']"]

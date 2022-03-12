@@ -1,0 +1,10 @@
+similarity,combination
+10,['Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol']
+27,['Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AdminUpgradeabilityProxy.sol']
+69,['Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+37,['Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+37,['Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+18,['Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+37,['Migrations.sol', 'UpgradeabilityProxy.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+14,['Migrations.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+40,['UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']

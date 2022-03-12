@@ -1,0 +1,9 @@
+similarity,combination
+1,['prototype.sol', 'Migrations.sol', 'params.sol', 'energy.sol', 'voting.sol', 'extension.sol', 'authority.sol']
+5,['prototype.sol', 'Migrations.sol', 'params.sol', 'energy.sol', 'voting.sol', 'extension.sol', 'builtin.sol']
+4,['prototype.sol', 'Migrations.sol', 'params.sol', 'energy.sol', 'voting.sol', 'authority.sol', 'builtin.sol']
+5,['prototype.sol', 'Migrations.sol', 'params.sol', 'energy.sol', 'extension.sol', 'authority.sol', 'builtin.sol']
+4,['prototype.sol', 'Migrations.sol', 'params.sol', 'voting.sol', 'extension.sol', 'authority.sol', 'builtin.sol']
+4,['prototype.sol', 'Migrations.sol', 'energy.sol', 'voting.sol', 'extension.sol', 'authority.sol', 'builtin.sol']
+5,['prototype.sol', 'params.sol', 'energy.sol', 'voting.sol', 'extension.sol', 'authority.sol', 'builtin.sol']
+4,['Migrations.sol', 'params.sol', 'energy.sol', 'voting.sol', 'extension.sol', 'authority.sol', 'builtin.sol']

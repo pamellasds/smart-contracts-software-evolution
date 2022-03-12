@@ -1,0 +1,5 @@
+commit,[similarity,combination]
+819b334efdc5b143c9c0bb4dcf392526d583c106,
+cde30b9793e80b6182edfa6302060e7774fbacc0,['2', "['staking.sol']"]
+78a5c677645c3c1d4e7249e16b530fcdb8ee7238,['2', "['staking.sol']"]
+cac394e934064caaf88d5e8b6447451fed33ee82,['3', "['staking.sol'", " 'safemath.sol']"]

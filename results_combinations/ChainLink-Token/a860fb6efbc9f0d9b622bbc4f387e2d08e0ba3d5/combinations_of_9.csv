@@ -1,0 +1,11 @@
+similarity,combination
+21,['SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol']
+5,['SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'ERC20.sol']
+16,['SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'TokenSale.sol', 'ERC20.sol']
+17,['SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+9,['SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+17,['SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+17,['SafeMath.sol', 'SmartOracle.sol', 'ERC20Basic.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+21,['SafeMath.sol', 'SmartOracle.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+17,['SafeMath.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+21,['SmartOracle.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']

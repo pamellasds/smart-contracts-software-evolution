@@ -1,0 +1,8 @@
+similarity,combination
+5,['TimelockedSafe.sol', 'Airdrop.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'ThetaTokenSale.sol']
+30,['TimelockedSafe.sol', 'Airdrop.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'ThetaToken.sol']
+8,['TimelockedSafe.sol', 'Airdrop.sol', 'StandardToken.sol', 'Migrations.sol', 'ThetaTokenSale.sol', 'ThetaToken.sol']
+10,['TimelockedSafe.sol', 'Airdrop.sol', 'StandardToken.sol', 'SafeMath.sol', 'ThetaTokenSale.sol', 'ThetaToken.sol']
+2,['TimelockedSafe.sol', 'Airdrop.sol', 'Migrations.sol', 'SafeMath.sol', 'ThetaTokenSale.sol', 'ThetaToken.sol']
+9,['TimelockedSafe.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'ThetaTokenSale.sol', 'ThetaToken.sol']
+17,['Airdrop.sol', 'StandardToken.sol', 'Migrations.sol', 'SafeMath.sol', 'ThetaTokenSale.sol', 'ThetaToken.sol']

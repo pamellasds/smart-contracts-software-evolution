@@ -1,0 +1,9 @@
+similarity,combination
+1,['Migrations.sol']
+11,['SafeMath.sol']
+1,['SafeMathMock.sol']
+1,['StablecoinWithBalance.sol']
+2,['ERC20Proxy.sol']
+2,['StablecoinImplementation.sol']
+12,['AddressUtils.sol']
+2,['UpgradeabilityStorage.sol']

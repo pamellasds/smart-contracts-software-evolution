@@ -1,0 +1,13 @@
+similarity,combination
+1,['Ownable.sol']
+2,['SafeMath.sol']
+2,['LinkReceiver.sol']
+4,['ERC20Basic.sol']
+7,['BasicTokenMock.sol']
+7,['ApproveAndCallReceiver.sol']
+0,['StandardTokenMock.sol']
+5,['StandardToken.sol']
+1,['LinkToken.sol']
+2,['BasicToken.sol']
+2,['TokenSale.sol']
+4,['ERC20.sol']

@@ -1,0 +1,552 @@
+pragma solidity ^0.4.8;
+
+
+
+contract ownable {
+  address public owner;
+
+
+  
+  function ownable()
+  {
+    owner = msg.sender;
+  }
+
+
+  
+  function transferownership(address newowner)
+  onlyowner
+  {
+    if (newowner != address(0)) {
+      owner = newowner;
+    }
+  }
+
+
+  
+
+  
+  modifier onlyowner()
+  {
+    if (msg.sender != owner) {
+      throw;
+    }
+    _;
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+import ;
+
+
+contract linktoken is standardtoken {
+
+  uint public constant totalsupply = 10**18;
+  string public constant name = ;
+  uint8 public constant decimals = 9;
+  string public constant symbol = ;
+
+  function linktoken()
+  {
+    balances[msg.sender] = totalsupply;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+import ;
+
+
+contract tokensale is ownable {
+
+  using safemath for uint;
+
+  uint public limit;
+  uint public starttime;
+  uint public distributed;
+  uint public phaseoneend;
+  uint public phasetwoend;
+  uint public endtime;
+  address public recipient;
+  linktoken public token;
+
+  function tokensale(
+    uint _limit,
+    uint _prepurchased,
+    uint _start
+  ) {
+    limit = _limit;
+    distributed = _prepurchased;
+    starttime = _start;
+    phaseoneend = _start + 1 weeks;
+    phasetwoend = _start + 2 weeks;
+    endtime = _start + 4 weeks;
+    token = new linktoken();
+
+    if (limit > token.totalsupply()) throw;
+  }
+
+  function ()
+  payable ensurestarted ensurenotended underlimit
+  {
+    if (owner.send(msg.value)) {
+      distributed += msg.value;
+      token.transfer(msg.sender, purchased());
+    }
+  }
+
+  function closeout()
+  onlyowner ensurestarted ensurecompleted
+  {
+    token.transfer(owner, token.balanceof(this));
+  }
+
+
+  
+
+  function purchased()
+  private returns (uint)
+  {
+    if (block.timestamp <= phaseoneend) {
+      return msg.value.div(10**15);
+    } else if (block.timestamp <= phasetwoend) {
+      return msg.value.mul(75).div(10**17);
+    } else {
+      return msg.value.mul(50).div(10**17);
+    }
+  }
+
+  function started()
+  private returns (bool)
+  {
+    return block.timestamp >= starttime;
+  }
+
+  function ended()
+  private returns (bool)
+  {
+    return block.timestamp > endtime;
+  }
+
+  function funded()
+  private returns (bool)
+  {
+    return distributed == limit;
+  }
+
+  function completed()
+  private returns (bool)
+  {
+    return ended() || funded();
+  }
+
+
+  
+
+  modifier ensurestarted()
+  {
+    if (!started()) throw; _;
+  }
+
+  modifier ensurenotended()
+  {
+    if (ended()) throw; _;
+  }
+
+  modifier ensurecompleted()
+  {
+    if (!completed()) throw; _;
+  }
+
+  modifier underlimit()
+  {
+    if (purchased() + distributed > limit) throw; _;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+
+library safemath {
+
+  
+
+  function mul(uint256 a, uint256 b)
+  internal returns (uint256)
+  {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b)
+  internal returns (uint256)
+  {
+    
+    uint256 c = a / b;
+    
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b)
+  internal returns (uint256)
+  {
+    assert(b <= a);
+    return a  b;
+  }
+
+  function add(uint256 a, uint256 b)
+  internal returns (uint256)
+  {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+contract smartoracle {
+
+  address public owner;
+
+  function smartoracle()
+  {
+    owner = msg.sender;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+import ;
+
+
+contract standard223token is erc223, standardtoken {
+
+  function transfer(address _to, uint _value, bytes _data)
+  {
+    super.transfer(_to, _value);
+    if (iscontract(_to))
+      contractfallback(_to, _value, _data);
+  }
+
+  function transfer(address _to, uint _value)
+  {
+    transfer(_to, _value, new bytes(0));
+  }
+
+  function transferfrom(address _from, address _to, uint _value, bytes _data)
+  {
+    super.transferfrom(_from, _to, _value);
+    if (iscontract(_to))
+      contractfallback(_to, _value, _data);
+  }
+
+  function transferfrom(address _from, address _to, uint _value)
+  {
+    transferfrom(_from, _to, _value, new bytes(0));
+  }
+
+  
+
+  function contractfallback(address _to, uint _value, bytes _data)
+  private
+  {
+    erc223receiver reciever = erc223receiver(_to);
+    reciever.tokenfallback(msg.sender, _value, _data);
+  }
+
+  function iscontract(address _addr)
+  private returns (bool iscontract)
+  {
+    uint length;
+    assembly { length := extcodesize(_addr) }
+    return length > 0;
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+contract erc223receiver {
+  function tokenfallback(address _sender, uint _value, bytes _data);
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract erc20 is erc20basic {
+  function allowance(address owner, address spender) constant returns (uint256);
+  function transferfrom(address from, address to, uint256 value);
+  function approve(address spender, uint256 value);
+  event approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+
+contract erc223 is erc20 {
+  function transfer(address to, uint value, bytes data);
+  function transferfrom(address from, address to, uint value, bytes data);
+}
+
+pragma solidity ^0.4.8;
+
+ 
+
+import ;
+
+contract standard223receiver is erc223receiver {
+  receivedtoken receivedtoken;
+
+  struct receivedtoken {
+    address addr;
+    address sender;
+    uint256 value;
+    bytes data;
+    bytes4 sig;
+  }
+
+  function tokenfallback(address _sender, uint _value, bytes _data) {
+    __istokenfallback = true;
+    receivedtoken = receivedtoken(msg.sender, _sender, _value, _data, getsig(_data));
+    if (!address(this).delegatecall(_data)) throw;
+    
+    __istokenfallback = false;
+  }
+
+  function getsig(bytes _data) private returns (bytes4 sig) {
+    uint l = _data.length < 4 ? _data.length : 4;
+    for (uint i = 0; i < l; i++) {
+      sig = bytes4(uint(sig) + uint(_data[i]) * (2 ** (8 * (l  1  i))));
+    }
+  }
+
+  bool __istokenfallback;
+
+  modifier tokenpayable {
+    if (!__istokenfallback) throw;
+    _;
+  }
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+
+
+
+contract basictoken is erc20basic {
+  using safemath for uint256;
+
+  mapping(address => uint256) balances;
+
+  
+  function transfer(address _to, uint256 _value) {
+    balances[msg.sender] = balances[msg.sender].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    transfer(msg.sender, _to, _value);
+  }
+
+  
+  function balanceof(address _owner) constant returns (uint256 balance) {
+    return balances[_owner];
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+import ;
+
+
+
+contract standardtoken is erc20, basictoken {
+
+  mapping (address => mapping (address => uint256)) allowed;
+
+
+  
+  function transferfrom(address _from, address _to, uint256 _value) {
+    var _allowance = allowed[_from][msg.sender];
+
+    
+    
+
+    balances[_to] = balances[_to].add(_value);
+    balances[_from] = balances[_from].sub(_value);
+    allowed[_from][msg.sender] = _allowance.sub(_value);
+    transfer(_from, _to, _value);
+  }
+
+  
+  function approve(address _spender, uint256 _value) {
+
+    
+    
+    
+    
+    if ((_value != 0) && (allowed[msg.sender][_spender] != 0)) throw;
+
+    allowed[msg.sender][_spender] = _value;
+    approval(msg.sender, _spender, _value);
+  }
+
+  
+  function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
+    return allowed[_owner][_spender];
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+
+contract erc20basic {
+  uint256 public totalsupply;
+  function balanceof(address who) constant returns (uint256);
+  function transfer(address to, uint256 value);
+  event transfer(address indexed from, address indexed to, uint256 value);
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract basictokenmock is basictoken {
+
+  function basictokenmock(address initialaccount, uint initialbalance)
+  {
+    balances[initialaccount] = initialbalance;
+    totalsupply = initialbalance;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+contract standard223tokenreceivermock is standard223receiver {
+    address public tokensender;
+    uint public sentvalue;
+    bytes public tokendata;
+    bool public calledfallback = false;
+
+    function tokenfallback(address from, uint value, bytes data)
+    {
+        calledfallback = true;
+
+        tokensender = from;
+        sentvalue = value;
+        tokendata = data;
+    }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+contract standardtokenmock is standardtoken {
+
+  function standardtokenmock(address initialaccount, uint initialbalance)
+  {
+    balances[initialaccount] = initialbalance;
+    totalsupply = initialbalance;
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+
+
+contract standard223tokenreceiverexample is standard223receiver {
+    event logfallbackparameters(address from, uint value, bytes data);
+
+    function tokenfallback(address from, uint value, bytes data)
+    {
+        logfallbackparameters(from, value, data);
+    }
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+
+
+contract standard223tokenexample is standard223token {
+
+    function standard223tokenexample(uint _initialbalance)
+    {
+        balances[msg.sender] = _initialbalance;
+        totalsupply = _initialbalance;
+    }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+import ;
+import ;
+
+contract standard223tokenreceivertest {
+    standard223tokenexample token;
+    standard223tokenreceivermock receiver;
+
+    function beforeeach() {
+        token = new standard223tokenexample(100);
+        receiver = new standard223tokenreceivermock();
+    }
+
+    function testfallbackiscalledontransfer() {
+        token.transfer(receiver, 10);
+
+        assert.equal(receiver.tokensender(), this, );
+        assert.equal(receiver.sentvalue(), 10, );
+    }
+
+    function testcorrectfunctioniscalledontransfer() {
+        bytes memory data = new bytes(4);
+        token.transfer(receiver, 20, data);
+
+        assert.istrue(receiver.calledfallback(), );
+    }
+}
+

@@ -1,0 +1,6 @@
+commit,[similarity,combination]
+11d5d7b2aa19e95a1c870add341ff4eba1c1927d,
+600c1db8c6c2a2577ab342dd08a12cc9f2e34c1c,['9', "['ERC20Basic.sol'", " 'CustomTokens.sol']"]
+3f722455ec0ebcb2dd8c7eb0b4cf2e77f13441c3,['9', "['ERC20Basic.sol'", " 'CustomTokens.sol']"]
+58a928d18a418503b4366282ed807439da83b14b,['9', "['ERC20Basic.sol'", " 'CustomTokens.sol']"]
+7f1194a06a0c9e6000830a63f4907f582fbe1645,['9', "['ERC20Basic.sol'", " 'CustomTokens.sol']"]

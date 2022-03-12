@@ -1,0 +1,8 @@
+similarity,combination
+15,['Migrations.sol', 'SeeleTokenFlat.sol', 'SeeleCrowdSale.sol', 'TestAddress.sol', 'SeeleCrowdSaleFlat.sol', 'TokenTimelock.sol']
+14,['Migrations.sol', 'SeeleTokenFlat.sol', 'SeeleCrowdSale.sol', 'TestAddress.sol', 'SeeleCrowdSaleFlat.sol', 'SeeleToken.sol']
+23,['Migrations.sol', 'SeeleTokenFlat.sol', 'SeeleCrowdSale.sol', 'TestAddress.sol', 'TokenTimelock.sol', 'SeeleToken.sol']
+14,['Migrations.sol', 'SeeleTokenFlat.sol', 'SeeleCrowdSale.sol', 'SeeleCrowdSaleFlat.sol', 'TokenTimelock.sol', 'SeeleToken.sol']
+17,['Migrations.sol', 'SeeleTokenFlat.sol', 'TestAddress.sol', 'SeeleCrowdSaleFlat.sol', 'TokenTimelock.sol', 'SeeleToken.sol']
+18,['Migrations.sol', 'SeeleCrowdSale.sol', 'TestAddress.sol', 'SeeleCrowdSaleFlat.sol', 'TokenTimelock.sol', 'SeeleToken.sol']
+15,['SeeleTokenFlat.sol', 'SeeleCrowdSale.sol', 'TestAddress.sol', 'SeeleCrowdSaleFlat.sol', 'TokenTimelock.sol', 'SeeleToken.sol']

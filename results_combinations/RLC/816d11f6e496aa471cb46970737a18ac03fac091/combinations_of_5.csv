@@ -1,0 +1,7 @@
+similarity,combination
+24,['TokenSpender.sol', 'Migrations.sol', 'SafeMath.sol', 'Ownable.sol', 'ERC20.sol']
+20,['TokenSpender.sol', 'Migrations.sol', 'SafeMath.sol', 'Ownable.sol', 'RLC.sol']
+40,['TokenSpender.sol', 'Migrations.sol', 'SafeMath.sol', 'ERC20.sol', 'RLC.sol']
+24,['TokenSpender.sol', 'Migrations.sol', 'Ownable.sol', 'ERC20.sol', 'RLC.sol']
+50,['TokenSpender.sol', 'SafeMath.sol', 'Ownable.sol', 'ERC20.sol', 'RLC.sol']
+24,['Migrations.sol', 'SafeMath.sol', 'Ownable.sol', 'ERC20.sol', 'RLC.sol']

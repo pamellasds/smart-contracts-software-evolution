@@ -1,0 +1,2 @@
+similarity,combination
+13,['IToken.sol', 'ControllerEventDefinitions.sol', 'Controller.sol', 'Pausable.sol', 'Owned.sol', 'Token.sol', 'Migrations.sol', 'Receiver.sol', 'TokenReceivable.sol', 'SafeMath.sol', 'Finalizable.sol', 'EventDefinitions.sol', 'DummyToken.sol', 'Sale.sol', 'Ledger.sol']

@@ -1,0 +1,4 @@
+similarity,combination
+7,['ExampleMigration.sol', 'Token.sol']
+4,['ExampleMigration.sol', 'BadWallet.sol']
+7,['Token.sol', 'BadWallet.sol']

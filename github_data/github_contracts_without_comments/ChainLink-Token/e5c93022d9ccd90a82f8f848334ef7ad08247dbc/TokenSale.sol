@@ -1,0 +1,122 @@
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+import ;
+
+
+contract tokensale is ownable {
+
+  using safemath for uint;
+
+  uint public limit;
+  uint public starttime;
+  uint public distributed;
+  uint public phaseoneend;
+  uint public phasetwoend;
+  uint public phasethreeend;
+  uint public endtime;
+  address public recipient;
+  linktoken public token;
+
+  function tokensale(uint _limit, uint _prepurchased, uint _start, address _owner)
+  public
+  {
+    limit = _limit;
+    distributed = _prepurchased;
+    starttime = _start;
+    phaseoneend = _start + 1 days;
+    phasetwoend = _start + 1 weeks;
+    phasethreeend = _start + 2 weeks;
+    endtime = _start + 4 weeks;
+    token = new linktoken();
+    owner = _owner;
+
+    require(limit <= token.totalsupply());
+  }
+
+  function ()
+  public payable ensurestarted ensurenotended underlimit
+  {
+    if (owner.send(msg.value)) {
+      distributed += msg.value;
+      token.transfer(msg.sender, purchased());
+    }
+  }
+
+  function closeout()
+  public onlyowner ensurestarted ensurecompleted
+  {
+    token.transfer(owner, token.balanceof(this));
+  }
+
+
+  
+
+  function purchased()
+  private returns (uint)
+  {
+    if (block.timestamp <= phaseoneend) {
+      return msg.value.div(10**6).mul(2);
+    } else if (block.timestamp <= phasetwoend) {
+      return msg.value.mul(18).div(10**7);
+    } else if (block.timestamp <= phasethreeend) {
+      return msg.value.mul(15).div(10**7);
+    } else {
+      return msg.value.mul(12).div(10**7);
+    }
+  }
+
+  function started()
+  private returns (bool)
+  {
+    return block.timestamp >= starttime;
+  }
+
+  function ended()
+  private returns (bool)
+  {
+    return block.timestamp > endtime;
+  }
+
+  function funded()
+  private returns (bool)
+  {
+    return distributed == limit;
+  }
+
+  function completed()
+  private returns (bool)
+  {
+    return ended() || funded();
+  }
+
+
+  
+
+  modifier ensurestarted()
+  {
+    require(started());
+    _;
+  }
+
+  modifier ensurenotended()
+  {
+    require(!ended());
+    _;
+  }
+
+  modifier ensurecompleted()
+  {
+    require(completed());
+    _;
+  }
+
+  modifier underlimit()
+  {
+    require(purchased() + distributed <= limit);
+    _;
+  }
+
+}

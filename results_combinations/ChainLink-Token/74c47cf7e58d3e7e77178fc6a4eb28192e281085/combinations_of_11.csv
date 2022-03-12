@@ -1,0 +1,13 @@
+similarity,combination
+13,['Ownable.sol', 'SafeMath.sol', 'LinkReceiver.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'ApproveAndCallReceiver.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol']
+30,['Ownable.sol', 'SafeMath.sol', 'LinkReceiver.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'ApproveAndCallReceiver.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'ERC20.sol']
+19,['Ownable.sol', 'SafeMath.sol', 'LinkReceiver.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'ApproveAndCallReceiver.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'TokenSale.sol', 'ERC20.sol']
+23,['Ownable.sol', 'SafeMath.sol', 'LinkReceiver.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'ApproveAndCallReceiver.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+16,['Ownable.sol', 'SafeMath.sol', 'LinkReceiver.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'ApproveAndCallReceiver.sol', 'StandardTokenMock.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+22,['Ownable.sol', 'SafeMath.sol', 'LinkReceiver.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'ApproveAndCallReceiver.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+22,['Ownable.sol', 'SafeMath.sol', 'LinkReceiver.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+23,['Ownable.sol', 'SafeMath.sol', 'LinkReceiver.sol', 'ERC20Basic.sol', 'ApproveAndCallReceiver.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+17,['Ownable.sol', 'SafeMath.sol', 'LinkReceiver.sol', 'BasicTokenMock.sol', 'ApproveAndCallReceiver.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+16,['Ownable.sol', 'SafeMath.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'ApproveAndCallReceiver.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+15,['Ownable.sol', 'LinkReceiver.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'ApproveAndCallReceiver.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']
+22,['SafeMath.sol', 'LinkReceiver.sol', 'ERC20Basic.sol', 'BasicTokenMock.sol', 'ApproveAndCallReceiver.sol', 'StandardTokenMock.sol', 'StandardToken.sol', 'LinkToken.sol', 'BasicToken.sol', 'TokenSale.sol', 'ERC20.sol']

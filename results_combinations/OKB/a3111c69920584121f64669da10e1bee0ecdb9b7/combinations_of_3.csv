@@ -1,0 +1,5 @@
+similarity,combination
+2,['SafeMath.sol', 'OKb.sol', 'Address.sol']
+2,['SafeMath.sol', 'OKb.sol', 'Proxy.sol']
+4,['SafeMath.sol', 'Address.sol', 'Proxy.sol']
+2,['OKb.sol', 'Address.sol', 'Proxy.sol']

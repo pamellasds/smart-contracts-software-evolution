@@ -1,0 +1,10 @@
+similarity,combination
+9,['PAXWithBalance.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'PAXImplementation.sol', 'SafeMathMock.sol', 'AddressUtils.sol']
+27,['PAXWithBalance.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'PAXImplementation.sol', 'SafeMathMock.sol', 'AdminUpgradeabilityProxy.sol']
+37,['PAXWithBalance.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'PAXImplementation.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+66,['PAXWithBalance.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+18,['PAXWithBalance.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'PAXImplementation.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+37,['PAXWithBalance.sol', 'Migrations.sol', 'UpgradeabilityProxy.sol', 'Proxy.sol', 'PAXImplementation.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+13,['PAXWithBalance.sol', 'Migrations.sol', 'SafeMath.sol', 'Proxy.sol', 'PAXImplementation.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+40,['PAXWithBalance.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'PAXImplementation.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']
+37,['Migrations.sol', 'UpgradeabilityProxy.sol', 'SafeMath.sol', 'Proxy.sol', 'PAXImplementation.sol', 'SafeMathMock.sol', 'AddressUtils.sol', 'AdminUpgradeabilityProxy.sol']

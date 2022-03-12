@@ -1,0 +1,8 @@
+commit,[similarity,combination]
+73e26dd97c51de69e3225dd2303077d432c64b99,
+36f35587e866b802e0dbb0fd631e33b65f4e2306,
+e271a4932b178ea8205cabb8b395a59404f0ae3e,
+15db84ee2d2a3362b3d2d19b90801c7653604456,['83', "['ERC20TokenInterface.sol'", " 'PowerLedger.sol']"]
+48ffcada82ca6a2ce35fd80d0ad530425ab3b998,['83', "['ERC20TokenInterface.sol'", " 'PowerLedger.sol']"]
+faba031ce765a4d736121377fce844cbe9d8560b,['83', "['ERC20TokenInterface.sol'", " 'PowerLedger.sol']"]
+a2769f84629d802340c9c2d865e5df84dae1857e,['83', "['ERC20TokenInterface.sol'", " 'PowerLedger.sol']"]

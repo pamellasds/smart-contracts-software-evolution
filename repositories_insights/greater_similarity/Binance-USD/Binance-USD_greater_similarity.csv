@@ -1,0 +1,3 @@
+commit,[similarity,combination]
+fb527f5306cd56b915ae5568d6a18b40a02a5c49,['100', "['UpgradeabilityProxy.sol'", " 'Proxy.sol'", " 'AddressUtils.sol'", " 'AdminUpgradeabilityProxy.sol']"]
+e589f2386941031bafe23cf42576942b0cdb5563,['100', "['UpgradeabilityProxy.sol'", " 'Proxy.sol'", " 'AddressUtils.sol'", " 'AdminUpgradeabilityProxy.sol']"]

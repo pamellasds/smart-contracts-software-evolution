@@ -1,0 +1,2 @@
+similarity,combination
+18,['ERC677Token.sol', 'LinkReceiver.sol', 'ERC677.sol', 'linkERC20.sol', 'linkSafeMath.sol', 'BasicTokenMock.sol', 'StandardTokenMock.sol', 'Token677ReceiverMock.sol', 'linkBasicToken.sol', 'ERC677Receiver.sol', 'linkERC20Basic.sol', 'LinkToken.sol', 'linkStandardToken.sol', 'NotERC677Compatible.sol', 'Token677.sol', 'flattened.sol']

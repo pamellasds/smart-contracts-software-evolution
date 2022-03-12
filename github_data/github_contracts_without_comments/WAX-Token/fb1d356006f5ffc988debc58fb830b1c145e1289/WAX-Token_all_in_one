@@ -1,0 +1,81 @@
+pragma solidity ^0.4.13;
+
+
+import ;
+import ;
+
+
+
+contract waxtoken is standardtoken, pausable {
+
+  string public constant name = ;                          
+  string public constant symbol = ;                                 
+  uint8 public constant decimals = 8;                                  
+  uint256 public constant initial_supply = 1000000000 * 10**uint256(decimals);    
+
+  
+  function waxtoken() {
+    totalsupply = initial_supply;                               
+    balances[msg.sender] = initial_supply;                      
+    transfer(0x0, msg.sender, initial_supply);
+  }
+
+  
+  function transfer(address _to, uint256 _value) whennotpaused returns (bool) {
+    require(_to != address(0));
+    require(_to != address(this));
+    return super.transfer(_to, _value);
+  }
+
+  
+  function transferfrom(address _from, address _to, uint256 _value) whennotpaused returns (bool) {
+    require(_to != address(0));
+    require(_to != address(this));
+    return super.transferfrom(_from, _to, _value);
+  }
+
+  
+  function approve(address _spender, uint256 _value) whennotpaused returns (bool) {
+    return super.approve(_spender, _value);
+  }
+
+  function() payable {
+      revert();
+  }
+
+  
+  function increaseapproval (address _spender, uint _addedvalue) whennotpaused returns (bool success) {
+    return super.increaseapproval(_spender, _addedvalue);
+  }
+
+  
+  function decreaseapproval (address _spender, uint _subtractedvalue) whennotpaused returns (bool success) {
+    return super.decreaseapproval(_spender, _subtractedvalue);
+  }
+
+}
+
+pragma solidity ^0.4.13;
+
+contract migrations {
+  address public owner;
+  uint public last_completed_migration;
+
+  modifier restricted() {
+    if (msg.sender == owner) _;
+  }
+
+  function migrations() {
+    owner = msg.sender;
+  }
+
+  function setcompleted(uint completed) restricted {
+    last_completed_migration = completed;
+  }
+
+  function upgrade(address new_address) restricted {
+    migrations upgraded = migrations(new_address);
+    upgraded.setcompleted(last_completed_migration);
+  }
+}
+

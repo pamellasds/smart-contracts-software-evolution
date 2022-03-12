@@ -1,0 +1,11 @@
+similarity,combination
+4,['EthLend.sol', 'ENS.sol', 'ReputationToken.sol']
+4,['EthLend.sol', 'ENS.sol', 'SampleToken.sol']
+2,['EthLend.sol', 'ENS.sol', 'TestENS.sol']
+4,['EthLend.sol', 'ReputationToken.sol', 'SampleToken.sol']
+4,['EthLend.sol', 'ReputationToken.sol', 'TestENS.sol']
+4,['EthLend.sol', 'SampleToken.sol', 'TestENS.sol']
+6,['ENS.sol', 'ReputationToken.sol', 'SampleToken.sol']
+8,['ENS.sol', 'ReputationToken.sol', 'TestENS.sol']
+6,['ENS.sol', 'SampleToken.sol', 'TestENS.sol']
+6,['ReputationToken.sol', 'SampleToken.sol', 'TestENS.sol']

@@ -1,0 +1,172 @@
+pragma solidity ^0.4.15;
+
+import ;
+
+contract basicnft is nft, nftevents {
+
+  uint public totaltokens;
+
+  
+  mapping(address => uint[]) public ownedtokens;
+  mapping(address => uint) _virtuallength;
+  mapping(uint => uint) _tokenindexinownerarray;
+
+  
+  mapping(uint => address) public tokenowner;
+
+  
+  mapping(uint => address) public allowedtransfer;
+
+  
+  mapping(uint => bytes) public tokenmetadata;
+
+  function totalsupply() public constant returns (uint) {
+    return totaltokens;
+  }
+
+  function balanceof(address owner) public constant returns (uint) {
+    return _virtuallength[owner];
+  }
+
+  function tokenbyindex(address owner, uint index) public returns (uint) {
+    return ownedtokens[owner][index];
+  }
+
+  function ownerof(uint tokenid) public returns (address) {
+    return tokenowner[tokenid];
+  }
+
+  function transfer(address to, uint tokenid) public {
+    require(msg.sender == tokenowner[tokenid]);
+    return _transfer(msg.sender, to, tokenid);
+  }
+
+  function approve(address beneficiary, uint tokenid) public {
+    require(msg.sender == beneficiary);
+
+    if (allowedtransfer[tokenid] != 0) {
+      allowedtransfer[tokenid] = 0;
+      tokentransferdisallowed(tokenid, allowedtransfer[tokenid]);
+    }
+    allowedtransfer[tokenid] = beneficiary;
+    tokentransferallowed(tokenid, beneficiary);
+  }
+
+  function transferfrom(address from, address to, uint tokenid) public {
+    return _transfer(from, to, tokenid);
+  }
+
+  function metadata(uint tokenid) constant public returns (bytes) {
+    return tokenmetadata[tokenid];
+  }
+
+  function updatetokenmetadata(uint tokenid, bytes _metadata) public {
+    require(msg.sender == tokenowner[tokenid]);
+    tokenmetadata[tokenid] = _metadata;
+    tokenmetadataupdated(tokenid, msg.sender, _metadata);
+  }
+
+  function _transfer(address from, address to, uint tokenid) internal {
+    require(tokenowner[tokenid] == from || allowedtransfer[tokenid] == from);
+
+    allowedtransfer[tokenid] = 0;
+    _removetokenfrom(from, tokenid);
+    _addtokento(to, tokenid);
+    tokentransferred(tokenid, from, to);
+  }
+
+  function _removetokenfrom(address from, uint tokenid) internal {
+    require(_virtuallength[from] > 0);
+
+    uint length = _virtuallength[from];
+    uint index = _tokenindexinownerarray[tokenid];
+    uint swaptoken = ownedtokens[from][length  1];
+
+    ownedtokens[from][index] = swaptoken;
+    _tokenindexinownerarray[swaptoken] = index;
+    _virtuallength[from];
+  }
+
+  function _addtokento(address owner, uint tokenid) internal {
+    if (ownedtokens[owner].length == _virtuallength[owner]) {
+      ownedtokens[owner].push(tokenid);
+    } else {
+      ownedtokens[owner][_virtuallength[owner]] = tokenid;
+    }
+    tokenowner[tokenid] = owner;
+    _tokenindexinownerarray[tokenid] = _virtuallength[owner];
+    _virtuallength[owner]++;
+  }
+}
+
+pragma solidity ^0.4.15;
+
+import ;
+
+contract land is basicnft {
+
+  string public name = ;
+  string public symbol = ;
+
+  address public claimcontract;
+  mapping (uint => uint) public latestping;
+
+  event tokenping(uint tokenid);
+
+  function land(address _claimcontract) {
+    claimcontract = _claimcontract;
+  }
+
+  function assignnewparcel(address beneficiary, uint tokenid, bytes metadata) public {
+    require(msg.sender == claimcontract);
+    require(tokenowner[tokenid] == 0);
+    latestping[tokenid] = now;
+    _addtokento(beneficiary, tokenid);
+    totaltokens++;
+    tokencreated(tokenid, beneficiary, metadata);
+  }
+
+  function ping(uint tokenid) public {
+    require(msg.sender == tokenowner[tokenid]);
+    latestping[tokenid] = now;
+    tokenping(tokenid);
+  }
+
+  function claimforgottenparcel(address beneficiary, uint tokenid) public {
+    require(tokenowner[tokenid] != 0);
+    require(latestping[tokenid] < now);
+    require(now  latestping[tokenid] > 1 years);
+    address oldowner = tokenowner[tokenid];
+    _transfer(oldowner, beneficiary, tokenid);
+    tokentransferred(tokenid, oldowner, beneficiary);
+  }
+}
+
+pragma solidity ^0.4.15;
+
+contract nft {
+  function totalsupply() constant returns (uint);
+  function balanceof(address) constant returns (uint);
+
+  function tokenbyindex(address owner, uint index) returns (uint);
+  function ownerof(uint tokenid) returns (address);
+
+  function transfer(address to, uint tokenid);
+  function approve(address beneficiary, uint tokenid);
+
+  function transferfrom(address from, address to, uint tokenid);
+
+  function metadata(uint tokenid) constant returns (bytes);
+}
+
+contract nftevents {
+  event tokencreated(uint tokenid, address owner, bytes metadata);
+  event tokendestroyed(uint tokenid, address owner);
+
+  event tokentransferred(uint tokenid, address from, address to);
+  event tokentransferallowed(uint tokenid, address beneficiary);
+  event tokentransferdisallowed(uint tokenid, address beneficiary);
+
+  event tokenmetadataupdated(uint tokenid, address owner, bytes data);
+}
+

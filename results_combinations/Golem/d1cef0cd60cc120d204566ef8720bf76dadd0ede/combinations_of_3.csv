@@ -1,0 +1,5 @@
+similarity,combination
+13,['ExampleMigration.sol', 'Token.sol', 'ProxyAccount.sol']
+12,['ExampleMigration.sol', 'Token.sol', 'BadWallet.sol']
+5,['ExampleMigration.sol', 'ProxyAccount.sol', 'BadWallet.sol']
+14,['Token.sol', 'ProxyAccount.sol', 'BadWallet.sol']

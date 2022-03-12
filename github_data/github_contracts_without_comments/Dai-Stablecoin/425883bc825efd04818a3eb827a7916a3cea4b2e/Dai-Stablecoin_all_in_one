@@ -1,0 +1,2660 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pragma solidity >=0.5.0;
+pragma experimental abiencoderv2;
+
+import ;
+
+contract flippy {
+    function kick(bytes32 urn, address gal, uint tab, uint lot, uint bid)
+        public returns (uint);
+    function gem() public returns (address);
+}
+
+contract hopeful {
+    function hope(address) public;
+    function nope(address) public;
+}
+
+contract vatlike {
+    struct ilk {
+        uint256 take;  
+        uint256 rate;  
+        uint256 ink;   
+        uint256 art;   
+    }
+    struct urn {
+        uint256 ink;   
+        uint256 art;   
+    }
+    function ilks(bytes32) public view returns (ilk memory);
+    function urns(bytes32,bytes32) public view returns (urn memory);
+    function grab(bytes32,bytes32,bytes32,bytes32,int,int) public;
+}
+
+contract pitlike {
+    function ilks(bytes32) public view returns (uint,uint);
+}
+
+contract vowlike {
+    function fess(uint) public;
+}
+
+contract cat is dsnote {
+    
+    mapping (address => uint) public wards;
+    function rely(address guy) public note auth { wards[guy] = 1; }
+    function deny(address guy) public note auth { wards[guy] = 0; }
+    modifier auth { require(wards[msg.sender] == 1); _; }
+
+    
+    struct ilk {
+        address flip;  
+        uint256 chop;  
+        uint256 lump;  
+    }
+    struct flip {
+        bytes32 ilk;  
+        bytes32 urn;  
+        uint256 ink;  
+        uint256 tab;  
+    }
+
+    mapping (bytes32 => ilk)  public ilks;
+    mapping (uint256 => flip) public flips;
+    uint256                   public nflip;
+
+    uint256 public live;
+    vatlike public vat;
+    pitlike public pit;
+    vowlike public vow;
+
+    
+    event bite(
+      bytes32 indexed ilk,
+      bytes32 indexed urn,
+      uint256 ink,
+      uint256 art,
+      uint256 tab,
+      uint256 flip
+    );
+
+    event flipkick(
+      uint256 nflip,
+      uint256 bid
+    );
+
+    
+    constructor(address vat_) public {
+        wards[msg.sender] = 1;
+        vat = vatlike(vat_);
+        live = 1;
+    }
+
+    
+    uint constant one = 10 ** 27;
+
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        z = x * y;
+        require(y == 0 || z / y == x);
+    }
+    function rmul(uint x, uint y) internal pure returns (uint z) {
+        z = x * y;
+        require(y == 0 || z / y == x);
+        z = z / one;
+    }
+
+    
+    function file(bytes32 what, address data) public note auth {
+        if (what == ) pit = pitlike(data);
+        if (what == ) vow = vowlike(data);
+    }
+    function file(bytes32 ilk, bytes32 what, uint data) public note auth {
+        if (what == ) ilks[ilk].chop = data;
+        if (what == ) ilks[ilk].lump = data;
+    }
+    function file(bytes32 ilk, bytes32 what, address flip) public note auth {
+        if (what == ) ilks[ilk].flip = flip;
+    }
+
+    
+    function bite(bytes32 ilk, bytes32 urn) public returns (uint) {
+        require(live == 1);
+        vatlike.ilk memory i = vat.ilks(ilk);
+        vatlike.urn memory u = vat.urns(ilk, urn);
+        (uint spot, uint line) = pit.ilks(ilk); line;
+        uint tab = rmul(u.art, i.rate);
+
+        require(rmul(u.ink, spot) < tab);  
+
+        vat.grab(ilk, urn, bytes32(bytes20(address(this))), bytes32(bytes20(address(vow))), int(u.ink), int(u.art));
+        vow.fess(tab);
+
+        flips[nflip] = flip(ilk, urn, u.ink, tab);
+
+        emit bite(ilk, urn, u.ink, u.art, tab, nflip);
+
+        return nflip++;
+    }
+    function flip(uint n, uint wad) public note returns (uint id) {
+        require(live == 1);
+        flip storage f = flips[n];
+        ilk  storage i = ilks[f.ilk];
+
+        require(wad <= f.tab);
+        require(wad == i.lump || (wad < i.lump && wad == f.tab));
+
+        uint tab = f.tab;
+        uint ink = mul(f.ink, wad) / tab;
+
+        f.tab = wad;
+        f.ink = ink;
+
+        hopeful(flippy(i.flip).gem()).hope(i.flip);
+        id = flippy(i.flip).kick({ urn: f.urn
+                                 , gal: address(vow)
+                                 , tab: rmul(wad, i.chop)
+                                 , lot: ink
+                                 , bid: 0
+                                 });
+        emit flipkick(n, id);
+        hopeful(flippy(i.flip).gem()).nope(i.flip);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pragma solidity >=0.5.0;
+
+contract vatlike {
+    function move(bytes32,bytes32,int) public;
+    function flux(bytes32,bytes32,bytes32,int) public;
+}
+
+contract gemmove {
+    vatlike public vat;
+    bytes32 public ilk;
+    constructor(address vat_, bytes32 ilk_) public {
+        vat = vatlike(vat_);
+        ilk = ilk_;
+    }
+    uint constant one = 10 ** 27;
+    function mul(uint x, uint y) internal pure returns (int z) {
+        z = int(x * y);
+        require(int(z) >= 0);
+        require(y == 0 || uint(z) / y == x);
+    }
+    mapping(address => mapping (address => uint)) public can;
+    function hope(address guy) public { can[msg.sender][guy] = 1; }
+    function nope(address guy) public { can[msg.sender][guy] = 0; }
+    function move(bytes32 src, bytes32 dst, uint wad) public {
+        require(bytes20(src) == bytes20(msg.sender) || can[address(bytes20(src))][msg.sender] == 1);
+        vat.flux(ilk, src, dst, mul(one, wad));
+    }
+    function push(bytes32 urn, uint wad) public {
+        bytes32 guy = bytes32(bytes20(msg.sender));
+        vat.flux(ilk, guy, urn, mul(one,wad));
+    }
+}
+
+contract daimove {
+    vatlike public vat;
+    constructor(address vat_) public {
+        vat = vatlike(vat_);
+    }
+    uint constant one = 10 ** 27;
+    function mul(uint x, uint y) internal pure returns (int z) {
+        z = int(x * y);
+        require(int(z) >= 0);
+        require(y == 0 || uint(z) / y == x);
+    }
+    mapping(address => mapping (address => uint)) public can;
+    function hope(address guy) public { can[msg.sender][guy] = 1; }
+    function nope(address guy) public { can[msg.sender][guy] = 0; }
+    function move(bytes32 src, bytes32 dst, uint wad) public {
+        require(bytes20(src) == bytes20(msg.sender) || can[address(bytes20(src))][msg.sender] == 1);
+        vat.move(src, dst, mul(one, wad));
+    }
+}
+
+pragma solidity >=0.5.0;
+
+import ;
+
+contract vatlike {
+    function ilks(bytes32) public returns (uint,uint,uint,uint);
+    function fold(bytes32,bytes32,int) public;
+}
+
+contract jug is dsnote {
+    
+    mapping (address => uint) public wards;
+    function rely(address guy) public note auth { wards[guy] = 1; }
+    function deny(address guy) public note auth { wards[guy] = 0; }
+    modifier auth { require(wards[msg.sender] == 1); _; }
+
+    
+    struct ilk {
+        uint256 tax;
+        uint48  rho;
+    }
+
+    mapping (bytes32 => ilk) public ilks;
+    vatlike                  public vat;
+    bytes32                  public vow;
+    uint256                  public repo;
+
+    
+    constructor(address vat_) public {
+        wards[msg.sender] = 1;
+        vat = vatlike(vat_);
+    }
+
+    
+    function rpow(uint x, uint n, uint base) internal pure returns (uint z) {
+      assembly {
+        switch x case 0 {switch n case 0 {z := base} default {z := 0}}
+        default {
+          switch mod(n, 2) case 0 { z := base } default { z := x }
+          let half := div(base, 2)  
+          for { n := div(n, 2) } n { n := div(n,2) } {
+            let xx := mul(x, x)
+            if iszero(eq(div(xx, x), x)) { revert(0,0) }
+            let xxround := add(xx, half)
+            if lt(xxround, xx) { revert(0,0) }
+            x := div(xxround, base)
+            if mod(n,2) {
+              let zx := mul(z, x)
+              if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
+              let zxround := add(zx, half)
+              if lt(zxround, zx) { revert(0,0) }
+              z := div(zxround, base)
+            }
+          }
+        }
+      }
+    }
+    uint256 constant one = 10 ** 27;
+    function add(uint x, uint y) internal pure returns (uint z) {
+        z = x + y;
+        require(z >= x);
+    }
+    function diff(uint x, uint y) internal pure returns (int z) {
+        z = int(x)  int(y);
+        require(int(x) >= 0 && int(y) >= 0);
+    }
+    function rmul(uint x, uint y) internal pure returns (uint z) {
+        z = x * y;
+        require(y == 0 || z / y == x);
+        z = z / one;
+    }
+
+    
+    function init(bytes32 ilk) public note auth {
+        ilk storage i = ilks[ilk];
+        require(i.tax == 0);
+        i.tax = one;
+        i.rho = uint48(now);
+    }
+    function file(bytes32 ilk, bytes32 what, uint data) public note auth {
+        ilk storage i = ilks[ilk];
+        if (what == ) i.tax = data;
+    }
+    function file(bytes32 what, uint data) public note auth {
+        if (what == ) repo = data;
+    }
+    function file(bytes32 what, bytes32 data) public note auth {
+        if (what == ) vow = data;
+    }
+
+    
+    function drip(bytes32 ilk) public note {
+        ilk storage i = ilks[ilk];
+        require(now >= i.rho);
+        (uint take, uint rate, uint ink, uint art) = vat.ilks(ilk); art; ink; take;
+        vat.fold(ilk, vow, diff(rmul(rpow(add(repo, i.tax), now  i.rho, one), rate), rate));
+        i.rho = uint48(now);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pragma solidity >=0.5.0;
+
+import ;
+
+contract dailike {
+    function move(bytes32,bytes32,uint) public;
+}
+contract gemlike {
+    function mint(address,uint) public;
+}
+
+
+
+contract flopper is dsnote {
+    
+    mapping (address => uint) public wards;
+    function rely(address guy) public note auth { wards[guy] = 1; }
+    function deny(address guy) public note auth { wards[guy] = 0; }
+    modifier auth { require(wards[msg.sender] == 1); _; }
+
+    
+    struct bid {
+        uint256 bid;
+        uint256 lot;
+        address guy;  
+        uint48  tic;  
+        uint48  end;
+        address vow;
+    }
+
+    mapping (uint => bid) public bids;
+
+    dailike  public   dai;
+    gemlike  public   gem;
+
+    uint256  constant one = 1.00e27;
+    uint256  public   beg = 1.05e27;  
+    uint48   public   ttl = 3 hours;  
+    uint48   public   tau = 2 days;   
+    uint256  public kicks = 0;
+
+    
+    event kick(
+      uint256 id,
+      uint256 lot,
+      uint256 bid,
+      address indexed gal
+    );
+
+    
+    constructor(address dai_, address gem_) public {
+        wards[msg.sender] = 1;
+        dai = dailike(dai_);
+        gem = gemlike(gem_);
+    }
+
+    
+    function add(uint48 x, uint48 y) internal pure returns (uint48 z) {
+        z = x + y;
+        require(z >= x);
+    }
+    function mul(uint x, uint y) internal pure returns (int z) {
+        z = int(x * y);
+        require(int(z) >= 0);
+        require(y == 0 || uint(z) / y == x);
+    }
+
+    function b32(address a) internal pure returns (bytes32) {
+        return bytes32(bytes20(a));
+    }
+
+    
+    function kick(address gal, uint lot, uint bid) public auth returns (uint id) {
+        require(kicks < uint(1));
+        id = ++kicks;
+
+        bids[id].vow = msg.sender;
+        bids[id].bid = bid;
+        bids[id].lot = lot;
+        bids[id].guy = gal;
+        bids[id].end = add(uint48(now), tau);
+
+        emit kick(id, lot, bid, gal);
+    }
+    function dent(uint id, uint lot, uint bid) public note {
+        require(bids[id].guy != address(0));
+        require(bids[id].tic > now || bids[id].tic == 0);
+        require(bids[id].end > now);
+
+        require(bid == bids[id].bid);
+        require(lot <  bids[id].lot);
+        require(uint(mul(beg, lot)) / one <= bids[id].lot);  
+
+        dai.move(b32(msg.sender), b32(bids[id].guy), bid);
+
+        bids[id].guy = msg.sender;
+        bids[id].lot = lot;
+        bids[id].tic = add(uint48(now), ttl);
+    }
+    function deal(uint id) public note {
+        require(bids[id].tic < now && bids[id].tic != 0 ||
+                bids[id].end < now);
+        gem.mint(bids[id].guy, bids[id].lot);
+        delete bids[id];
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pragma solidity >=0.5.0;
+
+import ;
+
+contract dailike {
+    function move(bytes32,bytes32,uint) public;
+}
+contract gemlike {
+    function move(bytes32,bytes32,uint) public;
+    function push(bytes32,uint) public;
+}
+
+
+
+contract flipper is dsnote {
+    
+    struct bid {
+        uint256 bid;
+        uint256 lot;
+        address guy;  
+        uint48  tic;  
+        uint48  end;
+        bytes32 urn;
+        address gal;
+        uint256 tab;
+    }
+
+    mapping (uint => bid) public bids;
+
+    dailike public   dai;
+    gemlike public   gem;
+
+    uint256 constant one = 1.00e27;
+    uint256 public   beg = 1.05e27;  
+    uint48  public   ttl = 3 hours;  
+    uint48  public   tau = 2 days;   
+    uint256 public kicks = 0;
+
+    
+    event kick(
+      uint256 id,
+      uint256 lot,
+      uint256 bid,
+      uint256 tab,
+      bytes32 indexed urn,
+      address indexed gal
+    );
+
+    
+    constructor(address dai_, address gem_) public {
+        dai = dailike(dai_);
+        gem = gemlike(gem_);
+    }
+
+    
+    function add(uint48 x, uint48 y) internal pure returns (uint48 z) {
+        z = x + y;
+        require(z >= x);
+    }
+    function mul(uint x, uint y) internal pure returns (int z) {
+        z = int(x * y);
+        require(int(z) >= 0);
+        require(y == 0 || uint(z) / y == x);
+    }
+
+    function b32(address a) internal pure returns (bytes32) {
+        return bytes32(bytes20(a));
+    }
+
+    
+    function kick(bytes32 urn, address gal, uint tab, uint lot, uint bid)
+        public note returns (uint id)
+    {
+        require(kicks < uint(1));
+        id = ++kicks;
+
+        bids[id].bid = bid;
+        bids[id].lot = lot;
+        bids[id].guy = msg.sender; 
+        bids[id].end = add(uint48(now), tau);
+        bids[id].urn = urn;
+        bids[id].gal = gal;
+        bids[id].tab = tab;
+
+        gem.move(b32(msg.sender), b32(address(this)), lot);
+
+        emit kick(id, lot, bid, tab, urn, gal);
+    }
+    function tick(uint id) public note {
+        require(bids[id].end < now);
+        require(bids[id].tic == 0);
+        bids[id].end = add(uint48(now), tau);
+    }
+    function tend(uint id, uint lot, uint bid) public note {
+        require(bids[id].guy != address(0));
+        require(bids[id].tic > now || bids[id].tic == 0);
+        require(bids[id].end > now);
+
+        require(lot == bids[id].lot);
+        require(bid <= bids[id].tab);
+        require(bid >  bids[id].bid);
+        require(mul(bid, one) >= mul(beg, bids[id].bid) || bid == bids[id].tab);
+
+        dai.move(b32(msg.sender), b32(bids[id].guy), bids[id].bid);
+        dai.move(b32(msg.sender), b32(bids[id].gal), bid  bids[id].bid);
+
+        bids[id].guy = msg.sender;
+        bids[id].bid = bid;
+        bids[id].tic = add(uint48(now), ttl);
+    }
+    function dent(uint id, uint lot, uint bid) public note {
+        require(bids[id].guy != address(0));
+        require(bids[id].tic > now || bids[id].tic == 0);
+        require(bids[id].end > now);
+
+        require(bid == bids[id].bid);
+        require(bid == bids[id].tab);
+        require(lot < bids[id].lot);
+        require(mul(beg, lot) <= mul(bids[id].lot, one));
+
+        dai.move(b32(msg.sender), b32(bids[id].guy), bid);
+        gem.push(bids[id].urn, bids[id].lot  lot);
+
+        bids[id].guy = msg.sender;
+        bids[id].lot = lot;
+        bids[id].tic = add(uint48(now), ttl);
+    }
+    function deal(uint id) public note {
+        require(bids[id].tic != 0 && (bids[id].tic < now || bids[id].end < now));
+        gem.push(b32(bids[id].guy), bids[id].lot);
+        delete bids[id];
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pragma solidity >=0.5.0;
+
+import ;
+
+contract dailike {
+    function move(bytes32,bytes32,uint) public;
+}
+contract gemlike {
+    function move(address,address,uint) public;
+}
+
+
+
+contract flapper is dsnote {
+    
+    struct bid {
+        uint256 bid;
+        uint256 lot;
+        address guy;  
+        uint48  tic;  
+        uint48  end;
+        address gal;
+    }
+
+    mapping (uint => bid) public bids;
+
+    dailike  public   dai;
+    gemlike  public   gem;
+
+    uint256  constant one = 1.00e27;
+    uint256  public   beg = 1.05e27;  
+    uint48   public   ttl = 3 hours;  
+    uint48   public   tau = 2 days;   
+    uint256  public kicks = 0;
+
+    
+    event kick(
+      uint256 id,
+      uint256 lot,
+      uint256 bid,
+      address indexed gal
+    );
+
+    
+    constructor(address dai_, address gem_) public {
+        dai = dailike(dai_);
+        gem = gemlike(gem_);
+    }
+
+    
+    function add(uint48 x, uint48 y) internal pure returns (uint48 z) {
+        z = x + y;
+        require(z >= x);
+    }
+    function mul(uint x, uint y) internal pure returns (int z) {
+        z = int(x * y);
+        require(int(z) >= 0);
+        require(y == 0 || uint(z) / y == x);
+    }
+
+    function b32(address a) internal pure returns (bytes32) {
+        return bytes32(bytes20(a));
+    }
+
+    
+    function kick(address gal, uint lot, uint bid)
+        public returns (uint id)
+    {
+        require(kicks < uint(1));
+        id = ++kicks;
+
+        bids[id].bid = bid;
+        bids[id].lot = lot;
+        bids[id].guy = msg.sender; 
+        bids[id].end = add(uint48(now), tau);
+        bids[id].gal = gal;
+
+        dai.move(b32(msg.sender), b32(address(this)), lot);
+
+        emit kick(id, lot, bid, gal);
+    }
+    function tend(uint id, uint lot, uint bid) public note {
+        require(bids[id].guy != address(0));
+        require(bids[id].tic > now || bids[id].tic == 0);
+        require(bids[id].end > now);
+
+        require(lot == bids[id].lot);
+        require(bid >  bids[id].bid);
+        require(mul(bid, one) >= mul(beg, bids[id].bid));
+
+        gem.move(msg.sender, bids[id].guy, bids[id].bid);
+        gem.move(msg.sender, bids[id].gal, bid  bids[id].bid);
+
+        bids[id].guy = msg.sender;
+        bids[id].bid = bid;
+        bids[id].tic = add(uint48(now), ttl);
+    }
+    function deal(uint id) public note {
+        require(bids[id].tic < now && bids[id].tic != 0 ||
+                bids[id].end < now);
+        dai.move(b32(address(this)), b32(bids[id].guy), bids[id].lot);
+        delete bids[id];
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pragma solidity >=0.5.0;
+pragma experimental abiencoderv2;
+
+import ;
+
+contract vatlike {
+    struct ilk {
+        uint256 take;  
+        uint256 rate;  
+        uint256 ink;   
+        uint256 art;   
+    }
+    struct urn {
+        uint256 ink;   
+        uint256 art;   
+    }
+    function debt() public view returns (uint);
+    function ilks(bytes32) public view returns (ilk memory);
+    function urns(bytes32,bytes32) public view returns (urn memory);
+    function tune(bytes32,bytes32,bytes32,bytes32,int,int) public;
+}
+
+contract pit is dsnote {
+    
+    mapping (address => uint) public wards;
+    function rely(address guy) public note auth { wards[guy] = 1; }
+    function deny(address guy) public note auth { wards[guy] = 0; }
+    modifier auth { require(wards[msg.sender] == 1); _; }
+
+    
+    struct ilk {
+        uint256  spot;  
+        uint256  line;  
+    }
+    mapping (bytes32 => ilk) public ilks;
+
+    uint256 public live;  
+    uint256 public line;  
+    vatlike public  vat;  
+
+    
+    event frob(
+      bytes32 indexed ilk,
+      bytes32 indexed urn,
+      int256  dink,
+      int256  dart
+    );
+
+    
+    constructor(address vat_) public {
+        wards[msg.sender] = 1;
+        vat = vatlike(vat_);
+        live = 1;
+    }
+
+    
+    uint256 constant one = 10 ** 27;
+
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x);
+    }
+
+    
+    function file(bytes32 what, uint data) public note auth {
+        if (what == ) line = data;
+    }
+    function file(bytes32 ilk, bytes32 what, uint data) public note auth {
+        if (what == ) ilks[ilk].spot = data;
+        if (what == ) ilks[ilk].line = data;
+    }
+
+    
+    function frob(bytes32 ilk, bytes32 urn, bytes32 gem, bytes32 dai, int dink, int dart) public {
+        vatlike(vat).tune(ilk, urn, gem, dai, dink, dart);
+
+        vatlike.ilk memory i = vat.ilks(ilk);
+        vatlike.urn memory u = vat.urns(ilk, urn);
+
+        bool calm = mul(i.art, i.rate) <= mul(ilks[ilk].line, one) &&
+                            vat.debt() <= mul(line, one);
+        bool safe = mul(u.ink, ilks[ilk].spot) >= mul(u.art, i.rate);
+
+        require((calm || dart <= 0) && (dart <= 0 && dink >= 0 || safe));
+
+        require(msg.sender == address(bytes20(urn)) || dart <= 0 && dink >= 0);
+        require(msg.sender == address(bytes20(gem)) || dink < 0);
+        require(msg.sender == address(bytes20(dai)) || dart > 0);
+
+        require(i.rate != 0);
+        require(live == 1);
+
+        emit frob(ilk, urn, dink, dart);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pragma solidity >=0.5.0;
+
+import ;
+
+contract fusspot {
+    function kick(address gal, uint lot, uint bid) public returns (uint);
+    function dai() public returns (address);
+}
+
+contract hopeful {
+    function hope(address) public;
+    function nope(address) public;
+}
+
+contract vatlike {
+    function dai (bytes32) public view returns (uint);
+    function sin (bytes32) public view returns (uint);
+    function heal(bytes32,bytes32,int) public;
+}
+
+contract vow is dsnote {
+    
+    mapping (address => uint) public wards;
+    function rely(address guy) public note auth { wards[guy] = 1; }
+    function deny(address guy) public note auth { wards[guy] = 0; }
+    modifier auth { require(wards[msg.sender] == 1); _; }
+
+
+    
+    address public vat;
+    address public cow;  
+    address public row;  
+
+    mapping (uint48 => uint256) public sin; 
+    uint256 public sin;   
+    uint256 public ash;   
+
+    uint256 public wait;  
+    uint256 public sump;  
+    uint256 public bump;  
+    uint256 public hump;  
+
+    
+    constructor() public { wards[msg.sender] = 1; }
+
+    
+    uint256 constant one = 10 ** 27;
+
+    function add(uint x, uint y) internal pure returns (uint z) {
+        z = x + y;
+        require(z >= x);
+    }
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        z = x  y;
+        require(z <= x);
+    }
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x);
+    }
+
+    
+    function file(bytes32 what, uint data) public note auth {
+        if (what == ) wait = data;
+        if (what == ) bump = data;
+        if (what == ) sump = data;
+        if (what == ) hump = data;
+    }
+    function file(bytes32 what, address addr) public note auth {
+        if (what == ) cow = addr;
+        if (what == ) row = addr;
+        if (what == )  vat = addr;
+    }
+
+    
+    function awe() public view returns (uint) {
+        return uint(vatlike(vat).sin(bytes32(bytes20(address(this))))) / one;
+    }
+    
+    function joy() public view returns (uint) {
+        return uint(vatlike(vat).dai(bytes32(bytes20(address(this))))) / one;
+    }
+    
+    function woe() public view returns (uint) {
+        return sub(sub(awe(), sin), ash);
+    }
+
+    
+    function fess(uint tab) public note auth {
+        sin[uint48(now)] = add(sin[uint48(now)], tab);
+        sin = add(sin, tab);
+    }
+    
+    function flog(uint48 era) public note {
+        require(add(era, wait) <= now);
+        sin = sub(sin, sin[era]);
+        sin[era] = 0;
+    }
+
+    
+    function heal(uint wad) public note {
+        require(wad <= joy() && wad <= woe());
+        require(int(mul(wad, one)) >= 0);
+        vatlike(vat).heal(bytes32(bytes20(address(this))), bytes32(bytes20(address(this))), int(mul(wad, one)));
+    }
+    function kiss(uint wad) public note {
+        require(wad <= ash && wad <= joy());
+        ash = sub(ash, wad);
+        require(int(mul(wad, one)) >= 0);
+        vatlike(vat).heal(bytes32(bytes20(address(this))), bytes32(bytes20(address(this))), int(mul(wad, one)));
+    }
+
+    
+    function flop() public returns (uint id) {
+        require(woe() >= sump);
+        require(joy() == 0);
+        ash = add(ash, sump);
+        return fusspot(row).kick(address(this), uint(1), sump);
+    }
+    
+    function flap() public returns (uint id) {
+        require(joy() >= add(add(awe(), bump), hump));
+        require(woe() == 0);
+        hopeful(fusspot(cow).dai()).hope(cow);
+        id = fusspot(cow).kick(address(0), bump, 0);
+        hopeful(fusspot(cow).dai()).nope(cow);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pragma solidity >=0.5.0;
+
+contract vat {
+    
+    mapping (address => uint) public wards;
+    function rely(address guy) public note auth { wards[guy] = 1; }
+    function deny(address guy) public note auth { wards[guy] = 0; }
+    modifier auth { require(wards[msg.sender] == 1); _; }
+
+    
+    struct ilk {
+        uint256 take;  
+        uint256 rate;  
+        uint256 ink;   
+        uint256 art;   
+    }
+    struct urn {
+        uint256 ink;   
+        uint256 art;   
+    }
+
+    mapping (bytes32 => ilk)                       public ilks;
+    mapping (bytes32 => mapping (bytes32 => urn )) public urns;
+    mapping (bytes32 => mapping (bytes32 => uint)) public gem;  
+    mapping (bytes32 => uint256)                   public dai;  
+    mapping (bytes32 => uint256)                   public sin;  
+
+    uint256 public debt;  
+    uint256 public vice;  
+
+    
+    event note(
+        bytes4   indexed  sig,
+        bytes32  indexed  foo,
+        bytes32  indexed  bar,
+        bytes32  indexed  too,
+        bytes             fax
+    ) anonymous;
+    modifier note {
+        bytes32 foo;
+        bytes32 bar;
+        bytes32 too;
+        assembly {
+            foo := calldataload(4)
+            bar := calldataload(36)
+            too := calldataload(68)
+        }
+        emit note(msg.sig, foo, bar, too, msg.data); _;
+    }
+
+    
+    constructor() public { wards[msg.sender] = 1; }
+
+    
+    function add(uint x, int y) internal pure returns (uint z) {
+      assembly {
+        z := add(x, y)
+        if sgt(y, 0) { if iszero(gt(z, x)) { revert(0, 0) } }
+        if slt(y, 0) { if iszero(lt(z, x)) { revert(0, 0) } }
+      }
+    }
+    function sub(uint x, int y) internal pure returns (uint z) {
+      assembly {
+        z := sub(x, y)
+        if slt(y, 0) { if iszero(gt(z, x)) { revert(0, 0) } }
+        if sgt(y, 0) { if iszero(lt(z, x)) { revert(0, 0) } }
+      }
+    }
+    function mul(uint x, int y) internal pure returns (int z) {
+      assembly {
+        z := mul(x, y)
+        if slt(x, 0) { revert(0, 0) }
+        if iszero(eq(y, 0)) { if iszero(eq(sdiv(z, y), x)) { revert(0, 0) } }
+      }
+    }
+
+    
+    function init(bytes32 ilk) public note auth {
+        require(ilks[ilk].rate == 0);
+        require(ilks[ilk].take == 0);
+        ilks[ilk].rate = 10 ** 27;
+        ilks[ilk].take = 10 ** 27;
+    }
+
+    
+    function slip(bytes32 ilk, bytes32 guy, int256 rad) public note auth {
+        gem[ilk][guy] = add(gem[ilk][guy], rad);
+    }
+    function flux(bytes32 ilk, bytes32 src, bytes32 dst, int256 rad) public note auth {
+        gem[ilk][src] = sub(gem[ilk][src], rad);
+        gem[ilk][dst] = add(gem[ilk][dst], rad);
+    }
+    function move(bytes32 src, bytes32 dst, int256 rad) public note auth {
+        dai[src] = sub(dai[src], rad);
+        dai[dst] = add(dai[dst], rad);
+    }
+
+    
+    function tune(bytes32 i, bytes32 u, bytes32 v, bytes32 w, int dink, int dart) public note auth {
+        urn storage urn = urns[i][u];
+        ilk storage ilk = ilks[i];
+
+        urn.ink = add(urn.ink, dink);
+        urn.art = add(urn.art, dart);
+        ilk.ink = add(ilk.ink, dink);
+        ilk.art = add(ilk.art, dart);
+
+        gem[i][v] = sub(gem[i][v], mul(ilk.take, dink));
+        dai[w]    = add(dai[w],    mul(ilk.rate, dart));
+        debt      = add(debt,      mul(ilk.rate, dart));
+    }
+    function grab(bytes32 i, bytes32 u, bytes32 v, bytes32 w, int dink, int dart) public note auth {
+        urn storage urn = urns[i][u];
+        ilk storage ilk = ilks[i];
+
+        urn.ink = add(urn.ink, dink);
+        urn.art = add(urn.art, dart);
+        ilk.ink = add(ilk.ink, dink);
+        ilk.art = add(ilk.art, dart);
+
+        gem[i][v] = sub(gem[i][v], mul(ilk.take, dink));
+        sin[w]    = sub(sin[w],    mul(ilk.rate, dart));
+        vice      = sub(vice,      mul(ilk.rate, dart));
+    }
+
+    
+    function heal(bytes32 u, bytes32 v, int rad) public note auth {
+        sin[u] = sub(sin[u], rad);
+        dai[v] = sub(dai[v], rad);
+        vice   = sub(vice,   rad);
+        debt   = sub(debt,   rad);
+    }
+
+    
+    function fold(bytes32 i, bytes32 u, int rate) public note auth {
+        ilk storage ilk = ilks[i];
+        ilk.rate = add(ilk.rate, rate);
+        int rad  = mul(ilk.art, rate);
+        dai[u]   = add(dai[u], rad);
+        debt     = add(debt,   rad);
+    }
+    function toll(bytes32 i, bytes32 u, int take) public note auth {
+        ilk storage ilk = ilks[i];
+        ilk.take  = add(ilk.take, take);
+        gem[i][u] = sub(gem[i][u], mul(ilk.ink, take));
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+pragma solidity >=0.5.0;
+
+import ;
+
+contract gemlike {
+    function transfer(address,uint) public returns (bool);
+    function transferfrom(address,address,uint) public returns (bool);
+}
+
+contract dstoken {
+    function mint(address,uint) public;
+    function burn(address,uint) public;
+}
+
+contract vatlike {
+    function slip(bytes32,bytes32,int) public;
+    function move(bytes32,bytes32,int) public;
+    function flux(bytes32,bytes32,bytes32,int) public;
+}
+
+
+
+contract gemjoin is dsnote {
+    vatlike public vat;
+    bytes32 public ilk;
+    gemlike public gem;
+    constructor(address vat_, bytes32 ilk_, address gem_) public {
+        vat = vatlike(vat_);
+        ilk = ilk_;
+        gem = gemlike(gem_);
+    }
+    uint constant one = 10 ** 27;
+    function mul(uint x, uint y) internal pure returns (int z) {
+        z = int(x * y);
+        require(int(z) >= 0);
+        require(y == 0 || uint(z) / y == x);
+    }
+    function join(bytes32 urn, uint wad) public note {
+        vat.slip(ilk, urn, mul(one, wad));
+        require(gem.transferfrom(msg.sender, address(this), wad));
+    }
+    function exit(bytes32 urn, address guy, uint wad) public note {
+        require(bytes20(urn) == bytes20(msg.sender));
+        vat.slip(ilk, urn, mul(one, wad));
+        require(gem.transfer(guy, wad));
+    }
+}
+
+contract ethjoin is dsnote {
+    vatlike public vat;
+    bytes32 public ilk;
+    constructor(address vat_, bytes32 ilk_) public {
+        vat = vatlike(vat_);
+        ilk = ilk_;
+    }
+    uint constant one = 10 ** 27;
+    function mul(uint x, uint y) internal pure returns (int z) {
+        z = int(x * y);
+        require(int(z) >= 0);
+        require(y == 0 || uint(z) / y == x);
+    }
+    function join(bytes32 urn) public payable note {
+        vat.slip(ilk, urn, mul(one, msg.value));
+    }
+    function exit(bytes32 urn, address payable guy, uint wad) public note {
+        require(bytes20(urn) == bytes20(msg.sender));
+        vat.slip(ilk, urn, mul(one, wad));
+        guy.transfer(wad);
+    }
+}
+
+contract daijoin is dsnote {
+    vatlike public vat;
+    dstoken public dai;
+    constructor(address vat_, address dai_) public {
+        vat = vatlike(vat_);
+        dai = dstoken(dai_);
+    }
+    uint constant one = 10 ** 27;
+    function mul(uint x, uint y) internal pure returns (int z) {
+        z = int(x * y);
+        require(int(z) >= 0);
+        require(y == 0 || uint(z) / y == x);
+    }
+    function join(bytes32 urn, uint wad) public note {
+        vat.move(bytes32(bytes20(address(this))), urn, mul(one, wad));
+        dai.burn(msg.sender, wad);
+    }
+    function exit(bytes32 urn, address guy, uint wad) public note {
+        require(bytes20(urn) == bytes20(msg.sender));
+        vat.move(urn, bytes32(bytes20(address(this))), mul(one, wad));
+        dai.mint(guy, wad);
+    }
+}
+
+pragma solidity >=0.5.0;
+
+import ;
+import {dstoken} from ;
+
+import {flipper} from ;
+
+contract hevm {
+    function warp(uint256) public;
+}
+
+contract guy {
+    flipper flip;
+    constructor(flipper flip_) public {
+        flip = flip_;
+        dstoken(address(flip.dai())).approve(address(flip));
+        dstoken(address(flip.gem())).approve(address(flip));
+    }
+    function tend(uint id, uint lot, uint bid) public {
+        flip.tend(id, lot, bid);
+    }
+    function dent(uint id, uint lot, uint bid) public {
+        flip.dent(id, lot, bid);
+    }
+    function deal(uint id) public {
+        flip.deal(id);
+    }
+    function try_tend(uint id, uint lot, uint bid)
+        public returns (bool ok)
+    {
+        string memory sig = ;
+        (ok,) = address(flip).call(abi.encodewithsignature(sig, id, lot, bid));
+    }
+    function try_dent(uint id, uint lot, uint bid)
+        public returns (bool ok)
+    {
+        string memory sig = ;
+        (ok,) = address(flip).call(abi.encodewithsignature(sig, id, lot, bid));
+    }
+    function try_deal(uint id)
+        public returns (bool ok)
+    {
+        string memory sig = ;
+        (ok,) = address(flip).call(abi.encodewithsignature(sig, id));
+    }
+    function try_tick(uint id)
+        public returns (bool ok)
+    {
+        string memory sig = ;
+        (ok,) = address(flip).call(abi.encodewithsignature(sig, id));
+    }
+}
+
+contract dai is dstoken() {
+    function move(bytes32 src, bytes32 dst, uint wad) public {
+        move(address(bytes20(src)), address(bytes20(dst)), wad);
+    }
+}
+contract gem is dstoken() {
+    function move(bytes32 src, bytes32 dst, uint wad) public {
+        move(address(bytes20(src)), address(bytes20(dst)), wad);
+    }
+    function push(bytes32 guy, uint wad) public {
+        push(address(bytes20(guy)), wad);
+    }
+}
+
+contract gal {}
+
+
+contract fliptest is dstest {
+    hevm hevm;
+
+    flipper flip;
+
+    dai  dai;
+    gem  gem;
+
+    address ali;
+    address bob;
+    address gal;
+    bytes32 urn = bytes32(bytes20(address(0xacab)));
+
+    function setup() public {
+        hevm = hevm(0x7109709ecfa91a80626ff3989d68f67f5b1dd12d);
+        hevm.warp(1 hours);
+
+        dai = new dai();
+        gem = new gem();
+
+        flip = new flipper(address(dai), address(gem));
+
+        ali = address(new guy(flip));
+        bob = address(new guy(flip));
+        gal = address(new gal());
+
+        dai.approve(address(flip));
+        gem.approve(address(flip));
+
+        gem.mint(address(this), 1000 ether);
+
+        dai.mint(ali, 200 ether);
+        dai.mint(bob, 200 ether);
+    }
+    function test_kick() public {
+        flip.kick({ lot: 100 ether
+                  , tab: 50 ether
+                  , urn: urn
+                  , gal: gal
+                  , bid: 0
+                  });
+    }
+    function testfail_tend_empty() public {
+        
+        flip.tend(42, 0, 0);
+    }
+    function test_tend() public {
+        uint id = flip.kick({ lot: 100 ether
+                            , tab: 50 ether
+                            , urn: urn
+                            , gal: gal
+                            , bid: 0
+                            });
+
+        guy(ali).tend(id, 100 ether, 1 ether);
+        
+        asserteq(dai.balanceof(ali),   199 ether);
+        
+        asserteq(dai.balanceof(gal),     1 ether);
+
+        guy(bob).tend(id, 100 ether, 2 ether);
+        
+        asserteq(dai.balanceof(bob), 198 ether);
+        
+        asserteq(dai.balanceof(ali), 200 ether);
+        
+        asserteq(dai.balanceof(gal),   2 ether);
+
+        hevm.warp(5 hours);
+        guy(bob).deal(id);
+        
+        asserteq(gem.balanceof(bob), 100 ether);
+    }
+    function test_tend_later() public {
+        uint id = flip.kick({ lot: 100 ether
+                            , tab: 50 ether
+                            , urn: urn
+                            , gal: gal
+                            , bid: 0
+                            });
+        hevm.warp(5 hours);
+
+        guy(ali).tend(id, 100 ether, 1 ether);
+        
+        asserteq(dai.balanceof(ali), 199 ether);
+        
+        asserteq(dai.balanceof(gal),   1 ether);
+    }
+    function test_dent() public {
+        uint id = flip.kick({ lot: 100 ether
+                            , tab: 50 ether
+                            , urn: urn
+                            , gal: gal
+                            , bid: 0
+                            });
+        guy(ali).tend(id, 100 ether,  1 ether);
+        guy(bob).tend(id, 100 ether, 50 ether);
+
+        guy(ali).dent(id,  95 ether, 50 ether);
+        
+        asserteq(gem.balanceof(address(0xacab)), 5 ether);
+        asserteq(dai.balanceof(ali),  150 ether);
+        asserteq(dai.balanceof(bob),  200 ether);
+    }
+    function test_beg() public {
+        uint id = flip.kick({ lot: 100 ether
+                            , tab: 50 ether
+                            , urn: urn
+                            , gal: gal
+                            , bid: 0
+                            });
+        asserttrue( guy(ali).try_tend(id, 100 ether, 1.00 ether));
+        asserttrue(!guy(bob).try_tend(id, 100 ether, 1.01 ether));
+        
+        asserttrue(!guy(ali).try_tend(id, 100 ether, 1.01 ether));
+        asserttrue( guy(bob).try_tend(id, 100 ether, 1.07 ether));
+
+        
+        asserttrue( guy(ali).try_tend(id, 100 ether, 49 ether));
+        asserttrue( guy(bob).try_tend(id, 100 ether, 50 ether));
+
+        asserttrue(!guy(ali).try_dent(id, 100 ether, 50 ether));
+        asserttrue(!guy(ali).try_dent(id,  99 ether, 50 ether));
+        asserttrue( guy(ali).try_dent(id,  95 ether, 50 ether));
+    }
+    function test_deal() public {
+        uint id = flip.kick({ lot: 100 ether
+                            , tab: 50 ether
+                            , urn: urn
+                            , gal: gal
+                            , bid: 0
+                            });
+
+        
+        guy(ali).tend(id, 100 ether, 1 ether);
+        asserttrue(!guy(bob).try_deal(id));
+        hevm.warp(4.1 hours);
+        asserttrue( guy(bob).try_deal(id));
+
+        uint ie = flip.kick({ lot: 100 ether
+                            , tab: 50 ether
+                            , urn: urn
+                            , gal: gal
+                            , bid: 0
+                            });
+
+        
+        hevm.warp(2 days);
+        guy(ali).tend(ie, 100 ether, 1 ether);
+        asserttrue(!guy(bob).try_deal(ie));
+        hevm.warp(3 days);
+        asserttrue( guy(bob).try_deal(ie));
+    }
+    function test_tick() public {
+        
+        uint id = flip.kick({ lot: 100 ether
+                            , tab: 50 ether
+                            , urn: urn
+                            , gal: gal
+                            , bid: 0
+                            });
+        
+        asserttrue(!guy(ali).try_tick(id));
+        
+        hevm.warp(2 weeks);
+        
+        asserttrue(!guy(ali).try_tend(id, 100 ether, 1 ether));
+        asserttrue( guy(ali).try_tick(id));
+        
+        asserttrue( guy(ali).try_tend(id, 100 ether, 1 ether));
+    }
+    function test_no_deal_after_end() public {
+        
+        
+        uint id = flip.kick({ lot: 100 ether
+                            , tab: 50 ether
+                            , urn: urn
+                            , gal: gal
+                            , bid: 0
+                            });
+        asserttrue(!guy(ali).try_deal(id));
+        hevm.warp(2 weeks);
+        asserttrue(!guy(ali).try_deal(id));
+        asserttrue( guy(ali).try_tick(id));
+        asserttrue(!guy(ali).try_deal(id));
+    }
+}
+
+pragma solidity >=0.5.0;
+pragma experimental abiencoderv2;
+
+import ;
+import ;
+
+import {vat} from ;
+import {pit} from ;
+import {cat} from ;
+import {vow} from ;
+import {jug} from ;
+import {gemjoin, ethjoin, daijoin} from ;
+import {gemmove, daimove} from ;
+
+import {flipper} from ;
+import {flopper} from ;
+import {flapper} from ;
+
+
+contract hevm {
+    function warp(uint256) public;
+}
+
+contract testvat is vat {
+    uint256 constant one = 10 ** 27;
+    function mint(address guy, uint wad) public {
+        dai[bytes32(bytes20(guy))] += wad * one;
+        debt += wad * one;
+    }
+    function balanceof(address guy) public view returns (uint) {
+        return dai[bytes32(bytes20(guy))] / one;
+    }
+}
+
+contract testpit is pit {
+    constructor(address vat) pit(vat) public {}
+    function frob(bytes32 ilk, int dink, int dart) public {
+        bytes32 guy = bytes32(bytes20(msg.sender));
+        frob(ilk, guy, guy, guy, dink, dart);
+    }
+}
+
+contract guy {
+    function try_call(address addr, bytes calldata data) external returns (bool) {
+        bytes memory _data = data;
+        assembly {
+            let ok := call(gas, addr, 0, add(_data, 0x20), mload(_data), 0, 0)
+            let free := mload(0x40)
+            mstore(free, ok)
+            mstore(0x40, add(free, 32))
+            revert(free, 32)
+        }
+    }
+    function can_frob(address pit, bytes32 ilk, bytes32 u, bytes32 v, bytes32 w, int dink, int dart) public returns (bool) {
+        string memory sig = ;
+        bytes memory data = abi.encodewithsignature(sig, ilk, u, v, w, dink, dart);
+
+        bytes memory can_call = abi.encodewithsignature(, pit, data);
+        (bool ok, bytes memory success) = address(this).call(can_call);
+
+        ok = abi.decode(success, (bool));
+        if (ok) return true;
+    }
+    function frob(address pit, bytes32 ilk, bytes32 u, bytes32 v, bytes32 w, int dink, int dart) public returns (bool) {
+        pit(pit).frob(ilk, u, v, w, dink, dart);
+    }
+}
+
+
+contract frobtest is dstest {
+    testvat vat;
+    testpit pit;
+    dstoken gold;
+    jug     drip;
+
+    gemjoin gema;
+
+    function try_frob(bytes32 ilk, int ink, int art) public returns (bool ok) {
+        string memory sig = ;
+        bytes32 self = bytes32(bytes20(address(this)));
+        (ok,) = address(pit).call(abi.encodewithsignature(sig, ilk, self, self, self, ink, art));
+    }
+
+    function ray(uint wad) internal pure returns (uint) {
+        return wad * 10 ** 9;
+    }
+
+    function setup() public {
+        vat = new testvat();
+        pit = new testpit(address(vat));
+
+        gold = new dstoken();
+        gold.mint(1000 ether);
+
+        vat.init();
+        gema = new gemjoin(address(vat), , address(gold));
+
+        pit.file(, , ray(1 ether));
+        pit.file(, , 1000 ether);
+        pit.file(, uint(1000 ether));
+        drip = new jug(address(vat));
+        drip.init();
+        vat.rely(address(drip));
+
+        gold.approve(address(gema));
+        gold.approve(address(vat));
+
+        vat.rely(address(pit));
+        vat.rely(address(gema));
+
+        gema.join(bytes32(bytes20(address(this))), 1000 ether);
+    }
+
+    function gem(bytes32 ilk, address urn) internal view returns (uint) {
+        return vat.gem(ilk, bytes32(bytes20(urn))) / 10 ** 27;
+    }
+    function ink(bytes32 ilk, address urn) internal view returns (uint) {
+        (uint ink_, uint art_) = vat.urns(ilk, bytes32(bytes20(urn))); art_;
+        return ink_;
+    }
+    function art(bytes32 ilk, address urn) internal view returns (uint) {
+        (uint ink_, uint art_) = vat.urns(ilk, bytes32(bytes20(urn))); ink_;
+        return art_;
+    }
+
+
+    function test_join() public {
+        bytes32 urn = bytes32(bytes20(address(this)));
+        gold.mint(500 ether);
+        asserteq(gold.balanceof(address(this)),    500 ether);
+        asserteq(gold.balanceof(address(gema)),   1000 ether);
+        gema.join(urn,                             500 ether);
+        asserteq(gold.balanceof(address(this)),      0 ether);
+        asserteq(gold.balanceof(address(gema)),   1500 ether);
+        gema.exit(urn, address(this),              250 ether);
+        asserteq(gold.balanceof(address(this)),    250 ether);
+        asserteq(gold.balanceof(address(gema)),   1250 ether);
+    }
+    function test_lock() public {
+        asserteq(ink(, address(this)),    0 ether);
+        asserteq(gem(, address(this)), 1000 ether);
+        pit.frob(, 6 ether, 0);
+        asserteq(ink(, address(this)),   6 ether);
+        asserteq(gem(, address(this)), 994 ether);
+        pit.frob(, 6 ether, 0);
+        asserteq(ink(, address(this)),    0 ether);
+        asserteq(gem(, address(this)), 1000 ether);
+    }
+    function test_calm() public {
+        
+        
+        pit.file(, , 10 ether);
+        asserttrue( try_frob(, 10 ether, 9 ether));
+        
+        asserttrue(!try_frob(,  0 ether, 2 ether));
+    }
+    function test_cool() public {
+        
+        
+        pit.file(, , 10 ether);
+        asserttrue(try_frob(, 10 ether,  8 ether));
+        pit.file(, , 5 ether);
+        
+        asserttrue(try_frob(,  0 ether, 1 ether));
+    }
+    function test_safe() public {
+        
+        
+        pit.frob(, 10 ether, 5 ether);                
+        asserttrue(!try_frob(, 0 ether, 6 ether));  
+    }
+    function test_nice() public {
+        
+        
+
+        pit.frob(, 10 ether, 10 ether);
+        pit.file(, , ray(0.5 ether));  
+
+        
+        asserttrue(!try_frob(,  0 ether,  1 ether));
+        
+        asserttrue( try_frob(,  0 ether, 1 ether));
+        
+        asserttrue(!try_frob(, 1 ether,  0 ether));
+        
+        asserttrue( try_frob(,  1 ether,  0 ether));
+
+        
+        
+        asserttrue(!this.try_frob(, 2 ether, 4 ether));
+        
+        asserttrue(!this.try_frob(,  5 ether,  1 ether));
+
+        
+        asserttrue( this.try_frob(, 1 ether, 4 ether));
+        pit.file(, , ray(0.4 ether));  
+        
+        asserttrue( this.try_frob(,  5 ether, 1 ether));
+    }
+
+    function b32(address addr) internal pure returns (bytes32) {
+        return bytes32(bytes20(addr));
+    }
+    function rad(uint wad) internal pure returns (uint) {
+        return wad * 10 ** 27;
+    }
+    function test_alt_callers() public {
+        guy ali = new guy();
+        guy bob = new guy();
+        guy che = new guy();
+
+        bytes32 a = b32(address(ali));
+        bytes32 b = b32(address(bob));
+        bytes32 c = b32(address(che));
+
+        vat.slip(, a, int(rad(20 ether)));
+        vat.slip(, b, int(rad(20 ether)));
+        vat.slip(, c, int(rad(20 ether)));
+
+        ali.frob(address(pit), , a, a, a, 10 ether, 5 ether);
+
+        
+        asserttrue( ali.can_frob(address(pit), , a, a, a,  1 ether,  0 ether));
+        asserttrue( bob.can_frob(address(pit), , a, b, b,  1 ether,  0 ether));
+        asserttrue( che.can_frob(address(pit), , a, c, c,  1 ether,  0 ether));
+        
+        asserttrue(!ali.can_frob(address(pit), , a, b, a,  1 ether,  0 ether));
+        asserttrue(!bob.can_frob(address(pit), , a, c, b,  1 ether,  0 ether));
+        asserttrue(!che.can_frob(address(pit), , a, a, c,  1 ether,  0 ether));
+
+        
+        asserttrue( ali.can_frob(address(pit), , a, a, a, 1 ether,  0 ether));
+        asserttrue(!bob.can_frob(address(pit), , a, b, b, 1 ether,  0 ether));
+        asserttrue(!che.can_frob(address(pit), , a, c, c, 1 ether,  0 ether));
+        
+        asserttrue( ali.can_frob(address(pit), , a, b, a, 1 ether,  0 ether));
+        asserttrue( ali.can_frob(address(pit), , a, c, a, 1 ether,  0 ether));
+
+        
+        asserttrue( ali.can_frob(address(pit), , a, a, a,  0 ether,  1 ether));
+        asserttrue(!bob.can_frob(address(pit), , a, b, b,  0 ether,  1 ether));
+        asserttrue(!che.can_frob(address(pit), , a, c, c,  0 ether,  1 ether));
+        
+        asserttrue( ali.can_frob(address(pit), , a, a, b,  0 ether,  1 ether));
+        asserttrue( ali.can_frob(address(pit), , a, a, c,  0 ether,  1 ether));
+
+        vat.move(a, b, int(rad(1 ether)));
+        vat.move(a, c, int(rad(1 ether)));
+
+        
+        asserttrue( ali.can_frob(address(pit), , a, a, a,  0 ether, 1 ether));
+        asserttrue( bob.can_frob(address(pit), , a, b, b,  0 ether, 1 ether));
+        asserttrue( che.can_frob(address(pit), , a, c, c,  0 ether, 1 ether));
+        
+        asserttrue(!ali.can_frob(address(pit), , a, a, b,  0 ether, 1 ether));
+        asserttrue(!bob.can_frob(address(pit), , a, b, c,  0 ether, 1 ether));
+        asserttrue(!che.can_frob(address(pit), , a, c, a,  0 ether, 1 ether));
+    }
+}
+
+contract jointest is dstest {
+    testvat vat;
+    ethjoin etha;
+    daijoin daia;
+    dstoken dai;
+    bytes32 me;
+
+    function setup() public {
+        vat = new testvat();
+        vat.init();
+
+        etha = new ethjoin(address(vat), );
+        vat.rely(address(etha));
+
+        dai  = new dstoken();
+        daia = new daijoin(address(vat), address(dai));
+        vat.rely(address(daia));
+        dai.setowner(address(daia));
+
+        me = bytes32(bytes20(address(this)));
+    }
+    function () external payable {}
+    function test_eth_join() public {
+        etha.join.value(10 ether)(bytes32(bytes20(address(this))));
+        asserteq(vat.gem(, me), rad(10 ether));
+    }
+    function test_eth_exit() public {
+        bytes32 urn = bytes32(bytes20(address(this)));
+        etha.join.value(50 ether)(urn);
+        etha.exit(urn, address(this), 10 ether);
+        asserteq(vat.gem(, me), rad(40 ether));
+    }
+    function rad(uint wad) internal pure returns (uint) {
+        return wad * 10 ** 27;
+    }
+    function test_dai_exit() public {
+        bytes32 urn = bytes32(bytes20(address(this)));
+        vat.mint(address(this), 100 ether);
+        daia.exit(urn, address(this), 60 ether);
+        asserteq(dai.balanceof(address(this)), 60 ether);
+        asserteq(vat.dai(me),              rad(40 ether));
+    }
+    function test_dai_exit_join() public {
+        bytes32 urn = bytes32(bytes20(address(this)));
+        vat.mint(address(this), 100 ether);
+        daia.exit(urn, address(this), 60 ether);
+        dai.approve(address(daia), uint(1));
+        daia.join(urn, 30 ether);
+        asserteq(dai.balanceof(address(this)),     30 ether);
+        asserteq(vat.dai(me),                  rad(70 ether));
+    }
+    function test_fallback_reverts() public {
+        (bool ok,) = address(etha).call();
+        asserttrue(!ok);
+    }
+    function test_nonzero_fallback_reverts() public {
+        (bool ok,) = address(etha).call.value(10)();
+        asserttrue(!ok);
+    }
+}
+
+contract bitetest is dstest {
+    hevm hevm;
+
+    testvat vat;
+    testpit pit;
+    vow     vow;
+    cat     cat;
+    dstoken gold;
+    jug     drip;
+
+    gemjoin gema;
+    gemmove gemm;
+    daimove daim;
+
+    flipper flip;
+    flopper flop;
+    flapper flap;
+
+    dstoken gov;
+
+    function try_frob(bytes32 ilk, int ink, int art) public returns (bool ok) {
+        string memory sig = ;
+        bytes32 self = bytes32(bytes20(address(this)));
+        (ok,) = address(pit).call(abi.encodewithsignature(sig, ilk, self, self, self, ink, art));
+    }
+
+    function ray(uint wad) internal pure returns (uint) {
+        return wad * 10 ** 9;
+    }
+
+    function gem(bytes32 ilk, address urn) internal view returns (uint) {
+        return vat.gem(ilk, bytes32(bytes20(urn))) / 10 ** 27;
+    }
+    function ink(bytes32 ilk, address urn) internal view returns (uint) {
+        (uint ink_, uint art_) = vat.urns(ilk, bytes32(bytes20(urn))); art_;
+        return ink_;
+    }
+    function art(bytes32 ilk, address urn) internal view returns (uint) {
+        (uint ink_, uint art_) = vat.urns(ilk, bytes32(bytes20(urn))); ink_;
+        return art_;
+    }
+
+    function setup() public {
+        hevm = hevm(0x7109709ecfa91a80626ff3989d68f67f5b1dd12d);
+        hevm.warp(0);
+
+        gov = new dstoken();
+        gov.mint(100 ether);
+
+        vat = new testvat();
+        pit = new testpit(address(vat));
+        vat.rely(address(pit));
+
+        daim = new daimove(address(vat));
+        vat.rely(address(daim));
+
+        flap = new flapper(address(daim), address(gov));
+        flop = new flopper(address(daim), address(gov));
+        gov.setowner(address(flop));
+
+        vow = new vow();
+        vow.file(,  address(vat));
+        vow.file(, address(flap));
+        vow.file(, address(flop));
+        flop.rely(address(vow));
+
+        drip = new jug(address(vat));
+        drip.init();
+        drip.file(, bytes32(bytes20(address(vow))));
+        vat.rely(address(drip));
+
+        cat = new cat(address(vat));
+        cat.file(, address(pit));
+        cat.file(, address(vow));
+        vat.rely(address(cat));
+        vow.rely(address(cat));
+
+        gold = new dstoken();
+        gold.mint(1000 ether);
+
+        vat.init();
+        gema = new gemjoin(address(vat), , address(gold));
+        vat.rely(address(gema));
+        gold.approve(address(gema));
+        gema.join(bytes32(bytes20(address(this))), 1000 ether);
+
+        gemm = new gemmove(address(vat), );
+        vat.rely(address(gemm));
+
+        pit.file(, , ray(1 ether));
+        pit.file(, , 1000 ether);
+        pit.file(, uint(1000 ether));
+        flip = new flipper(address(daim), address(gemm));
+        cat.file(, , address(flip));
+        cat.file(, , ray(1 ether));
+
+        vat.rely(address(flip));
+        vat.rely(address(flap));
+        vat.rely(address(flop));
+
+        daim.hope(address(flip));
+        daim.hope(address(flop));
+        gold.approve(address(vat));
+        gov.approve(address(flap));
+    }
+    function test_happy_bite() public {
+        
+        
+        pit.file(, , ray(2.5 ether));
+        pit.frob(,  40 ether, 100 ether);
+
+        
+        pit.file(, , ray(2 ether));  
+
+        asserteq(ink(, address(this)),  40 ether);
+        asserteq(art(, address(this)), 100 ether);
+        asserteq(vow.woe(), 0 ether);
+        asserteq(gem(, address(this)), 960 ether);
+        uint id = cat.bite(, bytes32(bytes20(address(this))));
+        asserteq(ink(, address(this)), 0);
+        asserteq(art(, address(this)), 0);
+        asserteq(vow.sin(uint48(now)),      100 ether);
+        asserteq(gem(, address(this)), 960 ether);
+
+        cat.file(, , uint(100 ether));
+        uint auction = cat.flip(id, 100 ether);  
+
+        asserteq(vat.balanceof(address(vow)),   0 ether);
+        flip.tend(auction, 40 ether,   1 ether);
+        asserteq(vat.balanceof(address(vow)),   1 ether);
+        flip.tend(auction, 40 ether, 100 ether);
+        asserteq(vat.balanceof(address(vow)), 100 ether);
+
+        asserteq(vat.balanceof(address(this)),       0 ether);
+        asserteq(gem(, address(this)), 960 ether);
+        vat.mint(address(this), 100 ether);  
+        flip.dent(auction, 38 ether,  100 ether);
+        asserteq(vat.balanceof(address(this)), 100 ether);
+        asserteq(vat.balanceof(address(vow)),  100 ether);
+        asserteq(gem(, address(this)), 962 ether);
+        asserteq(gem(, address(this)), 962 ether);
+
+        asserteq(vow.sin(uint48(now)),       100 ether);
+        asserteq(vat.balanceof(address(vow)), 100 ether);
+    }
+
+    function test_floppy_bite() public {
+        pit.file(, , ray(2.5 ether));
+        pit.frob(,  40 ether, 100 ether);
+        pit.file(, , ray(2 ether));  
+
+        asserteq(vow.sin(uint48(now)),   0 ether);
+        cat.bite(, bytes32(bytes20(address(this))));
+        asserteq(vow.sin(uint48(now)), 100 ether);
+
+        asserteq(vow.sin(), 100 ether);
+        vow.flog(uint48(now));
+        asserteq(vow.sin(),   0 ether);
+        asserteq(vow.woe(), 100 ether);
+        asserteq(vow.joy(),   0 ether);
+        asserteq(vow.ash(),   0 ether);
+
+        vow.file(, uint(10 ether));
+        uint f1 = vow.flop();
+        asserteq(vow.woe(),  90 ether);
+        asserteq(vow.joy(),   0 ether);
+        asserteq(vow.ash(),  10 ether);
+        flop.dent(f1, 1000 ether, 10 ether);
+        asserteq(vow.woe(),  90 ether);
+        asserteq(vow.joy(),  10 ether);
+        asserteq(vow.ash(),  10 ether);
+
+        asserteq(gov.balanceof(address(this)),  100 ether);
+        hevm.warp(4 hours);
+        flop.deal(f1);
+        asserteq(gov.balanceof(address(this)), 1100 ether);
+    }
+
+    function test_flappy_bite() public {
+        
+        vat.mint(address(vow), 100 ether);
+        asserteq(vat.balanceof(address(vow)),  100 ether);
+        asserteq(gov.balanceof(address(this)), 100 ether);
+
+        vow.file(, uint(100 ether));
+        asserteq(vow.awe(), 0 ether);
+        uint id = vow.flap();
+
+        asserteq(vat.balanceof(address(this)),   0 ether);
+        asserteq(gov.balanceof(address(this)), 100 ether);
+        flap.tend(id, 100 ether, 10 ether);
+        hevm.warp(4 hours);
+        flap.deal(id);
+        asserteq(vat.balanceof(address(this)),   100 ether);
+        asserteq(gov.balanceof(address(this)),    90 ether);
+    }
+}
+
+contract foldtest is dstest {
+    vat vat;
+
+    function ray(uint wad) internal pure returns (uint) {
+        return wad * 10 ** 9;
+    }
+    function rad(uint wad) internal pure returns (uint) {
+        return wad * 10 ** 27;
+    }
+    function tab(bytes32 ilk, bytes32 urn) internal view returns (uint) {
+        (uint ink, uint art)  = vat.urns(ilk, urn); ink;
+        (uint take, uint rate, uint ink, uint art) = vat.ilks(ilk); art; ink; take;
+        return art * rate;
+    }
+    function jam(bytes32 ilk, bytes32 urn) internal view returns (uint) {
+        (uint ink, uint art)  = vat.urns(ilk, urn); art;
+        (uint take, uint rate, uint ink, uint art) = vat.ilks(ilk); art; ink; rate;
+        return ink * take;
+    }
+
+    function setup() public {
+        vat = new vat();
+        vat.init();
+    }
+    function test_fold() public {
+        vat.tune(, , , , 0, 1 ether);
+
+        asserteq(tab(, ), rad(1.00 ether));
+        vat.fold(, ,  int(ray(0.05 ether)));
+        asserteq(tab(, ), rad(1.05 ether));
+        asserteq(vat.dai(),     rad(0.05 ether));
+    }
+    function test_toll_down() public {
+        vat.slip(, , int(rad(1 ether)));
+        vat.slip(, , int(rad(2 ether)));
+        vat.tune(, , , , 1 ether, 0);
+        vat.tune(, , , , 2 ether, 0);
+
+        asserteq(jam(, ),     rad(1.00 ether));
+        asserteq(jam(, ),     rad(2.00 ether));
+        vat.toll(, ,     int(ray(0.05 ether)));
+        asserteq(jam(, ),     rad(0.95 ether));
+        asserteq(jam(, ),     rad(1.90 ether));
+        asserteq(vat.gem(, ), rad(0.15 ether));
+    }
+    function test_toll_up() public {
+        vat.slip(, , int(rad(1 ether)));
+        vat.slip(, , int(rad(1 ether)));
+        vat.slip(, , int(rad(2 ether)));
+        vat.tune(, , , , 1 ether, 0);
+        vat.tune(, , , , 2 ether, 0);
+
+        asserteq(jam(, ),     rad(1.00 ether));
+        asserteq(jam(, ),     rad(2.00 ether));
+        vat.toll(, ,      int(ray(0.05 ether)));
+        asserteq(jam(, ),     rad(1.05 ether));
+        asserteq(jam(, ),     rad(2.10 ether));
+        asserteq(vat.gem(, ), rad(0.85 ether));
+    }
+}
+
+pragma solidity >=0.5.0;
+
+import ;
+import {dstoken} from ;
+
+import {flapper} from ;
+
+
+contract hevm {
+    function warp(uint256) public;
+}
+
+contract guy {
+    flapper fuss;
+    constructor(flapper fuss_) public {
+        fuss = fuss_;
+        dstoken(address(fuss.dai())).approve(address(fuss));
+        dstoken(address(fuss.gem())).approve(address(fuss));
+    }
+    function tend(uint id, uint lot, uint bid) public {
+        fuss.tend(id, lot, bid);
+    }
+    function deal(uint id) public {
+        fuss.deal(id);
+    }
+    function try_tend(uint id, uint lot, uint bid)
+        public returns (bool ok)
+    {
+        string memory sig = ;
+        (ok,) = address(fuss).call(abi.encodewithsignature(sig, id, lot, bid));
+    }
+    function try_deal(uint id)
+        public returns (bool ok)
+    {
+        string memory sig = ;
+        (ok,) = address(fuss).call(abi.encodewithsignature(sig, id));
+    }
+}
+
+contract gal {}
+
+contract vatlike is dstoken() {
+    uint constant one = 10 ** 27;
+    function move(bytes32 src, bytes32 dst, uint wad) public {
+        move(address(bytes20(src)), address(bytes20(dst)), wad);
+    }
+}
+
+contract flaptest is dstest {
+    hevm hevm;
+
+    flapper fuss;
+    vatlike dai;
+    dstoken gem;
+
+    address ali;
+    address bob;
+    address gal;
+
+    function setup() public {
+        hevm = hevm(0x7109709ecfa91a80626ff3989d68f67f5b1dd12d);
+        hevm.warp(1 hours);
+
+        dai = new vatlike();
+        gem = new dstoken();
+
+        fuss = new flapper(address(dai), address(gem));
+
+        ali = address(new guy(fuss));
+        bob = address(new guy(fuss));
+        gal = address(new gal());
+
+        dai.approve(address(fuss));
+        gem.approve(address(fuss));
+
+        dai.mint(1000 ether);
+        gem.mint(1000 ether);
+
+        gem.push(ali, 200 ether);
+        gem.push(bob, 200 ether);
+    }
+    function test_kick() public {
+        asserteq(dai.balanceof(address(this)), 1000 ether);
+        asserteq(dai.balanceof(address(fuss)),    0 ether);
+        fuss.kick({ lot: 100 ether
+                  , gal: gal
+                  , bid: 0
+                  });
+        asserteq(dai.balanceof(address(this)),  900 ether);
+        asserteq(dai.balanceof(address(fuss)),  100 ether);
+    }
+    function test_tend() public {
+        uint id = fuss.kick({ lot: 100 ether
+                            , gal: gal
+                            , bid: 0
+                            });
+        
+        asserteq(dai.balanceof(address(this)), 900 ether);
+
+        guy(ali).tend(id, 100 ether, 1 ether);
+        
+        asserteq(gem.balanceof(ali), 199 ether);
+        
+        asserteq(gem.balanceof(gal),   1 ether);
+
+        guy(bob).tend(id, 100 ether, 2 ether);
+        
+        asserteq(gem.balanceof(bob), 198 ether);
+        
+        asserteq(gem.balanceof(ali), 200 ether);
+        
+        asserteq(gem.balanceof(gal),   2 ether);
+
+        hevm.warp(5 weeks);
+        guy(bob).deal(id);
+        
+        asserteq(dai.balanceof(address(fuss)),  0 ether);
+        asserteq(dai.balanceof(bob), 100 ether);
+    }
+    function test_beg() public {
+        uint id = fuss.kick({ lot: 100 ether
+                            , gal: gal
+                            , bid: 0
+                            });
+        asserttrue( guy(ali).try_tend(id, 100 ether, 1.00 ether));
+        asserttrue(!guy(bob).try_tend(id, 100 ether, 1.01 ether));
+        
+        asserttrue(!guy(ali).try_tend(id, 100 ether, 1.01 ether));
+        asserttrue( guy(bob).try_tend(id, 100 ether, 1.07 ether));
+    }
+}
+
+pragma solidity >=0.5.0;
+
+import ;
+
+import {flopper as flop} from ;
+import {flapper as flap} from ;
+import {testvat  as vat} from ;
+import {daimove} from ;
+import {vow}     from ;
+
+contract hevm {
+    function warp(uint256) public;
+}
+
+contract gem {
+    mapping (address => uint256) public balanceof;
+    function mint(address guy, uint wad) public {
+        balanceof[guy] += wad;
+    }
+}
+
+contract vowtest is dstest {
+    hevm hevm;
+
+    vat  vat;
+    vow  vow;
+    flop flop;
+    flap flap;
+    gem  gov;
+
+    daimove daim;
+
+    function setup() public {
+        hevm = hevm(0x7109709ecfa91a80626ff3989d68f67f5b1dd12d);
+        hevm.warp(0);
+
+        vat = new vat();
+        vow = new vow();
+        vat.rely(address(vow));
+        gov  = new gem();
+        daim = new daimove(address(vat));
+
+        flop = new flop(address(daim), address(gov));
+        flap = new flap(address(daim), address(gov));
+        daim.hope(address(flop));
+        vat.rely(address(daim));
+        vat.rely(address(flop));
+        vat.rely(address(flap));
+        flop.rely(address(vow));
+
+        vow.file(,  address(vat));
+        vow.file(, address(flop));
+        vow.file(, address(flap));
+        vow.file(, uint256(100 ether));
+        vow.file(, uint256(100 ether));
+    }
+
+    function try_flog(uint48 era) internal returns (bool ok) {
+        string memory sig = ;
+        (ok,) = address(vow).call(abi.encodewithsignature(sig, era));
+    }
+    function try_flop() internal returns (bool ok) {
+        string memory sig = ;
+        (ok,) = address(vow).call(abi.encodewithsignature(sig));
+    }
+    function try_flap() internal returns (bool ok) {
+        string memory sig = ;
+        (ok,) = address(vow).call(abi.encodewithsignature(sig));
+    }
+    function try_dent(uint id, uint lot, uint bid) internal returns (bool ok) {
+        string memory sig = ;
+        (ok,) = address(flop).call(abi.encodewithsignature(sig, id, lot, bid));
+    }
+
+    uint256 constant one = 10 ** 27;
+    function suck(address who, uint wad) internal {
+        vow.fess(wad);
+        vat.init();
+        vat.heal(bytes32(bytes20(address(vow))), bytes32(bytes20(who)), int(wad * one));
+    }
+    function flog(uint wad) internal {
+        suck(address(0), wad);  
+        vow.flog(uint48(now));
+    }
+
+    function test_flog_wait() public {
+        asserteq(vow.wait(), 0);
+        vow.file(, uint(100 seconds));
+        asserteq(vow.wait(), 100 seconds);
+
+        uint48 tic = uint48(now);
+        vow.fess(100 ether);
+        asserttrue(!try_flog(tic) );
+        hevm.warp(tic + uint48(100 seconds));
+        asserttrue( try_flog(tic) );
+    }
+
+    function test_no_reflop() public {
+        flog(100 ether);
+        asserttrue( try_flop() );
+        asserttrue(!try_flop() );
+    }
+
+    function test_no_flop_pending_joy() public {
+        flog(200 ether);
+
+        vat.mint(address(vow), 100 ether);
+        asserttrue(!try_flop() );
+
+        vow.heal(100 ether);
+        asserttrue( try_flop() );
+    }
+
+    function test_flap() public {
+        vat.mint(address(vow), 100 ether);
+        asserttrue( try_flap() );
+    }
+
+    function test_no_flap_pending_sin() public {
+        vow.file(, uint256(0 ether));
+        flog(100 ether);
+
+        vat.mint(address(vow), 50 ether);
+        asserttrue(!try_flap() );
+    }
+    function test_no_flap_nonzero_woe() public {
+        vow.file(, uint256(0 ether));
+        flog(100 ether);
+        vat.mint(address(vow), 50 ether);
+        asserttrue(!try_flap() );
+    }
+    function test_no_flap_pending_flop() public {
+        flog(100 ether);
+        vow.flop();
+
+        vat.mint(address(vow), 100 ether);
+
+        asserttrue(!try_flap() );
+    }
+    function test_no_flap_pending_kiss() public {
+        flog(100 ether);
+        uint id = vow.flop();
+
+        vat.mint(address(this), 100 ether);
+        flop.dent(id, 0 ether, 100 ether);
+
+        asserttrue(!try_flap() );
+    }
+
+    function test_no_surplus_after_good_flop() public {
+        flog(100 ether);
+        uint id = vow.flop();
+        vat.mint(address(this), 100 ether);
+
+        flop.dent(id, 0 ether, 100 ether);  
+
+        asserttrue(!try_flap() );
+    }
+
+    function test_multiple_flop_dents() public {
+        flog(100 ether);
+        uint id = vow.flop();
+
+        vat.mint(address(this), 100 ether);
+        asserttrue(try_dent(id, 2 ether,  100 ether));
+
+        vat.mint(address(this), 100 ether);
+        asserttrue(try_dent(id, 1 ether,  100 ether));
+    }
+}
+
+pragma solidity >=0.5.0;
+
+import ;
+
+import ;
+import ;
+
+
+contract hevm {
+    function warp(uint256) public;
+}
+
+contract jugtest is dstest {
+    hevm hevm;
+    jug drip;
+    vat  vat;
+
+    function rad(uint wad_) internal pure returns (uint) {
+        return wad_ * 10 ** 27;
+    }
+    function wad(uint rad_) internal pure returns (uint) {
+        return rad_ / 10 ** 27;
+    }
+    function rho(bytes32 ilk) internal view returns (uint) {
+        (uint tax, uint48 rho_) = drip.ilks(ilk); tax;
+        return uint(rho_);
+    }
+    function rate(bytes32 ilk) internal view returns (uint) {
+        (uint t, uint r, uint i, uint a) = vat.ilks(ilk); t; a; i;
+        return r;
+    }
+
+    function setup() public {
+        hevm = hevm(0x7109709ecfa91a80626ff3989d68f67f5b1dd12d);
+        hevm.warp(0);
+
+        vat  = new vat();
+        drip = new jug(address(vat));
+        vat.rely(address(drip));
+        vat.init();
+        vat.tune(, , , , 0, 100 ether);
+    }
+    function test_drip_setup() public {
+        asserteq(uint(now), 0);
+        hevm.warp(1);
+        asserteq(uint(now), 1);
+        hevm.warp(2);
+        asserteq(uint(now), 2);
+        (uint t, uint r, uint i, uint a) = vat.ilks(); t; r; i;
+        asserteq(a, 100 ether);
+    }
+    function test_drip_updates_rho() public {
+        drip.init();
+        asserteq(rho(), 0);
+
+        drip.file(, , 10 ** 27);
+        drip.drip();
+        asserteq(rho(), 0);
+        hevm.warp(1);
+        asserteq(rho(), 0);
+        drip.drip();
+        asserteq(rho(), 1);
+        hevm.warp(1 days);
+        drip.drip();
+        asserteq(rho(), 1 days);
+    }
+    function test_drip_file() public {
+        drip.init();
+        drip.file(, , 10 ** 27);
+        hevm.warp(1);
+        drip.drip();
+        drip.file(, , 1000000564701133626865910626);  
+    }
+    function test_drip_0d() public {
+        drip.init();
+        drip.file(, , 1000000564701133626865910626);  
+        asserteq(vat.dai(), rad(0 ether));
+        drip.drip();
+        asserteq(vat.dai(), rad(0 ether));
+    }
+    function test_drip_1d() public {
+        drip.init();
+        drip.file(, );
+
+        drip.file(, , 1000000564701133626865910626);  
+        hevm.warp(1 days);
+        asserteq(wad(vat.dai()), 0 ether);
+        drip.drip();
+        asserteq(wad(vat.dai()), 5 ether);
+    }
+    function test_drip_2d() public {
+        drip.init();
+        drip.file(, );
+        drip.file(, , 1000000564701133626865910626);  
+
+        hevm.warp(2 days);
+        asserteq(wad(vat.dai()), 0 ether);
+        drip.drip();
+        asserteq(wad(vat.dai()), 10.25 ether);
+    }
+    function test_drip_3d() public {
+        drip.init();
+        drip.file(, );
+
+        drip.file(, , 1000000564701133626865910626);  
+        hevm.warp(3 days);
+        asserteq(wad(vat.dai()), 0 ether);
+        drip.drip();
+        asserteq(wad(vat.dai()), 15.7625 ether);
+    }
+    function test_drip_multi() public {
+        drip.init();
+        drip.file(, );
+
+        drip.file(, , 1000000564701133626865910626);  
+        hevm.warp(1 days);
+        drip.drip();
+        asserteq(wad(vat.dai()), 5 ether);
+        drip.file(, , 1000001103127689513476993127);  
+        hevm.warp(2 days);
+        drip.drip();
+        asserteq(wad(vat.dai()),  15.5 ether);
+        asserteq(wad(vat.debt()),     115.5 ether);
+        asserteq(rate() / 10 ** 9, 1.155 ether);
+    }
+    function test_drip_repo() public {
+        vat.init();
+        vat.tune(, , , , 0, 100 ether);
+
+        drip.init();
+        drip.init();
+        drip.file(, );
+
+        drip.file(, , 1050000000000000000000000000);  
+        drip.file(, , 1000000000000000000000000000);  
+        drip.file(,  uint(50000000000000000000000000)); 
+        hevm.warp(1);
+        drip.drip();
+        asserteq(wad(vat.dai()), 10 ether);
+    }
+}
+
+pragma solidity >=0.5.0;
+
+import ;
+import ;
+
+import ;
+
+
+contract hevm {
+    function warp(uint256) public;
+}
+
+contract guy {
+    flopper fuss;
+    constructor(flopper fuss_) public {
+        fuss = fuss_;
+        dstoken(address(fuss.dai())).approve(address(fuss));
+        dstoken(address(fuss.gem())).approve(address(fuss));
+    }
+    function dent(uint id, uint lot, uint bid) public {
+        fuss.dent(id, lot, bid);
+    }
+    function deal(uint id) public {
+        fuss.deal(id);
+    }
+    function try_dent(uint id, uint lot, uint bid)
+        public returns (bool ok)
+    {
+        string memory sig = ;
+        (ok,) = address(fuss).call(abi.encodewithsignature(sig, id, lot, bid));
+    }
+    function try_deal(uint id)
+        public returns (bool ok)
+    {
+        string memory sig = ;
+        (ok,) = address(fuss).call(abi.encodewithsignature(sig, id));
+    }
+}
+
+contract gal {}
+
+contract vatlike is dstoken() {
+    uint constant one = 10 ** 27;
+    function move(bytes32 src, bytes32 dst, uint wad) public {
+        move(address(bytes20(src)), address(bytes20(dst)), wad);
+    }
+}
+
+contract floptest is dstest {
+    hevm hevm;
+
+    flopper fuss;
+    vatlike dai;
+    dstoken gem;
+
+    address ali;
+    address bob;
+    address gal;
+
+    function kiss(uint) public pure { }  
+
+    function setup() public {
+        hevm = hevm(0x7109709ecfa91a80626ff3989d68f67f5b1dd12d);
+        hevm.warp(1 hours);
+
+        dai = new vatlike();
+        gem = new dstoken();
+
+        fuss = new flopper(address(dai), address(gem));
+
+        ali = address(new guy(fuss));
+        bob = address(new guy(fuss));
+        gal = address(new gal());
+
+        dai.approve(address(fuss));
+        gem.approve(address(fuss));
+
+        dai.mint(1000 ether);
+
+        dai.push(ali, 200 ether);
+        dai.push(bob, 200 ether);
+    }
+    function test_kick() public {
+        asserteq(dai.balanceof(address(this)), 600 ether);
+        asserteq(gem.balanceof(address(this)),   0 ether);
+        fuss.kick({ lot: uint(1)   
+                  , gal: gal
+                  , bid: 0
+                  });
+        
+        asserteq(dai.balanceof(address(this)), 600 ether);
+        asserteq(gem.balanceof(address(this)),   0 ether);
+    }
+    function test_dent() public {
+        uint id = fuss.kick({ lot: uint(1)   
+                            , gal: gal
+                            , bid: 10 ether
+                            });
+
+        guy(ali).dent(id, 100 ether, 10 ether);
+        
+        asserteq(dai.balanceof(ali), 190 ether);
+        
+        asserteq(dai.balanceof(gal),  10 ether);
+
+        guy(bob).dent(id, 80 ether, 10 ether);
+        
+        asserteq(dai.balanceof(bob), 190 ether);
+        
+        asserteq(dai.balanceof(ali), 200 ether);
+        
+        asserteq(dai.balanceof(gal), 10 ether);
+
+        hevm.warp(5 weeks);
+        asserteq(gem.totalsupply(),  0 ether);
+        gem.setowner(address(fuss));
+        guy(bob).deal(id);
+        
+        asserteq(gem.totalsupply(), 80 ether);
+        
+        asserteq(gem.balanceof(bob), 80 ether);
+    }
+}
+

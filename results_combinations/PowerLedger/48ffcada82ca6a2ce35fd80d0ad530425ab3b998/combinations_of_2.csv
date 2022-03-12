@@ -1,0 +1,11 @@
+similarity,combination
+0,['Migrations.sol', 'SafeMath.sol']
+10,['Migrations.sol', 'ERC20TokenInterface.sol']
+2,['Migrations.sol', 'NewRequestVoting.sol']
+39,['Migrations.sol', 'PowerLedger.sol']
+2,['SafeMath.sol', 'ERC20TokenInterface.sol']
+8,['SafeMath.sol', 'NewRequestVoting.sol']
+45,['SafeMath.sol', 'PowerLedger.sol']
+12,['ERC20TokenInterface.sol', 'NewRequestVoting.sol']
+83,['ERC20TokenInterface.sol', 'PowerLedger.sol']
+9,['NewRequestVoting.sol', 'PowerLedger.sol']

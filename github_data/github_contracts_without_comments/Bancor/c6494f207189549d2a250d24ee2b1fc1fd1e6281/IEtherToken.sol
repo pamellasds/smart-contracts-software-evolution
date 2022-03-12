@@ -1,0 +1,11 @@
+pragma solidity 0.4.26;
+import ;
+import ;
+
+
+contract iethertoken is itokenholder, ierc20token {
+    function deposit() public payable;
+    function withdraw(uint256 _amount) public;
+    function depositto(address _to) public payable;
+    function withdrawto(address _to, uint256 _amount) public;
+}

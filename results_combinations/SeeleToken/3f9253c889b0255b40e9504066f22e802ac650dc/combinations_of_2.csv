@@ -1,0 +1,11 @@
+similarity,combination
+3,['Migrations.sol', 'SeeleCrowdSale.sol']
+1,['Migrations.sol', 'TestAddress.sol']
+2,['Migrations.sol', 'TokenTimelock.sol']
+2,['Migrations.sol', 'SeeleToken.sol']
+3,['SeeleCrowdSale.sol', 'TestAddress.sol']
+3,['SeeleCrowdSale.sol', 'TokenTimelock.sol']
+3,['SeeleCrowdSale.sol', 'SeeleToken.sol']
+1,['TestAddress.sol', 'TokenTimelock.sol']
+2,['TestAddress.sol', 'SeeleToken.sol']
+4,['TokenTimelock.sol', 'SeeleToken.sol']

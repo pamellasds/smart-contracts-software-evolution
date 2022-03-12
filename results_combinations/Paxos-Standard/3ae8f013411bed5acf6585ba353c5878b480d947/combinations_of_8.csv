@@ -1,0 +1,10 @@
+similarity,combination
+3,['StablecoinEventInterface.sol', 'StablecoinProxy.sol', 'Migrations.sol', 'SafeMath.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol']
+5,['StablecoinEventInterface.sol', 'StablecoinProxy.sol', 'Migrations.sol', 'SafeMath.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'UpgradeabilityStorage.sol']
+5,['StablecoinEventInterface.sol', 'StablecoinProxy.sol', 'Migrations.sol', 'SafeMath.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+5,['StablecoinEventInterface.sol', 'StablecoinProxy.sol', 'Migrations.sol', 'SafeMath.sol', 'SafeMathMock.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+5,['StablecoinEventInterface.sol', 'StablecoinProxy.sol', 'Migrations.sol', 'SafeMath.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+5,['StablecoinEventInterface.sol', 'StablecoinProxy.sol', 'Migrations.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+7,['StablecoinEventInterface.sol', 'StablecoinProxy.sol', 'SafeMath.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+5,['StablecoinEventInterface.sol', 'Migrations.sol', 'SafeMath.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']
+5,['StablecoinProxy.sol', 'Migrations.sol', 'SafeMath.sol', 'SafeMathMock.sol', 'StablecoinWithBalance.sol', 'StablecoinImplementation.sol', 'AddressUtils.sol', 'UpgradeabilityStorage.sol']

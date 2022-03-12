@@ -1,0 +1,1795 @@
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+
+
+contract linktoken is linkstandardtoken, erc677token {
+
+  uint public constant totalsupply = 10**27;
+  string public constant name = ;
+  uint8 public constant decimals = 18;
+  string public constant symbol = ;
+
+  function linktoken()
+    public
+  {
+    balances[msg.sender] = totalsupply;
+  }
+
+  
+  function transferandcall(address _to, uint _value, bytes _data)
+    public
+    validrecipient(_to)
+    returns (bool success)
+  {
+    return super.transferandcall(_to, _value, _data);
+  }
+
+  
+  function transfer(address _to, uint _value)
+    public
+    validrecipient(_to)
+    returns (bool success)
+  {
+    return super.transfer(_to, _value);
+  }
+
+  
+  function approve(address _spender, uint256 _value)
+    public
+    validrecipient(_spender)
+    returns (bool)
+  {
+    return super.approve(_spender,  _value);
+  }
+
+  
+  function transferfrom(address _from, address _to, uint256 _value)
+    public
+    validrecipient(_to)
+    returns (bool)
+  {
+    return super.transferfrom(_from, _to, _value);
+  }
+
+
+  
+
+  modifier validrecipient(address _recipient) {
+    require(_recipient != address(0) && _recipient != address(this));
+    _;
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+
+
+contract erc677token is erc677 {
+
+  
+  function transferandcall(address _to, uint _value, bytes _data)
+    public
+    returns (bool success)
+  {
+    super.transfer(_to, _value);
+    transfer(msg.sender, _to, _value, _data);
+    if (iscontract(_to)) {
+      contractfallback(_to, _value, _data);
+    }
+    return true;
+  }
+
+
+  
+
+  function contractfallback(address _to, uint _value, bytes _data)
+    private
+  {
+    erc677receiver receiver = erc677receiver(_to);
+    receiver.ontokentransfer(msg.sender, _value, _data);
+  }
+
+  function iscontract(address _addr)
+    private
+    returns (bool hascode)
+  {
+    uint length;
+    assembly { length := extcodesize(_addr) }
+    return length > 0;
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+contract migrations {
+  address public owner;
+  uint public last_completed_migration;
+
+  function migrations() public {
+    owner = msg.sender;
+  }
+
+  modifier restricted() {
+    if (msg.sender == owner) _;
+  }
+
+  function setcompleted(uint completed) public restricted {
+    last_completed_migration = completed;
+  }
+
+  function upgrade(address new_address) public restricted {
+    migrations upgraded = migrations(new_address);
+    upgraded.setcompleted(last_completed_migration);
+  }
+}
+
+pragma solidity ^0.4.8;
+
+import ;
+
+contract erc677 is linkerc20 {
+  function transferandcall(address to, uint value, bytes data) returns (bool success);
+
+  event transfer(address indexed from, address indexed to, uint value, bytes data);
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+
+
+
+contract linkstandardtoken is linkerc20, linkbasictoken {
+
+  mapping (address => mapping (address => uint256)) allowed;
+
+
+  
+  function transferfrom(address _from, address _to, uint256 _value) returns (bool) {
+    var _allowance = allowed[_from][msg.sender];
+
+    
+    
+
+    balances[_from] = balances[_from].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    allowed[_from][msg.sender] = _allowance.sub(_value);
+    transfer(_from, _to, _value);
+    return true;
+  }
+
+  
+  function approve(address _spender, uint256 _value) returns (bool) {
+    allowed[msg.sender][_spender] = _value;
+    approval(msg.sender, _spender, _value);
+    return true;
+  }
+
+  
+  function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
+    return allowed[_owner][_spender];
+  }
+  
+    
+  function increaseapproval (address _spender, uint _addedvalue) 
+    returns (bool success) {
+    allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedvalue);
+    approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+    return true;
+  }
+
+  function decreaseapproval (address _spender, uint _subtractedvalue) 
+    returns (bool success) {
+    uint oldvalue = allowed[msg.sender][_spender];
+    if (_subtractedvalue > oldvalue) {
+      allowed[msg.sender][_spender] = 0;
+    } else {
+      allowed[msg.sender][_spender] = oldvalue.sub(_subtractedvalue);
+    }
+    approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+    return true;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+contract erc677receiver {
+  function ontokentransfer(address _sender, uint _value, bytes _data);
+}
+
+pragma solidity ^0.4.11;
+
+
+
+contract linkerc20basic {
+  uint256 public totalsupply;
+  function balanceof(address who) constant returns (uint256);
+  function transfer(address to, uint256 value) returns (bool);
+  event transfer(address indexed from, address indexed to, uint256 value);
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+
+
+
+contract linkbasictoken is linkerc20basic {
+  using linksafemath for uint256;
+
+  mapping(address => uint256) balances;
+
+  
+  function transfer(address _to, uint256 _value) returns (bool) {
+    balances[msg.sender] = balances[msg.sender].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    transfer(msg.sender, _to, _value);
+    return true;
+  }
+
+  
+  function balanceof(address _owner) constant returns (uint256 balance) {
+    return balances[_owner];
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+
+
+
+contract linkerc20 is linkerc20basic {
+  function allowance(address owner, address spender) constant returns (uint256);
+  function transferfrom(address from, address to, uint256 value) returns (bool);
+  function approve(address spender, uint256 value) returns (bool);
+  event approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+pragma solidity ^0.4.11;
+
+
+contract noterc677compatible {
+
+}
+
+pragma solidity ^0.4.8;
+
+
+contract token677receivermock {
+    address public tokensender;
+    uint public sentvalue;
+    bytes public tokendata;
+    bool public calledfallback = false;
+
+    function ontokentransfer(address _sender, uint _value, bytes _data)
+    public {
+      calledfallback = true;
+
+      tokensender = _sender;
+      sentvalue = _value;
+      tokendata = _data;
+    }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+import ;
+
+
+contract token677 is linkstandardtoken, erc677token {
+    string public constant name = ;
+    string public constant symbol = ;
+    uint8 public constant decimals = 18;
+    uint256 public totalsupply;
+
+    function token677(uint _initialbalance)
+    {
+        balances[msg.sender] = _initialbalance;
+        totalsupply = _initialbalance;
+    }
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+
+contract basictokenmock is linkbasictoken {
+
+  function basictokenmock(address initialaccount, uint initialbalance)
+  {
+    balances[initialaccount] = initialbalance;
+    totalsupply = initialbalance;
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+import ;
+
+
+contract linkreceiver {
+
+  bool public fallbackcalled;
+  bool public calldatacalled;
+  uint public tokensreceived;
+
+
+  function ontokentransfer(address _from, uint _amount, bytes _data)
+  public returns (bool success) {
+    fallbackcalled = true;
+    if (_data.length > 0) {
+      require(address(this).delegatecall(_data, msg.sender, _from, _amount));
+    }
+    return true;
+  }
+
+  function callbackwithoutwithdrawl() {
+    calldatacalled = true;
+  }
+
+  function callbackwithwithdrawl(uint _value, address _from, address _token) {
+    calldatacalled = true;
+    linkerc20 token = linkerc20(_token);
+    token.transferfrom(_from, this, _value);
+    tokensreceived = _value;
+  }
+
+}
+
+pragma solidity ^0.4.8;
+
+
+import ;
+
+
+contract standardtokenmock is linkstandardtoken {
+
+  function standardtokenmock(address initialaccount, uint initialbalance)
+  {
+    balances[initialaccount] = initialbalance;
+    totalsupply = initialbalance;
+  }
+
+}
+
+pragma solidity ^0.4.11;
+
+
+
+library linksafemath {
+  function mul(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b) internal constant returns (uint256) {
+    
+    uint256 c = a / b;
+    
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b) internal constant returns (uint256) {
+    assert(b <= a);
+    return a  b;
+  }
+
+  function add(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}
+
+pragma solidity ^0.6.0;
+
+import ;
+import ;
+
+contract linktoken is linkerc20, erc677token {
+  uint private constant total_supply = 10**27;
+  string private constant name = ;
+  string private constant symbol = ;
+
+  constructor() erc20(name, symbol)
+    public
+  {
+    _oncreate();
+  }
+
+  
+  function _oncreate()
+    internal
+    virtual
+  {
+    _mint(msg.sender, total_supply);
+  }
+
+  
+  function _transfer(address sender, address recipient, uint256 amount)
+    internal
+    override
+    virtual
+    validaddress(recipient)
+  {
+    super._transfer(sender, recipient, amount);
+  }
+
+  
+  function _approve(address owner, address spender, uint256 amount)
+    internal
+    override
+    virtual
+    validaddress(spender)
+  {
+    super._approve(owner, spender, amount);
+  }
+
+
+  
+
+  modifier validaddress(address _recipient) {
+    require(_recipient != address(this), );
+    _;
+  }
+}
+
+pragma solidity ^0.6.0;
+
+import ;
+import ;
+import ;
+
+abstract contract erc677token is erc20, erc677 {
+  
+  function transferandcall(address _to, uint _value, bytes memory _data)
+    public
+    override
+    virtual
+    returns (bool success)
+  {
+    super.transfer(_to, _value);
+    emit transfer(msg.sender, _to, _value, _data);
+    if (iscontract(_to)) {
+      contractfallback(_to, _value, _data);
+    }
+    return true;
+  }
+
+
+  
+
+  function contractfallback(address _to, uint _value, bytes memory _data)
+    private
+  {
+    erc677receiver receiver = erc677receiver(_to);
+    receiver.ontokentransfer(msg.sender, _value, _data);
+  }
+
+  function iscontract(address _addr)
+    private
+    view
+    returns (bool hascode)
+  {
+    uint length;
+    assembly { length := extcodesize(_addr) }
+    return length > 0;
+  }
+}
+
+pragma solidity ^0.6.0;
+
+contract migrations {
+  address public owner;
+  uint public last_completed_migration;
+
+  constructor() public {
+    owner = msg.sender;
+  }
+
+  modifier restricted() {
+    if (msg.sender == owner) _;
+  }
+
+  function setcompleted(uint completed) public restricted {
+    last_completed_migration = completed;
+  }
+
+  function upgrade(address new_address) public restricted {
+    migrations upgraded = migrations(new_address);
+    upgraded.setcompleted(last_completed_migration);
+  }
+}
+
+pragma solidity ^0.6.0;
+
+import ;
+
+abstract contract erc677 is ierc20 {
+  function transferandcall(address to, uint value, bytes memory data) public virtual returns (bool success);
+
+  event transfer(address indexed from, address indexed to, uint value, bytes data);
+}
+
+pragma solidity ^0.6.0;
+
+abstract contract erc677receiver {
+  function ontokentransfer(address _sender, uint _value, bytes memory _data) public virtual;
+}
+
+pragma solidity ^0.6.0;
+
+import ;
+
+abstract contract linkerc20 is erc20 {
+  
+  function increaseapproval(address spender, uint256 addedvalue) public virtual returns (bool) {
+    return super.increaseallowance(spender, addedvalue);
+  }
+
+  
+  function decreaseapproval(address spender, uint256 subtractedvalue) public virtual returns (bool) {
+    return super.decreaseallowance(spender, subtractedvalue);
+  }
+}
+
+pragma solidity ^0.6.0;
+
+contract noterc677compatible {}
+
+pragma solidity ^0.6.0;
+
+contract token677receivermock {
+  address public tokensender;
+  uint public sentvalue;
+  bytes public tokendata;
+  bool public calledfallback = false;
+
+  function ontokentransfer(address _sender, uint _value, bytes memory _data) public {
+    calledfallback = true;
+
+    tokensender = _sender;
+    sentvalue = _value;
+    tokendata = _data;
+  }
+}
+
+pragma solidity ^0.6.0;
+
+import ;
+import ;
+
+contract token677 is erc20, erc677token {
+  string private constant name = ;
+  string private constant symbol = ;
+
+  constructor(uint _initialbalance) erc20(name, symbol) public {
+    _mint(msg.sender, _initialbalance);
+  }
+}
+
+pragma solidity ^0.6.0;
+
+import ;
+
+contract linkreceiver {
+  bool public fallbackcalled;
+  bool public calldatacalled;
+  uint public tokensreceived;
+
+  function ontokentransfer(address _from, uint _amount, bytes memory _data) public returns (bool) {
+    fallbackcalled = true;
+    if (_data.length > 0) {
+      (bool success, bytes memory _returndata) = address(this).delegatecall(_data);
+      require(success, );
+    }
+    return true;
+  }
+
+  function callbackwithoutwithdrawl() public {
+    calldatacalled = true;
+  }
+
+  function callbackwithwithdrawl(uint _value, address _from, address _token) public {
+    calldatacalled = true;
+    ierc20 token = ierc20(_token);
+    token.transferfrom(_from, address(this), _value);
+    tokensreceived = _value;
+  }
+}
+
+pragma solidity ^0.6.0;
+
+import ;
+import ;
+
+contract standardtokenmock is erc20, linkerc20 {
+
+  constructor(address initialaccount, uint initialbalance) erc20(, ) public {
+    _mint(initialaccount, initialbalance);
+  }
+}
+
+
+
+
+pragma solidity ^0.4.11;
+
+
+
+contract linkerc20basic {
+  uint256 public totalsupply;
+  function balanceof(address who) constant returns (uint256);
+  function transfer(address to, uint256 value) returns (bool);
+  event transfer(address indexed from, address indexed to, uint256 value);
+}
+
+
+
+pragma solidity ^0.4.11;
+
+
+
+
+contract linkerc20 is linkerc20basic {
+  function allowance(address owner, address spender) constant returns (uint256);
+  function transferfrom(address from, address to, uint256 value) returns (bool);
+  function approve(address spender, uint256 value) returns (bool);
+  event approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+
+
+pragma solidity ^0.4.8;
+
+
+contract erc677 is linkerc20 {
+  function transferandcall(address to, uint value, bytes data) returns (bool success);
+
+  event transfer(address indexed from, address indexed to, uint value, bytes data);
+}
+
+
+
+pragma solidity ^0.4.8;
+
+
+contract erc677receiver {
+  function ontokentransfer(address _sender, uint _value, bytes _data);
+}
+
+
+
+pragma solidity ^0.4.11;
+
+
+
+
+contract erc677token is erc677 {
+
+  
+  function transferandcall(address _to, uint _value, bytes _data)
+    public
+    returns (bool success)
+  {
+    super.transfer(_to, _value);
+    transfer(msg.sender, _to, _value, _data);
+    if (iscontract(_to)) {
+      contractfallback(_to, _value, _data);
+    }
+    return true;
+  }
+
+
+  
+
+  function contractfallback(address _to, uint _value, bytes _data)
+    private
+  {
+    erc677receiver receiver = erc677receiver(_to);
+    receiver.ontokentransfer(msg.sender, _value, _data);
+  }
+
+  function iscontract(address _addr)
+    private
+    returns (bool hascode)
+  {
+    uint length;
+    assembly { length := extcodesize(_addr) }
+    return length > 0;
+  }
+
+}
+
+
+
+pragma solidity ^0.4.11;
+
+
+
+library linksafemath {
+  function mul(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b) internal constant returns (uint256) {
+    
+    uint256 c = a / b;
+    
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b) internal constant returns (uint256) {
+    assert(b <= a);
+    return a  b;
+  }
+
+  function add(uint256 a, uint256 b) internal constant returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}
+
+
+
+pragma solidity ^0.4.11;
+
+
+
+
+
+contract linkbasictoken is linkerc20basic {
+  using linksafemath for uint256;
+
+  mapping(address => uint256) balances;
+
+  
+  function transfer(address _to, uint256 _value) returns (bool) {
+    balances[msg.sender] = balances[msg.sender].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    transfer(msg.sender, _to, _value);
+    return true;
+  }
+
+  
+  function balanceof(address _owner) constant returns (uint256 balance) {
+    return balances[_owner];
+  }
+
+}
+
+
+
+pragma solidity ^0.4.11;
+
+
+
+
+
+contract linkstandardtoken is linkerc20, linkbasictoken {
+
+  mapping (address => mapping (address => uint256)) allowed;
+
+
+  
+  function transferfrom(address _from, address _to, uint256 _value) returns (bool) {
+    var _allowance = allowed[_from][msg.sender];
+
+    
+    
+
+    balances[_from] = balances[_from].sub(_value);
+    balances[_to] = balances[_to].add(_value);
+    allowed[_from][msg.sender] = _allowance.sub(_value);
+    transfer(_from, _to, _value);
+    return true;
+  }
+
+  
+  function approve(address _spender, uint256 _value) returns (bool) {
+    allowed[msg.sender][_spender] = _value;
+    approval(msg.sender, _spender, _value);
+    return true;
+  }
+
+  
+  function allowance(address _owner, address _spender) constant returns (uint256 remaining) {
+    return allowed[_owner][_spender];
+  }
+  
+    
+  function increaseapproval (address _spender, uint _addedvalue) 
+    returns (bool success) {
+    allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedvalue);
+    approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+    return true;
+  }
+
+  function decreaseapproval (address _spender, uint _subtractedvalue) 
+    returns (bool success) {
+    uint oldvalue = allowed[msg.sender][_spender];
+    if (_subtractedvalue > oldvalue) {
+      allowed[msg.sender][_spender] = 0;
+    } else {
+      allowed[msg.sender][_spender] = oldvalue.sub(_subtractedvalue);
+    }
+    approval(msg.sender, _spender, allowed[msg.sender][_spender]);
+    return true;
+  }
+
+}
+
+
+
+pragma solidity ^0.4.11;
+
+
+
+
+contract linktoken is linkstandardtoken, erc677token {
+
+  uint public constant totalsupply = 10**27;
+  string public constant name = ;
+  uint8 public constant decimals = 18;
+  string public constant symbol = ;
+
+  function linktoken()
+    public
+  {
+    balances[msg.sender] = totalsupply;
+  }
+
+  
+  function transferandcall(address _to, uint _value, bytes _data)
+    public
+    validrecipient(_to)
+    returns (bool success)
+  {
+    return super.transferandcall(_to, _value, _data);
+  }
+
+  
+  function transfer(address _to, uint _value)
+    public
+    validrecipient(_to)
+    returns (bool success)
+  {
+    return super.transfer(_to, _value);
+  }
+
+  
+  function approve(address _spender, uint256 _value)
+    public
+    validrecipient(_spender)
+    returns (bool)
+  {
+    return super.approve(_spender,  _value);
+  }
+
+  
+  function transferfrom(address _from, address _to, uint256 _value)
+    public
+    validrecipient(_to)
+    returns (bool)
+  {
+    return super.transferfrom(_from, _to, _value);
+  }
+
+
+  
+
+  modifier validrecipient(address _recipient) {
+    require(_recipient != address(0) && _recipient != address(this));
+    _;
+  }
+
+}
+
+
+
+
+
+
+pragma solidity ^0.6.0;
+
+
+abstract contract context {
+    function _msgsender() internal view virtual returns (address payable) {
+        return msg.sender;
+    }
+
+    function _msgdata() internal view virtual returns (bytes memory) {
+        this; 
+        return msg.data;
+    }
+}
+
+
+
+
+
+pragma solidity ^0.6.0;
+
+
+interface ierc20 {
+    
+    function totalsupply() external view returns (uint256);
+
+    
+    function balanceof(address account) external view returns (uint256);
+
+    
+    function transfer(address recipient, uint256 amount) external returns (bool);
+
+    
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    
+    function transferfrom(address sender, address recipient, uint256 amount) external returns (bool);
+
+    
+    event transfer(address indexed from, address indexed to, uint256 value);
+
+    
+    event approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+
+
+
+
+pragma solidity ^0.6.0;
+
+
+library safemath {
+    
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, );
+
+        return c;
+    }
+
+    
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        return sub(a, b, );
+    }
+
+    
+    function sub(uint256 a, uint256 b, string memory errormessage) internal pure returns (uint256) {
+        require(b <= a, errormessage);
+        uint256 c = a  b;
+
+        return c;
+    }
+
+    
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        
+        
+        
+        if (a == 0) {
+            return 0;
+        }
+
+        uint256 c = a * b;
+        require(c / a == b, );
+
+        return c;
+    }
+
+    
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        return div(a, b, );
+    }
+
+    
+    function div(uint256 a, uint256 b, string memory errormessage) internal pure returns (uint256) {
+        require(b > 0, errormessage);
+        uint256 c = a / b;
+        
+
+        return c;
+    }
+
+    
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        return mod(a, b, );
+    }
+
+    
+    function mod(uint256 a, uint256 b, string memory errormessage) internal pure returns (uint256) {
+        require(b != 0, errormessage);
+        return a % b;
+    }
+}
+
+
+
+
+
+pragma solidity ^0.6.2;
+
+
+library address {
+    
+    function iscontract(address account) internal view returns (bool) {
+        
+        
+        
+        bytes32 codehash;
+        bytes32 accounthash = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+        
+        assembly { codehash := extcodehash(account) }
+        return (codehash != accounthash && codehash != 0x0);
+    }
+
+    
+    function sendvalue(address payable recipient, uint256 amount) internal {
+        require(address(this).balance >= amount, );
+
+        
+        (bool success, ) = recipient.call{ value: amount }();
+        require(success, );
+    }
+
+    
+    function functioncall(address target, bytes memory data) internal returns (bytes memory) {
+      return functioncall(target, data, );
+    }
+
+    
+    function functioncall(address target, bytes memory data, string memory errormessage) internal returns (bytes memory) {
+        return _functioncallwithvalue(target, data, 0, errormessage);
+    }
+
+    
+    function functioncallwithvalue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {
+        return functioncallwithvalue(target, data, value, );
+    }
+
+    
+    function functioncallwithvalue(address target, bytes memory data, uint256 value, string memory errormessage) internal returns (bytes memory) {
+        require(address(this).balance >= value, );
+        return _functioncallwithvalue(target, data, value, errormessage);
+    }
+
+    function _functioncallwithvalue(address target, bytes memory data, uint256 weivalue, string memory errormessage) private returns (bytes memory) {
+        require(iscontract(target), );
+
+        
+        (bool success, bytes memory returndata) = target.call{ value: weivalue }(data);
+        if (success) {
+            return returndata;
+        } else {
+            
+            if (returndata.length > 0) {
+                
+
+                
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+                revert(errormessage);
+            }
+        }
+    }
+}
+
+
+
+
+
+pragma solidity ^0.6.0;
+
+
+
+
+
+
+contract erc20 is context, ierc20 {
+    using safemath for uint256;
+    using address for address;
+
+    mapping (address => uint256) private _balances;
+
+    mapping (address => mapping (address => uint256)) private _allowances;
+
+    uint256 private _totalsupply;
+
+    string private _name;
+    string private _symbol;
+    uint8 private _decimals;
+
+    
+    constructor (string memory name, string memory symbol) public {
+        _name = name;
+        _symbol = symbol;
+        _decimals = 18;
+    }
+
+    
+    function name() public view returns (string memory) {
+        return _name;
+    }
+
+    
+    function symbol() public view returns (string memory) {
+        return _symbol;
+    }
+
+    
+    function decimals() public view returns (uint8) {
+        return _decimals;
+    }
+
+    
+    function totalsupply() public view override returns (uint256) {
+        return _totalsupply;
+    }
+
+    
+    function balanceof(address account) public view override returns (uint256) {
+        return _balances[account];
+    }
+
+    
+    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+        _transfer(_msgsender(), recipient, amount);
+        return true;
+    }
+
+    
+    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+        return _allowances[owner][spender];
+    }
+
+    
+    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+        _approve(_msgsender(), spender, amount);
+        return true;
+    }
+
+    
+    function transferfrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+        _transfer(sender, recipient, amount);
+        _approve(sender, _msgsender(), _allowances[sender][_msgsender()].sub(amount, ));
+        return true;
+    }
+
+    
+    function increaseallowance(address spender, uint256 addedvalue) public virtual returns (bool) {
+        _approve(_msgsender(), spender, _allowances[_msgsender()][spender].add(addedvalue));
+        return true;
+    }
+
+    
+    function decreaseallowance(address spender, uint256 subtractedvalue) public virtual returns (bool) {
+        _approve(_msgsender(), spender, _allowances[_msgsender()][spender].sub(subtractedvalue, ));
+        return true;
+    }
+
+    
+    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+        require(sender != address(0), );
+        require(recipient != address(0), );
+
+        _beforetokentransfer(sender, recipient, amount);
+
+        _balances[sender] = _balances[sender].sub(amount, );
+        _balances[recipient] = _balances[recipient].add(amount);
+        emit transfer(sender, recipient, amount);
+    }
+
+    
+    function _mint(address account, uint256 amount) internal virtual {
+        require(account != address(0), );
+
+        _beforetokentransfer(address(0), account, amount);
+
+        _totalsupply = _totalsupply.add(amount);
+        _balances[account] = _balances[account].add(amount);
+        emit transfer(address(0), account, amount);
+    }
+
+    
+    function _burn(address account, uint256 amount) internal virtual {
+        require(account != address(0), );
+
+        _beforetokentransfer(account, address(0), amount);
+
+        _balances[account] = _balances[account].sub(amount, );
+        _totalsupply = _totalsupply.sub(amount);
+        emit transfer(account, address(0), amount);
+    }
+
+    
+    function _approve(address owner, address spender, uint256 amount) internal virtual {
+        require(owner != address(0), );
+        require(spender != address(0), );
+
+        _allowances[owner][spender] = amount;
+        emit approval(owner, spender, amount);
+    }
+
+    
+    function _setupdecimals(uint8 decimals_) internal {
+        _decimals = decimals_;
+    }
+
+    
+    function _beforetokentransfer(address from, address to, uint256 amount) internal virtual { }
+}
+
+
+
+pragma solidity ^0.6.0;
+
+
+abstract contract linkerc20 is erc20 {
+  
+  function increaseapproval(address spender, uint256 addedvalue) public virtual returns (bool) {
+    return super.increaseallowance(spender, addedvalue);
+  }
+
+  
+  function decreaseapproval(address spender, uint256 subtractedvalue) public virtual returns (bool) {
+    return super.decreaseallowance(spender, subtractedvalue);
+  }
+}
+
+
+
+pragma solidity ^0.6.0;
+
+
+abstract contract erc677 is ierc20 {
+  function transferandcall(address to, uint value, bytes memory data) public virtual returns (bool success);
+
+  event transfer(address indexed from, address indexed to, uint value, bytes data);
+}
+
+
+
+pragma solidity ^0.6.0;
+
+abstract contract erc677receiver {
+  function ontokentransfer(address _sender, uint _value, bytes memory _data) public virtual;
+}
+
+
+
+pragma solidity ^0.6.0;
+
+
+
+
+abstract contract erc677token is erc20, erc677 {
+  
+  function transferandcall(address _to, uint _value, bytes memory _data)
+    public
+    override
+    virtual
+    returns (bool success)
+  {
+    super.transfer(_to, _value);
+    emit transfer(msg.sender, _to, _value, _data);
+    if (iscontract(_to)) {
+      contractfallback(_to, _value, _data);
+    }
+    return true;
+  }
+
+
+  
+
+  function contractfallback(address _to, uint _value, bytes memory _data)
+    private
+  {
+    erc677receiver receiver = erc677receiver(_to);
+    receiver.ontokentransfer(msg.sender, _value, _data);
+  }
+
+  function iscontract(address _addr)
+    private
+    view
+    returns (bool hascode)
+  {
+    uint length;
+    assembly { length := extcodesize(_addr) }
+    return length > 0;
+  }
+}
+
+
+
+pragma solidity ^0.6.0;
+
+
+
+contract linktoken is linkerc20, erc677token {
+  uint private constant total_supply = 10**27;
+  string private constant name = ;
+  string private constant symbol = ;
+
+  constructor() erc20(name, symbol)
+    public
+  {
+    _oncreate();
+  }
+
+  
+  function _oncreate()
+    internal
+    virtual
+  {
+    _mint(msg.sender, total_supply);
+  }
+
+  
+  function _transfer(address sender, address recipient, uint256 amount)
+    internal
+    override
+    virtual
+    validaddress(recipient)
+  {
+    super._transfer(sender, recipient, amount);
+  }
+
+  
+  function _approve(address owner, address spender, uint256 amount)
+    internal
+    override
+    virtual
+    validaddress(spender)
+  {
+    super._approve(owner, spender, amount);
+  }
+
+
+  
+
+  modifier validaddress(address _recipient) {
+    require(_recipient != address(this), );
+    _;
+  }
+}
+
+
+
+
+
+
+pragma solidity ^0.6.0;
+
+
+abstract contract context {
+    function _msgsender() internal view virtual returns (address payable) {
+        return msg.sender;
+    }
+
+    function _msgdata() internal view virtual returns (bytes memory) {
+        this; 
+        return msg.data;
+    }
+}
+
+
+
+
+
+pragma solidity ^0.6.0;
+
+
+interface ierc20 {
+    
+    function totalsupply() external view returns (uint256);
+
+    
+    function balanceof(address account) external view returns (uint256);
+
+    
+    function transfer(address recipient, uint256 amount) external returns (bool);
+
+    
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    
+    function transferfrom(address sender, address recipient, uint256 amount) external returns (bool);
+
+    
+    event transfer(address indexed from, address indexed to, uint256 value);
+
+    
+    event approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+
+
+
+
+pragma solidity ^0.6.0;
+
+
+library safemath {
+    
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, );
+
+        return c;
+    }
+
+    
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        return sub(a, b, );
+    }
+
+    
+    function sub(uint256 a, uint256 b, string memory errormessage) internal pure returns (uint256) {
+        require(b <= a, errormessage);
+        uint256 c = a  b;
+
+        return c;
+    }
+
+    
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        
+        
+        
+        if (a == 0) {
+            return 0;
+        }
+
+        uint256 c = a * b;
+        require(c / a == b, );
+
+        return c;
+    }
+
+    
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        return div(a, b, );
+    }
+
+    
+    function div(uint256 a, uint256 b, string memory errormessage) internal pure returns (uint256) {
+        require(b > 0, errormessage);
+        uint256 c = a / b;
+        
+
+        return c;
+    }
+
+    
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        return mod(a, b, );
+    }
+
+    
+    function mod(uint256 a, uint256 b, string memory errormessage) internal pure returns (uint256) {
+        require(b != 0, errormessage);
+        return a % b;
+    }
+}
+
+
+
+
+
+pragma solidity ^0.6.2;
+
+
+library address {
+    
+    function iscontract(address account) internal view returns (bool) {
+        
+        
+        
+        bytes32 codehash;
+        bytes32 accounthash = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+        
+        assembly { codehash := extcodehash(account) }
+        return (codehash != accounthash && codehash != 0x0);
+    }
+
+    
+    function sendvalue(address payable recipient, uint256 amount) internal {
+        require(address(this).balance >= amount, );
+
+        
+        (bool success, ) = recipient.call{ value: amount }();
+        require(success, );
+    }
+
+    
+    function functioncall(address target, bytes memory data) internal returns (bytes memory) {
+      return functioncall(target, data, );
+    }
+
+    
+    function functioncall(address target, bytes memory data, string memory errormessage) internal returns (bytes memory) {
+        return _functioncallwithvalue(target, data, 0, errormessage);
+    }
+
+    
+    function functioncallwithvalue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {
+        return functioncallwithvalue(target, data, value, );
+    }
+
+    
+    function functioncallwithvalue(address target, bytes memory data, uint256 value, string memory errormessage) internal returns (bytes memory) {
+        require(address(this).balance >= value, );
+        return _functioncallwithvalue(target, data, value, errormessage);
+    }
+
+    function _functioncallwithvalue(address target, bytes memory data, uint256 weivalue, string memory errormessage) private returns (bytes memory) {
+        require(iscontract(target), );
+
+        
+        (bool success, bytes memory returndata) = target.call{ value: weivalue }(data);
+        if (success) {
+            return returndata;
+        } else {
+            
+            if (returndata.length > 0) {
+                
+
+                
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+                revert(errormessage);
+            }
+        }
+    }
+}
+
+
+
+
+
+pragma solidity ^0.6.0;
+
+
+
+
+
+
+contract erc20 is context, ierc20 {
+    using safemath for uint256;
+    using address for address;
+
+    mapping (address => uint256) private _balances;
+
+    mapping (address => mapping (address => uint256)) private _allowances;
+
+    uint256 private _totalsupply;
+
+    string private _name;
+    string private _symbol;
+    uint8 private _decimals;
+
+    
+    constructor (string memory name, string memory symbol) public {
+        _name = name;
+        _symbol = symbol;
+        _decimals = 18;
+    }
+
+    
+    function name() public view returns (string memory) {
+        return _name;
+    }
+
+    
+    function symbol() public view returns (string memory) {
+        return _symbol;
+    }
+
+    
+    function decimals() public view returns (uint8) {
+        return _decimals;
+    }
+
+    
+    function totalsupply() public view override returns (uint256) {
+        return _totalsupply;
+    }
+
+    
+    function balanceof(address account) public view override returns (uint256) {
+        return _balances[account];
+    }
+
+    
+    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+        _transfer(_msgsender(), recipient, amount);
+        return true;
+    }
+
+    
+    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+        return _allowances[owner][spender];
+    }
+
+    
+    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+        _approve(_msgsender(), spender, amount);
+        return true;
+    }
+
+    
+    function transferfrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+        _transfer(sender, recipient, amount);
+        _approve(sender, _msgsender(), _allowances[sender][_msgsender()].sub(amount, ));
+        return true;
+    }
+
+    
+    function increaseallowance(address spender, uint256 addedvalue) public virtual returns (bool) {
+        _approve(_msgsender(), spender, _allowances[_msgsender()][spender].add(addedvalue));
+        return true;
+    }
+
+    
+    function decreaseallowance(address spender, uint256 subtractedvalue) public virtual returns (bool) {
+        _approve(_msgsender(), spender, _allowances[_msgsender()][spender].sub(subtractedvalue, ));
+        return true;
+    }
+
+    
+    function _transfer(address sender, address recipient, uint256 amount) internal virtual {
+        require(sender != address(0), );
+        require(recipient != address(0), );
+
+        _beforetokentransfer(sender, recipient, amount);
+
+        _balances[sender] = _balances[sender].sub(amount, );
+        _balances[recipient] = _balances[recipient].add(amount);
+        emit transfer(sender, recipient, amount);
+    }
+
+    
+    function _mint(address account, uint256 amount) internal virtual {
+        require(account != address(0), );
+
+        _beforetokentransfer(address(0), account, amount);
+
+        _totalsupply = _totalsupply.add(amount);
+        _balances[account] = _balances[account].add(amount);
+        emit transfer(address(0), account, amount);
+    }
+
+    
+    function _burn(address account, uint256 amount) internal virtual {
+        require(account != address(0), );
+
+        _beforetokentransfer(account, address(0), amount);
+
+        _balances[account] = _balances[account].sub(amount, );
+        _totalsupply = _totalsupply.sub(amount);
+        emit transfer(account, address(0), amount);
+    }
+
+    
+    function _approve(address owner, address spender, uint256 amount) internal virtual {
+        require(owner != address(0), );
+        require(spender != address(0), );
+
+        _allowances[owner][spender] = amount;
+        emit approval(owner, spender, amount);
+    }
+
+    
+    function _setupdecimals(uint8 decimals_) internal {
+        _decimals = decimals_;
+    }
+
+    
+    function _beforetokentransfer(address from, address to, uint256 amount) internal virtual { }
+}
+
+
+
+pragma solidity ^0.6.0;
+
+
+abstract contract erc677 is ierc20 {
+  function transferandcall(address to, uint value, bytes memory data) public virtual returns (bool success);
+
+  event transfer(address indexed from, address indexed to, uint value, bytes data);
+}
+
+
+
+pragma solidity ^0.6.0;
+
+abstract contract erc677receiver {
+  function ontokentransfer(address _sender, uint _value, bytes memory _data) public virtual;
+}
+
+
+
+pragma solidity ^0.6.0;
+
+
+
+
+abstract contract erc677token is erc20, erc677 {
+  
+  function transferandcall(address _to, uint _value, bytes memory _data)
+    public
+    override
+    virtual
+    returns (bool success)
+  {
+    super.transfer(_to, _value);
+    emit transfer(msg.sender, _to, _value, _data);
+    if (iscontract(_to)) {
+      contractfallback(_to, _value, _data);
+    }
+    return true;
+  }
+
+
+  
+
+  function contractfallback(address _to, uint _value, bytes memory _data)
+    private
+  {
+    erc677receiver receiver = erc677receiver(_to);
+    receiver.ontokentransfer(msg.sender, _value, _data);
+  }
+
+  function iscontract(address _addr)
+    private
+    view
+    returns (bool hascode)
+  {
+    uint length;
+    assembly { length := extcodesize(_addr) }
+    return length > 0;
+  }
+}
+
